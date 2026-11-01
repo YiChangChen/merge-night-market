@@ -1,0 +1,333 @@
+// 純遊戲規則：所有函式都是 (state, ...) => state，不碰 UI、時間來源或儲存。
+import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId } from './content';
+
+export type ItemPiece = { id: number; kind: 'item'; chain: ChainId; level: number };
+export type GeneratorPiece = { id: number; kind: 'generator'; chain: ChainId };
+export type Piece = ItemPiece | GeneratorPiece;
+
+export type Requirement = { chain: ChainId; level: number };
+
+export type Order = {
+  id: number;
+  requirements: Requirement[];
+  coins: number;
+  xp: number;
+  energy: number;
+};
+
+export type GameState = {
+  version: 1;
+  board: (Piece | null)[];
+  orders: Order[];
+  energy: number;
+  // 體力回復的計時起點
+  energyUpdatedAt: number;
+  coins: number;
+  level: number;
+  xp: number;
+  // 升級解鎖但棋盤已滿、等有空位才放上去的產生器
+  pendingGenerators: ChainId[];
+  nextId: number;
+  rngSeed: number;
+};
+
+export type SpawnBlocker = 'no-energy' | 'board-full';
+
+// mulberry32：種子放在 state 裡，讓結果可重現，存讀檔也不會改變
+function nextRandom(state: GameState): [number, GameState] {
+  const seed = (state.rngSeed + 0x6d2b79f5) | 0;
+  let t = seed;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  const value = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  return [value, { ...state, rngSeed: seed }];
+}
+
+function randomInt(state: GameState, maxExclusive: number): [number, GameState] {
+  const [value, next] = nextRandom(state);
+  return [Math.floor(value * maxExclusive), next];
+}
+
+// 製作某階品項需要的基礎品項數，也是數值的基準
+export function baseCost(level: number): number {
+  return 2 ** (level - 1);
+}
+
+export function xpToNextLevel(level: number): number {
+  return 10 + 5 * (level - 1);
+}
+
+export function unlockedChains(level: number): ChainId[] {
+  return CHAIN_IDS.filter((id) => CHAINS[id].unlockLevel <= level);
+}
+
+export function maxOrderItemLevel(playerLevel: number, chain: ChainId): number {
+  return Math.min(2 + Math.floor(playerLevel / 2), CHAINS[chain].items.length);
+}
+
+export function sellPrice(piece: ItemPiece): number {
+  return baseCost(piece.level);
+}
+
+function emptyCells(board: (Piece | null)[]): number[] {
+  const cells: number[] = [];
+  board.forEach((piece, index) => {
+    if (!piece) cells.push(index);
+  });
+  return cells;
+}
+
+function placeGenerator(state: GameState, chain: ChainId): GameState {
+  const [cell] = emptyCells(state.board);
+  if (cell === undefined) {
+    return { ...state, pendingGenerators: [...state.pendingGenerators, chain] };
+  }
+  const board = [...state.board];
+  board[cell] = { id: state.nextId, kind: 'generator', chain };
+  return { ...state, board, nextId: state.nextId + 1 };
+}
+
+function flushPendingGenerators(state: GameState): GameState {
+  let next: GameState = { ...state, pendingGenerators: [] };
+  for (const chain of state.pendingGenerators) {
+    next = placeGenerator(next, chain);
+  }
+  return next;
+}
+
+function createOrder(state: GameState): [Order, GameState] {
+  let next = state;
+  const chains = unlockedChains(state.level);
+  const requirements: Requirement[] = [];
+
+  let count = 1;
+  if (state.level >= BALANCE.twoItemOrderMinLevel) {
+    const [roll, afterRoll] = nextRandom(next);
+    next = afterRoll;
+    if (roll < BALANCE.twoItemOrderChance) count = 2;
+  }
+
+  for (let i = 0; i < count; i++) {
+    const [chainIndex, afterChain] = randomInt(next, chains.length);
+    const chain = chains[chainIndex];
+    const maxLevel = maxOrderItemLevel(state.level, chain);
+    // 至少 2 階，訂單才一定需要合成
+    const [offset, afterLevel] = randomInt(afterChain, maxLevel - 1);
+    next = afterLevel;
+    requirements.push({ chain, level: 2 + offset });
+  }
+
+  const totalCost = requirements.reduce((sum, r) => sum + baseCost(r.level), 0);
+  const order: Order = {
+    id: next.nextId,
+    requirements,
+    coins: totalCost * BALANCE.orderCoinsPerBase,
+    xp: requirements.reduce((sum, r) => sum + r.level, 0),
+    energy: Math.ceil(totalCost * BALANCE.orderEnergyRefund),
+  };
+  return [order, { ...next, nextId: next.nextId + 1 }];
+}
+
+export function createGame(now: number, seed: number): GameState {
+  let state: GameState = {
+    version: 1,
+    board: Array<Piece | null>(BOARD_SIZE).fill(null),
+    orders: [],
+    energy: BALANCE.maxEnergy,
+    energyUpdatedAt: now,
+    coins: 0,
+    level: 1,
+    xp: 0,
+    pendingGenerators: [],
+    nextId: 1,
+    rngSeed: seed,
+  };
+  for (const chain of unlockedChains(1)) {
+    state = placeGenerator(state, chain);
+  }
+  for (let i = 0; i < BALANCE.orderSlots; i++) {
+    const [order, next] = createOrder(state);
+    state = { ...next, orders: [...next.orders, order] };
+  }
+  return state;
+}
+
+// 依經過時間回復體力。獎勵可超過上限，超過時不再自然回復。
+export function syncEnergy(state: GameState, now: number): GameState {
+  // 裝置時間被調回去時重設起點，避免之後長時間不回復
+  if (now < state.energyUpdatedAt) return { ...state, energyUpdatedAt: now };
+  if (state.energy >= BALANCE.maxEnergy) {
+    return state.energyUpdatedAt === now ? state : { ...state, energyUpdatedAt: now };
+  }
+  const gained = Math.floor((now - state.energyUpdatedAt) / BALANCE.energyRegenMs);
+  if (gained <= 0) return state;
+  const energy = Math.min(BALANCE.maxEnergy, state.energy + gained);
+  return {
+    ...state,
+    energy,
+    energyUpdatedAt:
+      energy >= BALANCE.maxEnergy ? now : state.energyUpdatedAt + gained * BALANCE.energyRegenMs,
+  };
+}
+
+export function msUntilNextEnergy(state: GameState, now: number): number | null {
+  if (state.energy >= BALANCE.maxEnergy) return null;
+  return Math.max(0, state.energyUpdatedAt + BALANCE.energyRegenMs - now);
+}
+
+export function getSpawnBlocker(state: GameState): SpawnBlocker | null {
+  if (emptyCells(state.board).length === 0) return 'board-full';
+  if (state.energy < BALANCE.spawnEnergyCost) return 'no-energy';
+  return null;
+}
+
+function cellDistance(a: number, b: number): number {
+  const { boardColumns } = BALANCE;
+  return (
+    Math.abs((a % boardColumns) - (b % boardColumns)) +
+    Math.abs(Math.floor(a / boardColumns) - Math.floor(b / boardColumns))
+  );
+}
+
+export function tapGenerator(state: GameState, cell: number): GameState {
+  const piece = state.board[cell];
+  if (piece?.kind !== 'generator' || getSpawnBlocker(state)) return state;
+
+  const target = emptyCells(state.board).reduce((best, candidate) =>
+    cellDistance(cell, candidate) < cellDistance(cell, best) ? candidate : best
+  );
+
+  const [roll, next] = nextRandom(state);
+  const board = [...next.board];
+  board[target] = {
+    id: next.nextId,
+    kind: 'item',
+    chain: piece.chain,
+    level: roll < BALANCE.spawnLevel2Chance ? 2 : 1,
+  };
+  return {
+    ...next,
+    board,
+    nextId: next.nextId + 1,
+    energy: next.energy - BALANCE.spawnEnergyCost,
+  };
+}
+
+export function canMerge(a: Piece, b: Piece): boolean {
+  return (
+    a.kind === 'item' &&
+    b.kind === 'item' &&
+    a.chain === b.chain &&
+    a.level === b.level &&
+    a.level < CHAINS[a.chain].items.length
+  );
+}
+
+// 拖曳放下：相同品項合成，空格移動，其他情況交換位置
+export function movePiece(state: GameState, from: number, to: number): GameState {
+  const source = state.board[from];
+  if (!source || from === to || to < 0 || to >= BOARD_SIZE) return state;
+  const target = state.board[to];
+  const board = [...state.board];
+
+  if (target?.kind === 'item' && canMerge(source, target)) {
+    board[from] = null;
+    board[to] = { id: state.nextId, kind: 'item', chain: target.chain, level: target.level + 1 };
+    return flushPendingGenerators({ ...state, board, nextId: state.nextId + 1 });
+  }
+
+  board[from] = target;
+  board[to] = source;
+  return { ...state, board };
+}
+
+// 為訂單找到要交出的格子；品項不夠時回傳 null
+export function findOrderCells(state: GameState, order: Order): number[] | null {
+  const used = new Set<number>();
+  for (const requirement of order.requirements) {
+    const cell = state.board.findIndex(
+      (piece, index) =>
+        !used.has(index) &&
+        piece?.kind === 'item' &&
+        piece.chain === requirement.chain &&
+        piece.level === requirement.level
+    );
+    if (cell === -1) return null;
+    used.add(cell);
+  }
+  return [...used];
+}
+
+function applyLevelUps(state: GameState): GameState {
+  let next = state;
+  while (next.xp >= xpToNextLevel(next.level)) {
+    const level = next.level + 1;
+    next = {
+      ...next,
+      xp: next.xp - xpToNextLevel(next.level),
+      level,
+      energy: next.energy + BALANCE.levelUpEnergy,
+    };
+    for (const id of CHAIN_IDS) {
+      if (CHAINS[id].unlockLevel === level) next = placeGenerator(next, id);
+    }
+  }
+  return next;
+}
+
+export function completeOrder(state: GameState, orderId: number): GameState {
+  const orderIndex = state.orders.findIndex((order) => order.id === orderId);
+  if (orderIndex === -1) return state;
+  const order = state.orders[orderIndex];
+  const cells = findOrderCells(state, order);
+  if (!cells) return state;
+
+  const board = [...state.board];
+  for (const cell of cells) board[cell] = null;
+
+  let next: GameState = {
+    ...state,
+    board,
+    coins: state.coins + order.coins,
+    xp: state.xp + order.xp,
+    energy: state.energy + order.energy,
+  };
+  next = flushPendingGenerators(next);
+  next = applyLevelUps(next);
+
+  const [replacement, afterOrder] = createOrder(next);
+  const orders = [...afterOrder.orders];
+  orders[orderIndex] = replacement;
+  return { ...afterOrder, orders };
+}
+
+// 賣掉品項騰出空間，避免棋盤塞滿無法合成時卡死。產生器不能賣。
+export function sellPiece(state: GameState, cell: number): GameState {
+  const piece = state.board[cell];
+  if (piece?.kind !== 'item') return state;
+  const board = [...state.board];
+  board[cell] = null;
+  return flushPendingGenerators({ ...state, board, coins: state.coins + sellPrice(piece) });
+}
+
+// 存檔可能損毀或來自舊版，讀取時只接受形狀正確的資料
+export function isValidSave(value: unknown): value is GameState {
+  if (typeof value !== 'object' || value === null) return false;
+  const save = value as Partial<GameState>;
+  return (
+    save.version === 1 &&
+    Array.isArray(save.board) &&
+    save.board.length === BOARD_SIZE &&
+    Array.isArray(save.orders) &&
+    Array.isArray(save.pendingGenerators) &&
+    [
+      save.energy,
+      save.energyUpdatedAt,
+      save.coins,
+      save.level,
+      save.xp,
+      save.nextId,
+      save.rngSeed,
+    ].every((field) => typeof field === 'number' && Number.isFinite(field))
+  );
+}

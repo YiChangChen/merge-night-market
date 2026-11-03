@@ -7,7 +7,7 @@ export type ItemDef = { name: string; emoji: string };
 export type ChainDef = {
   id: ChainId;
   generatorName: string;
-  generatorEmoji: string;
+  generatorEmoji: string | number;
   unlockLevel: number;
   items: ItemDef[];
 };
@@ -16,7 +16,7 @@ export const CHAINS: Record<ChainId, ChainDef> = {
   tea: {
     id: 'tea',
     generatorName: '手搖飲吧台',
-    generatorEmoji: '🏪',
+    generatorEmoji: require('../../assets/images/test.png'),
     unlockLevel: 1,
     items: [
       { name: '茶葉', emoji: '🍃' },
@@ -31,7 +31,7 @@ export const CHAINS: Record<ChainId, ChainDef> = {
   fried: {
     id: 'fried',
     generatorName: '炸物鍋',
-    generatorEmoji: '🍳',
+    generatorEmoji: require('../../assets/images/fried.png'),
     unlockLevel: 1,
     items: [
       { name: '地瓜粉', emoji: '🌾' },
@@ -45,7 +45,7 @@ export const CHAINS: Record<ChainId, ChainDef> = {
   noodle: {
     id: 'noodle',
     generatorName: '麵線大鍋',
-    generatorEmoji: '🍲',
+    generatorEmoji: require('../../assets/images/noodle.png'),
     unlockLevel: 3,
     items: [
       { name: '蔥花', emoji: '🌱' },
@@ -59,7 +59,7 @@ export const CHAINS: Record<ChainId, ChainDef> = {
   dumpling: {
     id: 'dumpling',
     generatorName: '蒸籠台',
-    generatorEmoji: '♨️',
+    generatorEmoji: require('../../assets/images/dumpling.png'),
     unlockLevel: 5,
     items: [
       { name: '麵糰', emoji: '🫓' },
@@ -73,7 +73,7 @@ export const CHAINS: Record<ChainId, ChainDef> = {
   sweet: {
     id: 'sweet',
     generatorName: '甜品車',
-    generatorEmoji: '🛒',
+    generatorEmoji: require('../../assets/images/sweet.png'),
     unlockLevel: 7,
     items: [
       { name: '地瓜', emoji: '🍠' },

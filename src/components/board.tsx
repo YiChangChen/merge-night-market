@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
@@ -16,13 +17,33 @@ type BoardProps = {
 
 export function pieceEmoji(piece: Piece): string {
   const chain = CHAINS[piece.chain];
-  return piece.kind === 'generator' ? chain.generatorEmoji : chain.items[piece.level - 1].emoji;
+  return piece.kind === 'generator'
+    ? typeof chain.generatorEmoji === 'string'
+      ? chain.generatorEmoji
+      : '🏪'
+    : chain.items[piece.level - 1].emoji;
+}
+
+export function PieceIcon({ piece, size }: { piece: Piece; size: number }) {
+  const generatorEmoji = CHAINS[piece.chain].generatorEmoji;
+  if (piece.kind === 'generator' && typeof generatorEmoji !== 'string') {
+    return (
+      <Image
+        source={generatorEmoji}
+        contentFit="contain"
+        // 網頁版的 img 預設可原生拖曳，會取消棋盤的拖曳手勢
+        draggable={false}
+        style={{ width: size * 0.88, height: size * 0.88, borderRadius: 6 }}
+      />
+    );
+  }
+  return <Text style={{ fontSize: size * 0.56 }}>{pieceEmoji(piece)}</Text>;
 }
 
 function PieceView({ piece, size }: { piece: Piece; size: number }) {
   return (
-    <>
-      <Text style={{ fontSize: size * 0.56 }}>{pieceEmoji(piece)}</Text>
+    <>    
+      <PieceIcon piece={piece} size={size} />
       {piece.kind === 'item' ? <Text style={styles.level}>{piece.level}</Text> : null}
     </>
   );
@@ -147,10 +168,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cellDark: { backgroundColor: '#3A2A4D' },
-  cellLight: { backgroundColor: '#463459' },
-  cellSelected: { backgroundColor: '#7A5FA0' },
-  cellHover: { backgroundColor: '#5E4A78' },
+  cellDark: { backgroundColor: '#E8D9BC' },
+  cellLight: { backgroundColor: '#F5ECD8' },
+  cellSelected: { backgroundColor: '#F2C572' },
+  cellHover: { backgroundColor: '#DCC79E' },
   cellMerge: { backgroundColor: '#E0A030' },
   piece: {
     width: '100%',
@@ -162,13 +183,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFD36E44',
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#FFD36E',
+    borderColor: '#C98A1E',
   },
   level: {
     position: 'absolute',
     right: 4,
     bottom: 1,
-    color: '#FFF3D6',
+    color: '#4A3420',
     fontSize: 11,
     fontWeight: '700',
   },

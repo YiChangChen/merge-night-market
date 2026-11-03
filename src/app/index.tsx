@@ -1,8 +1,9 @@
+import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Board, pieceEmoji } from '@/components/board';
+import { Board, PieceIcon } from '@/components/board';
 import { BALANCE, CHAINS } from '@/game/content';
 import {
   completeOrder,
@@ -20,7 +21,11 @@ import { useGame } from '@/game/use-game';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
+// 棋盤以外的 HUD、訂單、資訊列與間距總高
+const NON_BOARD_HEIGHT = 202;
 const TOAST_MS = 1800;
+// 背景圖的寬高比（768×1376）
+const BACKGROUND_ASPECT = 768 / 1376;
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.ceil(ms / 1000);
@@ -100,9 +105,10 @@ function InfoBar({
   if (piece.kind === 'generator') {
     return (
       <View style={styles.info}>
-        <Text style={styles.infoText}>
-          {pieceEmoji(piece)} {CHAINS[piece.chain].generatorName}：再點一次出食材
-        </Text>
+        <View style={styles.infoLabel}>
+          <PieceIcon piece={piece} size={24} />
+          <Text style={styles.infoText}>{CHAINS[piece.chain].generatorName}：再點一次出食材</Text>
+        </View>
       </View>
     );
   }
@@ -123,7 +129,8 @@ function InfoBar({
 
 export default function GameScreen() {
   const { state, now, apply } = useGame();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -136,7 +143,16 @@ export default function GameScreen() {
   if (!state) return <View style={styles.screen} />;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);
-  const cellSize = Math.floor(boardWidth / BALANCE.boardColumns);
+  const boardHeight = windowHeight - insets.top - insets.bottom - NON_BOARD_HEIGHT;
+  const cellSize = Math.floor(
+    Math.min(boardWidth / BALANCE.boardColumns, boardHeight / BALANCE.boardRows)
+  );
+
+  // 背景維持直式比例：手機填滿寬度，寬螢幕置中，兩側露出與夜空相近的底色
+  const backgroundWidth = Math.min(
+    windowWidth,
+    Math.max(windowHeight * BACKGROUND_ASPECT, boardWidth + SCREEN_PADDING * 2)
+  );
 
   const handleTapCell = (cell: number) => {
     const piece = state.board[cell];
@@ -165,17 +181,29 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={[styles.content, { width: cellSize * BALANCE.boardColumns }]}>
+      <Image
+        source={require('../../assets/images/night-market-background-direct.jpg')}
+        contentFit="cover"
+        contentPosition="bottom"
+        draggable={false}
+        style={[
+          styles.background,
+          { width: backgroundWidth, left: (windowWidth - backgroundWidth) / 2 },
+        ]}
+      />
+      <View style={[styles.content, { width: boardWidth }]}>
         <Hud state={state} now={now} />
         <Orders state={state} onComplete={handleCompleteOrder} />
         <InfoBar state={state} selected={selected} onSell={handleSell} />
-        <Board
-          board={state.board}
-          cellSize={cellSize}
-          selected={selected}
-          onTapCell={handleTapCell}
-          onMove={handleMove}
-        />
+        <View style={styles.boardArea}>
+          <Board
+            board={state.board}
+            cellSize={cellSize}
+            selected={selected}
+            onTapCell={handleTapCell}
+            onMove={handleMove}
+          />
+        </View>
         {toast ? (
           <View pointerEvents="none" style={styles.toast}>
             <Text style={styles.toastText}>{toast}</Text>
@@ -190,12 +218,22 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#1F1630',
+    backgroundColor: '#0A1E3D',
+    // 網頁版靠長按與拖曳操作，不能觸發文字選取
+    userSelect: 'none',
+  },
+  background: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
   },
   content: {
     flex: 1,
     gap: 10,
     paddingTop: 8,
+  },
+  boardArea: {
+    alignItems: 'center',
   },
   hud: {
     flexDirection: 'row',
@@ -217,10 +255,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#322445',
+    backgroundColor: '#F5ECD8',
   },
   orderReady: {
-    backgroundColor: '#B8741A',
+    backgroundColor: '#F2C572',
   },
   orderItems: {
     flexDirection: 'row',
@@ -234,11 +272,11 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   orderName: {
-    color: '#FFF3D6',
+    color: '#4A3420',
     fontSize: 11,
   },
   orderReward: {
-    color: '#FFD36E',
+    color: '#6B4210',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -250,11 +288,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    backgroundColor: '#322445',
+    backgroundColor: '#F5ECD8',
+  },
+  infoLabel: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   infoText: {
     flexShrink: 1,
-    color: '#FFF3D6',
+    color: '#4A3420',
     fontSize: 13,
   },
   sell: {

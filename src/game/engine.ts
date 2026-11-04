@@ -1,5 +1,13 @@
 // 純遊戲規則：所有函式都是 (state, ...) => state，不碰 UI、時間來源或儲存。
-import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId } from './content';
+import {
+  BALANCE,
+  BOARD_SIZE,
+  CHAIN_IDS,
+  CHAINS,
+  type ChainId,
+  CUSTOMERS,
+  type CustomerDef,
+} from './content';
 
 export type ItemPiece = { id: number; kind: 'item'; chain: ChainId; level: number };
 export type GeneratorPiece = { id: number; kind: 'generator'; chain: ChainId };
@@ -128,6 +136,11 @@ function createOrder(state: GameState): [Order, GameState] {
   return [order, { ...next, nextId: next.nextId + 1 }];
 }
 
+// 客人由訂單 id 決定，不必寫進存檔，同一張訂單移動位置或讀檔後也不會換人
+export function customerForOrder(order: Order): CustomerDef {
+  return CUSTOMERS[order.id % CUSTOMERS.length];
+}
+
 export function createGame(now: number, seed: number): GameState {
   let state: GameState = {
     version: 1,
@@ -213,6 +226,48 @@ export function tapGenerator(state: GameState, cell: number): GameState {
   };
 }
 
+export type Spawn = { piece: ItemPiece; from: number; to: number };
+
+// 比對前後棋盤，找出由產生器新產出的食材，給 UI 播放動畫。
+// 合成、出餐與賣出都會移除棋子，產出不會，所以有棋子消失就不是產出。
+export function findSpawns(before: (Piece | null)[], after: (Piece | null)[]): Spawn[] {
+  const beforeIds = new Set(before.map((piece) => piece?.id));
+  const afterIds = new Set(after.map((piece) => piece?.id));
+  if (before.some((piece) => piece && !afterIds.has(piece.id))) return [];
+
+  const spawns: Spawn[] = [];
+  after.forEach((piece, to) => {
+    if (piece?.kind !== 'item' || beforeIds.has(piece.id)) return;
+    // 每條產品線只有一台產生器
+    const from = after.findIndex(
+      (other) => other?.kind === 'generator' && other.chain === piece.chain
+    );
+    if (from !== -1) spawns.push({ piece, from, to });
+  });
+  return spawns;
+}
+
+export type Merge = { piece: ItemPiece; cell: number };
+
+// 比對前後棋盤，找出剛合成的品項：新棋子取代了同產品線、低一階的棋子。
+// 產出只會落在空格，所以不會被算進來。
+export function findMerges(before: (Piece | null)[], after: (Piece | null)[]): Merge[] {
+  const beforeIds = new Set(before.map((piece) => piece?.id));
+  const merges: Merge[] = [];
+  after.forEach((piece, cell) => {
+    if (piece?.kind !== 'item' || beforeIds.has(piece.id)) return;
+    const replaced = before[cell];
+    if (
+      replaced?.kind === 'item' &&
+      replaced.chain === piece.chain &&
+      replaced.level === piece.level - 1
+    ) {
+      merges.push({ piece, cell });
+    }
+  });
+  return merges;
+}
+
 export function canMerge(a: Piece, b: Piece): boolean {
   return (
     a.kind === 'item' &&
@@ -296,8 +351,10 @@ export function completeOrder(state: GameState, orderId: number): GameState {
   next = applyLevelUps(next);
 
   const [replacement, afterOrder] = createOrder(next);
+  // 右邊的訂單往左遞補，新訂單排到最後
   const orders = [...afterOrder.orders];
-  orders[orderIndex] = replacement;
+  orders.splice(orderIndex, 1);
+  orders.push(replacement);
   return { ...afterOrder, orders };
 }
 

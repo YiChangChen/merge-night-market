@@ -1,12 +1,15 @@
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeInRight, LinearTransition, ZoomOut } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Board, PieceIcon } from '@/components/board';
+import { customerArtSize, CustomerTray } from '@/components/customer-tray';
 import { BALANCE, CHAINS } from '@/game/content';
 import {
   completeOrder,
+  customerForOrder,
   findOrderCells,
   type GameState,
   getSpawnBlocker,
@@ -21,9 +24,15 @@ import { useGame } from '@/game/use-game';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
-// 棋盤以外的 HUD、訂單、資訊列與間距總高
-const NON_BOARD_HEIGHT = 202;
+// 棋盤以外的 HUD、資訊列與間距總高，不含訂單
+const NON_BOARD_HEIGHT = 106;
+const ORDER_GAP = 8;
+// 訂單人物圖下方的品名與獎勵標籤
+const ORDER_LABEL_HEIGHT = 42;
 const TOAST_MS = 1800;
+const ORDER_SHIFT_MS = 260;
+const ORDER_ENTER_MS = 260;
+const ORDER_EXIT_MS = 160;
 // 背景圖的寬高比（768×1376）
 const BACKGROUND_ASPECT = 768 / 1376;
 
@@ -50,35 +59,56 @@ function Hud({ state, now }: { state: GameState; now: number }) {
   );
 }
 
-function Orders({ state, onComplete }: { state: GameState; onComplete: (id: number) => void }) {
+function Orders({
+  state,
+  artSize,
+  onComplete,
+}: {
+  state: GameState;
+  artSize: { width: number; height: number };
+  onComplete: (id: number) => void;
+}) {
   return (
     <View style={styles.orders}>
       {state.orders.map((order) => {
         const ready = findOrderCells(state, order) !== null;
         return (
-          <Pressable
+          <Animated.View
             key={order.id}
-            testID="order"
-            disabled={!ready}
-            onPress={() => onComplete(order.id)}
-            style={[styles.order, ready && styles.orderReady]}>
-            <View style={styles.orderItems}>
-              {order.requirements.map((requirement, index) => {
-                const item = CHAINS[requirement.chain].items[requirement.level - 1];
-                return (
-                  <View key={index} style={styles.orderItem}>
-                    <Text style={styles.orderEmoji}>{item.emoji}</Text>
-                    <Text style={styles.orderName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-            <Text style={styles.orderReward}>
-              {ready ? '點我出餐！' : `🪙${order.coins} ⚡${order.energy}`}
-            </Text>
-          </Pressable>
+            // 等其他卡片讓出位置才進場，避免疊在一起
+            entering={FadeInRight.delay(ORDER_SHIFT_MS).duration(ORDER_ENTER_MS)}
+            exiting={ZoomOut.duration(ORDER_EXIT_MS)}
+            layout={LinearTransition.duration(ORDER_SHIFT_MS)}
+            style={styles.orderSlot}>
+            <Pressable
+              testID="order"
+              disabled={!ready}
+              onPress={() => onComplete(order.id)}
+              style={styles.order}>
+              <CustomerTray
+                customer={customerForOrder(order)}
+                requirements={order.requirements}
+                width={artSize.width}
+                height={artSize.height}
+              />
+              <View style={[styles.orderLabel, ready && styles.orderLabelReady]}>
+                <Text
+                  style={[styles.orderName, ready && styles.orderTextReady]}
+                  numberOfLines={1}>
+                  {order.requirements
+                    .map(
+                      (requirement) => CHAINS[requirement.chain].items[requirement.level - 1].name
+                    )
+                    .join('、')}
+                </Text>
+                <Text
+                  style={[styles.orderReward, ready && styles.orderTextReady]}
+                  numberOfLines={1}>
+                  {ready ? '點我出餐！' : `🪙${order.coins} ⚡${order.energy}`}
+                </Text>
+              </View>
+            </Pressable>
+          </Animated.View>
         );
       })}
     </View>
@@ -116,10 +146,13 @@ function InfoBar({
   const nextItem = items[piece.level];
   return (
     <View style={styles.info}>
-      <Text style={styles.infoText} numberOfLines={1}>
-        {items[piece.level - 1].emoji} {items[piece.level - 1].name} Lv.{piece.level}
-        {nextItem ? ` → ${nextItem.name}` : '（最高階）'}
-      </Text>
+      <View style={styles.infoLabel}>
+        <PieceIcon piece={piece} size={28} />
+        <Text style={styles.infoText} numberOfLines={1}>
+          {items[piece.level - 1].name} Lv.{piece.level}
+          {nextItem ? ` → ${nextItem.name}` : '（最高階）'}
+        </Text>
+      </View>
       <Pressable testID="sell" style={styles.sell} onPress={() => onSell(selected)}>
         <Text style={styles.sellText}>賣出 🪙{sellPrice(piece)}</Text>
       </Pressable>
@@ -143,7 +176,14 @@ export default function GameScreen() {
   if (!state) return <View style={styles.screen} />;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);
-  const boardHeight = windowHeight - insets.top - insets.bottom - NON_BOARD_HEIGHT;
+  const artSize = customerArtSize((boardWidth + ORDER_GAP) / BALANCE.orderSlots);
+  const boardHeight =
+    windowHeight -
+    insets.top -
+    insets.bottom -
+    NON_BOARD_HEIGHT -
+    artSize.height -
+    ORDER_LABEL_HEIGHT;
   const cellSize = Math.floor(
     Math.min(boardWidth / BALANCE.boardColumns, boardHeight / BALANCE.boardRows)
   );
@@ -193,7 +233,7 @@ export default function GameScreen() {
       />
       <View style={[styles.content, { width: boardWidth }]}>
         <Hud state={state} now={now} />
-        <Orders state={state} onComplete={handleCompleteOrder} />
+        <Orders state={state} artSize={artSize} onComplete={handleCompleteOrder} />
         <InfoBar state={state} selected={selected} onSell={handleSell} />
         <View style={styles.boardArea}>
           <Board
@@ -246,39 +286,40 @@ const styles = StyleSheet.create({
   },
   orders: {
     flexDirection: 'row',
-    gap: 8,
+    gap: ORDER_GAP,
+  },
+  orderSlot: {
+    flex: 1,
   },
   order: {
     flex: 1,
-    minHeight: 96,
-    padding: 6,
-    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F5ECD8',
+    gap: 2,
   },
-  orderReady: {
+  // 少了卡片底色，文字要有深色底才看得清楚
+  orderLabel: {
+    alignSelf: 'stretch',
+    height: ORDER_LABEL_HEIGHT - 2,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000AA',
+  },
+  orderLabelReady: {
     backgroundColor: '#F2C572',
   },
-  orderItems: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  orderItem: {
-    flexShrink: 1,
-    alignItems: 'center',
-  },
-  orderEmoji: {
-    fontSize: 26,
-  },
   orderName: {
-    color: '#4A3420',
-    fontSize: 11,
+    color: '#FFF3D6',
+    fontSize: 12,
   },
   orderReward: {
-    color: '#6B4210',
+    color: '#FFF3D6',
     fontSize: 12,
     fontWeight: '600',
+  },
+  orderTextReady: {
+    color: '#4A3420',
   },
   info: {
     minHeight: 40,

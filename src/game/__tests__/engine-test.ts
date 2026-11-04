@@ -1,9 +1,12 @@
-import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId } from '../content';
+import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId, CUSTOMERS } from '../content';
 import {
   canMerge,
   completeOrder,
   createGame,
+  customerForOrder,
+  findMerges,
   findOrderCells,
+  findSpawns,
   type GameState,
   getSpawnBlocker,
   isValidSave,
@@ -199,8 +202,10 @@ describe('orders', () => {
     expect(next.xp).toBe(state.xp + target.xp);
     expect(next.energy).toBe(state.energy + target.energy);
     expect(next.orders).toHaveLength(3);
-    expect(next.orders[1].id).not.toBe(target.id);
+    expect(next.orders.map((o) => o.id)).not.toContain(target.id);
+    // 右邊的訂單往左遞補，新訂單排到最後
     expect(next.orders[0]).toBe(base.orders[0]);
+    expect(next.orders[1]).toBe(base.orders[2]);
   });
 
   it('does nothing when items are missing or the order is unknown', () => {
@@ -305,5 +310,89 @@ describe('isValidSave', () => {
     ['NaN coins', { ...createGame(NOW, 1), coins: NaN }],
   ])('rejects %s', (_name, value) => {
     expect(isValidSave(value)).toBe(false);
+  });
+});
+
+describe('findSpawns', () => {
+  const generator: Piece = { id: 1, kind: 'generator', chain: 'tea' };
+
+  it('reports the item a generator tap produced, and where it came from', () => {
+    const state = withBoard(createGame(NOW, 1), { 3: generator });
+    const after = tapGenerator(state, 3);
+    const spawns = findSpawns(state.board, after.board);
+    expect(spawns).toHaveLength(1);
+    expect(spawns[0].from).toBe(3);
+    expect(after.board[spawns[0].to]).toBe(spawns[0].piece);
+  });
+
+  it('reports every item when several taps land in one update', () => {
+    const state = withBoard(createGame(NOW, 1), { 0: generator });
+    const after = tapGenerator(tapGenerator(state, 0), 0);
+    expect(findSpawns(state.board, after.board)).toHaveLength(2);
+  });
+
+  it('ignores merges', () => {
+    const state = withBoard(createGame(NOW, 1), {
+      0: generator,
+      1: item(10, 'tea', 1),
+      2: item(11, 'tea', 1),
+    });
+    expect(findSpawns(state.board, movePiece(state, 1, 2).board)).toEqual([]);
+  });
+
+  it('ignores moves and swaps', () => {
+    const state = withBoard(createGame(NOW, 1), { 0: generator, 1: item(10, 'tea', 1) });
+    expect(findSpawns(state.board, movePiece(state, 1, 5).board)).toEqual([]);
+    expect(findSpawns(state.board, movePiece(state, 1, 0).board)).toEqual([]);
+  });
+
+  it('ignores selling, even when that places a pending generator', () => {
+    const state: GameState = {
+      ...withBoard(createGame(NOW, 1), { 0: generator, 1: item(10, 'tea', 1) }),
+      pendingGenerators: ['fried'],
+    };
+    expect(findSpawns(state.board, sellPiece(state, 1).board)).toEqual([]);
+  });
+});
+
+describe('findMerges', () => {
+  const generator: Piece = { id: 1, kind: 'generator', chain: 'tea' };
+  const twoLeaves = () =>
+    withBoard(createGame(NOW, 1), {
+      0: generator,
+      1: item(10, 'tea', 1),
+      2: item(11, 'tea', 1),
+    });
+
+  it('reports the merged item at the drop cell', () => {
+    const state = twoLeaves();
+    const after = movePiece(state, 1, 2);
+    expect(findMerges(state.board, after.board)).toEqual([{ piece: after.board[2], cell: 2 }]);
+  });
+
+  it('ignores generator spawns', () => {
+    const state = twoLeaves();
+    expect(findMerges(state.board, tapGenerator(state, 0).board)).toEqual([]);
+  });
+
+  it('ignores moves, swaps and sales', () => {
+    const state = twoLeaves();
+    expect(findMerges(state.board, movePiece(state, 1, 5).board)).toEqual([]);
+    expect(findMerges(state.board, movePiece(state, 1, 0).board)).toEqual([]);
+    expect(findMerges(state.board, sellPiece(state, 1).board)).toEqual([]);
+  });
+});
+
+describe('customerForOrder', () => {
+  it('always gives the same order the same customer', () => {
+    const target = { ...order([{ chain: 'tea', level: 2 }]), id: 7 };
+    expect(customerForOrder({ ...target })).toBe(customerForOrder(target));
+  });
+
+  it('can reach every customer', () => {
+    const seen = new Set(
+      CUSTOMERS.map((_, id) => customerForOrder({ ...order([{ chain: 'tea', level: 2 }]), id }))
+    );
+    expect(seen.size).toBe(CUSTOMERS.length);
   });
 });

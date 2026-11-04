@@ -32,7 +32,6 @@ function saveGame(state: GameState) {
 // 持有遊戲狀態：負責讀檔、存檔與體力計時。回傳 null 代表還在讀檔。
 export function useGame() {
   const [state, setState] = useState<GameState | null>(null);
-  const [now, setNow] = useState(() => Date.now());
   const latest = useRef<GameState | null>(null);
 
   useEffect(() => {
@@ -54,7 +53,6 @@ export function useGame() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setNow(Date.now());
       // 體力滿時不必結算，避免每秒產生新 state 並觸發存檔
       setState((current) =>
         current && current.energy < BALANCE.maxEnergy ? syncEnergy(current, Date.now()) : current
@@ -79,5 +77,5 @@ export function useGame() {
     setState((current) => current && action(syncEnergy(current, Date.now())));
   }, []);
 
-  return { state, now, apply };
+  return { state, apply };
 }

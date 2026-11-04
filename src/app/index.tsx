@@ -43,7 +43,13 @@ function formatCountdown(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-function Hud({ state, now }: { state: GameState; now: number }) {
+function Hud({ state }: { state: GameState }) {
+  // 倒數只影響這裡，計時放在 Hud 裡，每秒才不會重畫整個畫面
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const untilNext = msUntilNextEnergy(state, now);
   return (
     <View style={styles.hud}>
@@ -161,7 +167,7 @@ function InfoBar({
 }
 
 export default function GameScreen() {
-  const { state, now, apply } = useGame();
+  const { state, apply } = useGame();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<number | null>(null);
@@ -232,7 +238,7 @@ export default function GameScreen() {
         ]}
       />
       <View style={[styles.content, { width: boardWidth }]}>
-        <Hud state={state} now={now} />
+        <Hud state={state} />
         <Orders state={state} artSize={artSize} onComplete={handleCompleteOrder} />
         <InfoBar state={state} selected={selected} onSell={handleSell} />
         <View style={styles.boardArea}>

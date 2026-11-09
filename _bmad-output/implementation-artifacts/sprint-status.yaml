@@ -1,0 +1,114 @@
+# generated: 2026-11-09
+# last_updated: 2026-11-09
+# project: merge-night-market
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# 專案備註：story key 的標題由中文標題意譯為英文 kebab-case。
+# Epic 1 順序依 2026-11-09 Sprint Change Proposal：1.0 可與 1.1～1.5 並行，須在 1.7 前完成。
+
+generated: 2026-11-09
+last_updated: 2026-11-09
+project: merge-night-market
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1：夜市街開張
+  epic-1: in-progress
+  1-0-content-finalization-and-art-manifest: done
+  1-1-project-setup-and-lint-guardrails: review
+  1-2a-layered-file-relocation: review
+  1-2b-zustand-store-apply-and-game-events: review
+  1-2c-log-service-and-error-boundary: backlog
+  1-3-spike-a-street-performance-gate: backlog
+  1-4-spike-b-admob-test-rewarded-ad: backlog
+  1-5-save-v2-and-v1-migration: backlog
+  1-6-stall-driven-generators-and-orders: backlog
+  1-7-tabs-street-screen-and-settings: backlog
+  1-8-debug-panel-and-save-import-export: backlog
+  1-9-reopen-stall: backlog
+  1-10-upgrade-stall-to-lv2-and-neon: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2：排隊人龍與完售
+  epic-2: backlog
+  2-1-queue-wave-rules: backlog
+  2-2-board-queue-meter: backlog
+  2-3-street-queue-avatars: backlog
+  2-4-sellout-show: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3：老闆發明
+  epic-3: backlog
+  3-1-recipe-and-dish-data: backlog
+  3-2-drop-resolution-rules: backlog
+  3-3-board-dishes-and-reject-bounce: backlog
+  3-4-first-invention-show-and-dish-selling: backlog
+  3-5-lv3-upgrade-and-signature-dish: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4：貴客上門與阿嬤指點
+  epic-4: backlog
+  4-1-vip-order-rules: backlog
+  4-2-clue-orders-and-dismiss: backlog
+  4-3-vip-and-clue-order-cards: backlog
+  4-4-grandma-pity-hints: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5：發明菜收藏冊
+  epic-5: backlog
+  5-1-card-data-and-star-bonus: backlog
+  5-2-collection-screen: backlog
+  5-3-card-shows-and-signature-stars: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6：開幕週與激勵廣告
+  epic-6: backlog
+  6-1-opening-week-energy-and-daily-ad-counts: backlog
+  6-2-rewarded-ad-for-energy: backlog
+  6-3-rewarded-ad-sellout-double: backlog
+  6-4-tutorial-finger-guide: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7：聲音、數據與上架
+  epic-7: backlog
+  7-1-audio-service-and-event-sfx: backlog
+  7-2-bgm-voice-and-mute-settings: backlog
+  7-3-telemetry-posthog: backlog
+  7-4-crash-reporting-sentry: backlog
+  7-5-closed-beta-and-balance-tuning: backlog
+  7-6-final-performance-acceptance: backlog
+  7-7-store-assets-and-submission: backlog
+  epic-7-retrospective: optional

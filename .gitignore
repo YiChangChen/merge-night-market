@@ -30,7 +30,8 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files（app.config.ts 從環境變數讀 PostHog、Sentry、AdMob 金鑰）
+.env
 .env*.local
 
 # typescript
@@ -41,3 +42,12 @@ example
 # generated native folders
 /ios
 /android
+
+# AI agent skills：由安裝器依 skills-lock.json 產生，可重新安裝
+/.agents/
+/agent/
+/.claude/skills/
+
+# BMAD 個人設定（安裝器產生，只屬於本機使用者）
+/_bmad/config.user.toml
+/_bmad/custom/*.user.toml

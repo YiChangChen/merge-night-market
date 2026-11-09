@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>夜市留客計</title>
+<meta name="description" content="夜市合成遊戲新功能腦力激盪紀念冊：四攤技巧、65 個點子、兩條骨幹與核心循環。">
+<style>
+:root{
+  --sky:#0b0a1c; --sky2:#151233; --ink:#f4efe6; --muted:#c9c2d8; --dim:#9a93ad;
+  --user:#ff5fae; --user-glow:rgba(255,95,174,.55);
+  --coach:#3fe3ff; --coach-glow:rgba(63,227,255,.5);
+  --gold:#ffd23f; --gold-glow:rgba(255,210,63,.5);
+  --jade:#5cf2a0; --red:#ff4a3d; --orange:#ff9a3c;
+  --card:#1a1636; --card2:#221d44; --line:#3a3366;
+  --font:"PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--sky);
+  background-image:
+    radial-gradient(ellipse 120% 60% at 50% 0%, #2a1d5a 0%, transparent 60%),
+    radial-gradient(ellipse 80% 40% at 50% 100%, #3a1426 0%, transparent 70%);
+  color:var(--ink); font-family:var(--font); line-height:1.7; font-size:16px;
+  overflow-x:hidden; min-height:100vh;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+a{color:inherit}
+
+/* stars */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+   radial-gradient(1px 1px at 10% 20%,#fff9 50%,transparent 51%),
+   radial-gradient(1px 1px at 30% 8%,#fff7 50%,transparent 51%),
+   radial-gradient(1.5px 1.5px at 70% 15%,#fffa 50%,transparent 51%),
+   radial-gradient(1px 1px at 85% 30%,#fff6 50%,transparent 51%),
+   radial-gradient(1px 1px at 55% 5%,#fff8 50%,transparent 51%),
+   radial-gradient(1px 1px at 92% 6%,#fff7 50%,transparent 51%),
+   radial-gradient(1px 1px at 4% 40%,#fff5 50%,transparent 51%);
+  animation:twinkle 6s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.5}to{opacity:1}}
+main,header,footer,nav{position:relative;z-index:1}
+
+/* lanterns */
+.lanterns{position:relative;height:90px;overflow:hidden}
+.lanterns svg{position:absolute;left:0;top:0;width:100%;height:90px}
+.lantern{transform-origin:50% 0;animation:sway 3.6s ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+
+/* header */
+header{text-align:center;padding:8px 0 40px}
+.kicker{letter-spacing:.3em;color:var(--gold);font-size:.85rem}
+.neon-title{
+  font-size:clamp(2.6rem,11vw,5.6rem);font-weight:900;line-height:1.15;margin:.2em 0 .1em;
+  color:#fff5fb;
+  text-shadow:0 0 4px #fff,0 0 12px var(--user),0 0 28px var(--user),0 0 56px #ff2d8a;
+  animation:flicker 7s infinite;
+}
+.neon-title .alt{color:#eaffff;text-shadow:0 0 4px #fff,0 0 12px var(--coach),0 0 28px var(--coach),0 0 56px #00b7ff}
+@keyframes flicker{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.55}}
+.topic{max-width:720px;margin:12px auto 0;font-size:1.08rem;color:var(--ink)}
+.goal{max-width:720px;margin:8px auto 0;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
+.chip{border:1.5px solid var(--line);background:#14112bcc;border-radius:999px;padding:6px 14px;font-size:.9rem}
+.chip b{color:var(--gold);font-weight:700}
+.count-sign{
+  display:inline-flex;align-items:baseline;gap:8px;margin-top:26px;padding:10px 22px;border-radius:12px;
+  border:2px solid var(--gold);box-shadow:0 0 18px var(--gold-glow),inset 0 0 14px var(--gold-glow);
+  background:#1c1608;
+}
+.count-sign .n{font-size:2.6rem;font-weight:900;color:var(--gold);text-shadow:0 0 10px var(--gold)}
+.count-sign small{color:var(--muted)}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:center;margin:0 auto 10px;padding:14px 16px;
+  border-radius:14px;background:#120f27;border:1px dashed var(--line);max-width:760px;font-size:.92rem}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none}
+.dot.u{background:var(--user);box-shadow:0 0 10px var(--user)}
+.dot.c{background:var(--coach);box-shadow:0 0 10px var(--coach)}
+.dot.d{background:var(--gold);box-shadow:0 0 10px var(--gold);border-radius:3px}
+.dot.i{background:var(--jade);box-shadow:0 0 10px var(--jade);border-radius:3px;transform:rotate(45deg)}
+
+/* street nav */
+nav.street{position:sticky;top:0;z-index:20;background:linear-gradient(#0b0a1cf2,#0b0a1cd9);backdrop-filter:blur(6px);
+  border-bottom:1px solid #2a2450}
+nav.street ul{list-style:none;display:flex;gap:8px;overflow-x:auto;padding:10px 16px;max-width:1080px;margin:0 auto;scrollbar-width:none}
+nav.street ul::-webkit-scrollbar{display:none}
+nav.street a{display:block;white-space:nowrap;text-decoration:none;font-size:.88rem;padding:5px 12px;border-radius:8px;
+  border:1.5px solid currentColor;font-weight:700}
+nav.street a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* intro */
+.prelude{display:grid;gap:14px;margin:34px 0 10px;grid-template-columns:1fr}
+@media(min-width:760px){.prelude{grid-template-columns:1fr 1fr}}
+.note{background:var(--card);border-radius:14px;padding:16px 18px;border-left:4px solid var(--user)}
+.note h3{font-size:.85rem;color:var(--dim);letter-spacing:.15em;margin-bottom:4px}
+
+/* stall */
+.stall{margin:64px 0 0;scroll-margin-top:60px}
+.stall-head{position:relative;border-radius:16px 16px 0 0;overflow:hidden}
+.awning{height:46px;
+  background:repeating-linear-gradient(90deg,var(--a1) 0 36px,var(--a2) 36px 72px);
+  -webkit-mask:radial-gradient(18px 12px at 18px 100%,transparent 98%,#000) 0 0/36px 100% repeat-x;
+          mask:radial-gradient(18px 12px at 18px 100%,transparent 98%,#000) 0 0/36px 100% repeat-x;
+}
+.signboard{margin:-6px auto 0;width:fit-content;max-width:100%;text-align:center;padding:10px 22px 12px;border-radius:12px;
+  background:#0e0c20;border:2.5px solid var(--neon);box-shadow:0 0 14px var(--neon),inset 0 0 12px var(--neon);position:relative;z-index:2}
+.signboard .no{font-size:.78rem;letter-spacing:.3em;color:var(--muted)}
+.signboard h2{font-size:clamp(1.5rem,6vw,2.2rem);line-height:1.25;color:#fff;text-shadow:0 0 6px var(--neon),0 0 18px var(--neon)}
+.signboard .en{font-size:.82rem;color:var(--muted);letter-spacing:.08em}
+.counter{background:linear-gradient(#1d1940,#141130);border:1px solid #2e2858;border-top:0;border-radius:0 0 16px 16px;padding:22px 16px 26px;margin-top:-18px;padding-top:36px}
+@media(min-width:760px){.counter{padding:40px 28px 30px}}
+.stall-lede{color:var(--muted);text-align:center;max-width:640px;margin:0 auto 18px;font-size:.95rem}
+
+.group-title{display:flex;align-items:center;gap:10px;font-size:1.05rem;margin:22px 0 10px;color:var(--gold)}
+.group-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+/* ideas */
+.ideas{list-style:none;display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:640px){.ideas{grid-template-columns:1fr 1fr}}
+.idea{position:relative;background:var(--card2);border-radius:10px;padding:12px 14px 12px 16px;border:1.5px solid transparent;font-size:.96rem}
+.idea::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:4px}
+.idea.u{border-color:#ff5fae55}
+.idea.u::before{background:var(--user);box-shadow:0 0 8px var(--user)}
+.idea.c{border-color:#3fe3ff44}
+.idea.c::before{background:var(--coach);box-shadow:0 0 8px var(--coach)}
+.who{display:inline-block;font-size:.72rem;font-weight:800;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:2px;letter-spacing:.05em}
+.u .who,.who.u{background:var(--user);color:#2a0016}
+.c .who,.who.c{background:var(--coach);color:#00222a}
+.idea.fav{border-color:var(--gold);box-shadow:0 0 16px var(--gold-glow)}
+.fav-tag{position:absolute;top:-10px;right:10px;background:var(--gold);color:#2b1d00;font-size:.72rem;font-weight:900;padding:1px 9px;border-radius:6px;transform:rotate(3deg)}
+
+.decision{margin:16px 0 0;padding:14px 16px 14px 54px;border-radius:12px;position:relative;
+  background:repeating-linear-gradient(-45deg,#2b2208 0 10px,#241c06 10px 20px);border:2px solid var(--gold);
+  box-shadow:0 0 14px var(--gold-glow)}
+.decision::before{content:"定";position:absolute;left:12px;top:50%;transform:translateY(-50%) rotate(-8deg);width:32px;height:32px;border-radius:50%;
+  border:2px solid var(--red);color:var(--red);font-weight:900;display:grid;place-items:center;font-size:1rem;background:#2b0d0a}
+.decision b{color:var(--gold)}
+
+/* stall 1: menu tickets layout tweaks */
+.uses{counter-reset:use}
+.uses .idea{padding-left:46px}
+.uses .idea::after{counter-increment:use;content:counter(use);position:absolute;left:14px;top:12px;width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;font-size:.8rem;font-weight:900;background:#0e0c20;color:var(--gold);border:1.5px solid var(--gold)}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 2px;font-size:.85rem}
+.chain span{background:#0e0c20;border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.chain i{color:var(--gold);font-style:normal}
+
+/* stall 2: timeline */
+.timeline{position:relative;display:grid;gap:22px;grid-template-columns:1fr;margin-top:10px}
+@media(min-width:860px){.timeline{grid-template-columns:repeat(3,1fr)}}
+.phase{position:relative;border-radius:14px;padding:16px 14px;background:var(--card);border-top:6px solid var(--ph)}
+.phase .time{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.phase .orb{width:38px;height:38px;border-radius:50%;flex:none;background:var(--orb);box-shadow:0 0 18px var(--ph)}
+.phase h3{font-size:1.15rem}
+.phase .clock{font-size:.78rem;color:var(--muted);letter-spacing:.1em}
+.phase .ideas{grid-template-columns:1fr}
+.sky-bar{height:10px;border-radius:999px;margin:4px 0 22px;
+  background:linear-gradient(90deg,#ffb35c,#ff5fae 30%,#7b3cff 60%,#1b1550 85%,#0b0a1c)}
+.shutter{display:block;height:20px;border-radius:4px;margin-bottom:8px;
+  background:repeating-linear-gradient(#8c8fa3 0 3px,#5d6075 3px 6px);animation:shutter 4s ease-in-out infinite alternate;transform-origin:top}
+@keyframes shutter{from{transform:scaleY(1)}to{transform:scaleY(.25)}}
+
+/* stall 3: senses */
+.senses{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:900px){.senses{grid-template-columns:repeat(3,1fr)}}
+.sense{border-radius:14px;background:var(--card);padding:16px 14px;border:1.5px solid var(--sc)}
+.sense h3{display:flex;align-items:center;gap:10px;font-size:1.3rem;margin-bottom:10px;color:var(--sc)}
+.sense h3 .glyph{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:1.4rem;color:#0b0a1c;background:var(--sc);font-weight:900;box-shadow:0 0 14px var(--sc)}
+.sense .ideas{grid-template-columns:1fr}
+.marquee{overflow:hidden;border-radius:8px;background:#0e0c20;border:1.5px solid var(--red);margin:6px 0 12px;box-shadow:0 0 10px #ff4a3d66}
+.marquee .track{display:inline-flex;white-space:nowrap;gap:30px;padding:8px 0;animation:marq 22s linear infinite;color:#ffd9b0;font-weight:800}
+.marquee .track span::before{content:"✦ ";color:var(--red)}
+@keyframes marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.price-steps{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+.price-steps span{font-size:.8rem;font-weight:900;padding:2px 8px;border-radius:5px;color:#1a0400}
+.price-steps span:nth-child(1){background:#ffd23f}.price-steps span:nth-child(2){background:#ff9a3c}.price-steps span:nth-child(3){background:#ff4a3d;color:#fff}
+.pegs{height:30px;margin:4px 0 10px;border-radius:6px;background:
+  radial-gradient(circle,#ffd23f 2px,transparent 3px) 0 0/18px 15px,
+  radial-gradient(circle,#ff5fae 2px,transparent 3px) 9px 7px/18px 15px,#0e0c20;position:relative;overflow:hidden}
+.pegs::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:#e8eaf3;box-shadow:0 0 6px #fff;left:20%;top:-10px;animation:ball 2.8s cubic-bezier(.5,0,.7,1) infinite}
+@keyframes ball{0%{top:-10px;left:20%}30%{left:34%}55%{left:28%}80%{left:46%}100%{top:34px;left:52%}}
+.steam-box{position:relative;height:56px;margin:0 0 6px}
+.steam-box .pot{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:120px;height:18px;border-radius:0 0 40px 40px;background:#4a3a2a;border-top:3px solid #a07a4a}
+.steam{position:absolute;bottom:16px;width:10px;height:34px;border-radius:50%;background:linear-gradient(transparent,#ffffff55);filter:blur(3px);animation:steam 3s ease-in infinite}
+.steam:nth-child(2){left:calc(50% - 30px);animation-delay:.4s}
+.steam:nth-child(3){left:calc(50% - 5px);animation-delay:1.1s}
+.steam:nth-child(4){left:calc(50% + 22px);animation-delay:1.8s}
+@keyframes steam{0%{transform:translateY(8px) scaleX(1);opacity:0}30%{opacity:.9}100%{transform:translateY(-26px) scaleX(2.2);opacity:0}}
+.whiff{font-style:italic;color:#d9ffc7;margin:0 0 10px;text-align:center;font-size:.92rem}
+
+/* stall 4: flip cards */
+.flips{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:640px){.flips{grid-template-columns:1fr 1fr}}
+@media(min-width:980px){.flips{grid-template-columns:repeat(3,1fr)}}
+.flip{perspective:900px;background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;width:100%}
+.flip:focus-visible{outline:2px solid #fff;outline-offset:4px;border-radius:14px}
+.flip-inner{display:grid;transition:transform .7s cubic-bezier(.3,.7,.3,1);transform-style:preserve-3d}
+.flip[aria-pressed="true"] .flip-inner{transform:rotateY(180deg)}
+.face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;padding:16px;min-height:170px;display:flex;flex-direction:column;gap:8px}
+.front{background:#2a0f14;border:2px solid #ff4a3d;box-shadow:inset 0 0 18px #ff4a3d44}
+.back{background:#0d2a1e;border:2px solid var(--jade);box-shadow:0 0 14px #5cf2a055;transform:rotateY(180deg)}
+.face .lbl{font-size:.75rem;font-weight:900;letter-spacing:.2em}
+.front .lbl{color:#ff8a80}.back .lbl{color:var(--jade)}
+.front .pain{font-size:1.15rem;font-weight:800;color:#ffe1dd}
+.face .hint{margin-top:auto;font-size:.78rem;color:var(--dim)}
+.flip-all{display:block;margin:0 auto 16px;font:inherit;font-weight:800;color:#0b0a1c;background:var(--jade);border:0;border-radius:999px;padding:8px 20px;cursor:pointer;box-shadow:0 0 12px #5cf2a088}
+.flip-all:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.back .who{margin-right:4px}
+
+/* finale */
+.finale{margin:90px 0 0;scroll-margin-top:60px}
+.finale-title{text-align:center}
+.finale-title .kicker{display:block}
+.finale-title h2{font-size:clamp(1.9rem,8vw,3.4rem);font-weight:900;color:#fff;
+  text-shadow:0 0 6px #fff,0 0 18px var(--gold),0 0 40px #ff8a00}
+.backbones{display:grid;gap:18px;grid-template-columns:1fr;margin:30px 0}
+@media(min-width:820px){.backbones{grid-template-columns:1fr 1fr}}
+.bb{border-radius:18px;padding:22px 18px;background:#0f0d22;border:3px solid var(--bc);box-shadow:0 0 22px var(--bc),inset 0 0 22px color-mix(in srgb,var(--bc) 35%,transparent)}
+.bb .tag{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:12px;font-size:1.6rem;font-weight:900;background:var(--bc);color:#0b0a1c;margin-bottom:8px}
+.bb h3{font-size:1.35rem;margin-bottom:10px}
+.bb ul{list-style:none;display:grid;gap:8px}
+.bb li{padding:8px 12px;border-radius:8px;background:#ffffff0d;border-left:3px solid var(--bc)}
+.bulbs{display:flex;gap:6px;margin:8px 0 12px}
+.bulbs i{width:12px;height:12px;border-radius:50%;background:#3a3366}
+.bulbs i.on{background:var(--gold);box-shadow:0 0 8px var(--gold);animation:bulb 2.4s infinite}
+.bulbs i:nth-child(2){animation-delay:.3s}.bulbs i:nth-child(3){animation-delay:.6s}.bulbs i:nth-child(4){animation-delay:.9s}
+@keyframes bulb{0%,100%{opacity:1}50%{opacity:.4}}
+
+.loop-box{display:grid;gap:20px;grid-template-columns:1fr;align-items:center;background:#100d24;border-radius:20px;padding:20px 12px;border:1px solid var(--line)}
+@media(min-width:820px){.loop-box{grid-template-columns:1.1fr .9fr;padding:28px}}
+.loop-box svg{width:100%;max-width:460px;margin:0 auto;display:block;height:auto}
+.node{animation:pulse 6s infinite}
+.node:nth-of-type(2){animation-delay:1.5s}.node:nth-of-type(3){animation-delay:3s}.node:nth-of-type(4){animation-delay:4.5s}
+@keyframes pulse{0%,20%{filter:drop-shadow(0 0 10px var(--gold))}25%,100%{filter:none}}
+.loop-text h3{font-size:1.3rem;color:var(--gold);margin-bottom:8px}
+.loop-text p{color:var(--muted);margin-bottom:8px}
+
+.insights{display:grid;gap:16px;grid-template-columns:1fr;margin-top:24px}
+@media(min-width:760px){.insights{grid-template-columns:1fr 1fr}}
+.ins{background:#0d2219;border:1.5px solid var(--jade);border-radius:16px;padding:18px 16px}
+.ins h3{color:var(--jade);font-size:1.15rem;margin-bottom:8px;display:flex;gap:8px;align-items:center}
+.ins h3::before{content:"";width:12px;height:12px;background:var(--jade);transform:rotate(45deg);box-shadow:0 0 8px var(--jade);flex:none}
+.ins p,.ins li{color:#dff5ea;font-size:.95rem}
+.ins ul{padding-left:1.2em;display:grid;gap:4px}
+.queue{display:flex;align-items:flex-end;gap:5px;height:44px;margin:10px 0;padding:0 6px;border-bottom:2px solid #2d5a45;overflow:hidden}
+.queue .stand{width:40px;height:40px;border-radius:6px 6px 0 0;background:repeating-linear-gradient(90deg,#ff4a3d 0 8px,#fff 8px 16px);flex:none;position:relative}
+.queue .stand::after{content:"攤";position:absolute;inset:14px 0 0;background:#3b2a1a;color:var(--gold);font-size:.75rem;display:grid;place-items:center;font-weight:900}
+.queue .p{width:12px;height:24px;border-radius:6px 6px 2px 2px;flex:none;background:var(--c,#c9c2d8);animation:serve 5s ease-in-out infinite}
+.queue .p:nth-child(odd){--c:#ff9ac8}.queue .p:nth-child(3n){--c:#8ff0ff}
+@keyframes serve{0%,10%{transform:translateX(0);opacity:1}40%{transform:translateX(-17px);opacity:1}60%,100%{transform:translateX(-17px);opacity:1}}
+.queue .p:nth-child(2){animation:gone 5s ease-in-out infinite}
+@keyframes gone{0%,10%{opacity:1;transform:none}35%,100%{opacity:0;transform:translateY(-14px)}}
+.hp{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
+.hp .bar{flex:1;height:10px;border-radius:999px;background:#1d3a2e;overflow:hidden}
+.hp .bar i{display:block;height:100%;width:78%;background:linear-gradient(90deg,var(--jade),var(--gold));animation:hp 5s ease-in-out infinite alternate}
+@keyframes hp{from{width:55%}to{width:92%}}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+.three span{text-align:center;font-size:.82rem;padding:6px 4px;border-radius:8px;background:#ffffff10;border:1px solid #5cf2a055}
+.three-arrow{text-align:center;font-weight:900;color:var(--gold);font-size:.92rem}
+.mvp{display:grid;gap:8px;grid-template-columns:1fr 1fr;margin:8px 0}
+.mvp div{border-radius:8px;padding:8px 10px;font-size:.88rem}
+.mvp .now{background:#1f3d2f;border:1.5px solid var(--jade)}
+.mvp .later{background:#1d1a35;border:1.5px dashed #6c6499;color:var(--muted)}
+.mvp b{display:block;font-size:.75rem;letter-spacing:.15em;margin-bottom:2px}
+.money{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.money span{background:var(--gold);color:#2b1d00;font-weight:800;font-size:.82rem;padding:3px 10px;border-radius:999px}
+
+footer{text-align:center;padding:60px 16px 40px;color:var(--dim);font-size:.85rem}
+footer .bye{font-size:1.2rem;color:var(--ink);margin-bottom:6px}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .flip[aria-pressed="true"] .flip-inner{transform:none}
+  .flip[aria-pressed="true"] .front{visibility:hidden}
+  .back{transform:none;visibility:hidden}
+  .flip[aria-pressed="true"] .back{visibility:visible}
+  .moving-dot{display:none}
+}
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+
+<div class="lanterns" aria-hidden="true">
+  <svg viewBox="0 0 1000 90" preserveAspectRatio="xMidYMin slice">
+    <path d="M0 10 Q250 50 500 18 T1000 12" fill="none" stroke="#5a4a2a" stroke-width="2"/>
+  </svg>
+  <svg viewBox="0 0 1000 90" preserveAspectRatio="xMidYMin slice" id="lanternRow"></svg>
+</div>
+
+<header class="wrap">
+  <p class="kicker">腦力激盪紀念冊 · 夜市合成遊戲</p>
+  <h1 class="neon-title">夜市<span class="alt">留客</span>計</h1>
+  <p class="topic">以夜市合成遊戲為基礎發想新功能（攤販建造、卡牌收集等）</p>
+  <p class="goal">目標：留住玩家天天回來，並上架變現；參考 Travel Town</p>
+  <div class="meta">
+    <span class="chip">日期 <b>2026-11-08</b></span>
+    <span class="chip">模式 <b>創意夥伴</b></span>
+    <span class="chip">技巧 <b>4 攤</b></span>
+    <span class="chip">老闆 <b>28</b> · Mary <b>37</b></span>
+  </div>
+  <div class="count-sign"><span class="n">65</span><span>個點子<br><small>今晚出餐總數</small></span></div>
+</header>
+
+<div class="wrap">
+  <div class="legend" role="note" aria-label="圖例">
+    <span><i class="dot u"></i>老闆（使用者）的點子</span>
+    <span><i class="dot c"></i>Mary（教練）的點子</span>
+    <span><i class="dot d"></i>老闆拍板的決定</span>
+    <span><i class="dot i"></i>收攤後的洞見</span>
+  </div>
+</div>
+
+<nav class="street" aria-label="夜市一條街">
+  <ul>
+    <li><a href="#s1" style="color:var(--user)">① 特質移植</a></li>
+    <li><a href="#s2" style="color:var(--orange)">② 儀式設計</a></li>
+    <li><a href="#s3" style="color:var(--coach)">③ 五感探索</a></li>
+    <li><a href="#s4" style="color:var(--jade)">④ 反向腦力激盪</a></li>
+    <li><a href="#finale" style="color:var(--gold)">★ 總結大招牌</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+
+  <section class="prelude" aria-label="開場">
+    <div class="note">
+      <h3>起點 · 老闆的方向</h3>
+      <p>參考 <b>Travel Town: Merge Adventure</b>，主題台灣夜市；種子方向：<b>夜市攤販建造</b>、<b>卡牌收集</b>讓遊戲多樣化。四攤技巧依序逛：特質移植 → 儀式設計 → 五感探索 → 反向腦力激盪。</p>
+    </div>
+    <div class="note" style="border-left-color:var(--jade)">
+      <h3>老闆的第一個洞見</h3>
+      <p>上癮的核心＝<b>打發時間</b> ＋ <b>完成某件事後的腦內啡（完成感）</b>。整晚的點子都在回答：怎麼讓玩家隨時都有東西可以「完成」。</p>
+    </div>
+  </section>
+
+  <!-- ============ STALL 1 ============ -->
+  <section class="stall" id="s1" aria-labelledby="s1h">
+    <div class="stall-head" style="--a1:#ff5fae;--a2:#fff0f6">
+      <div class="awning"></div>
+    </div>
+    <div class="signboard" style="--neon:var(--user)">
+      <div class="no">第一攤</div>
+      <h2 id="s1h">特質移植・發明菜老店</h2>
+      <div class="en">Trait Transfer</div>
+    </div>
+    <div class="counter">
+      <p class="stall-lede">把 Travel Town 的上癮特質搬進夜市：重開攤位、分層完成感、發明新菜，一路長出卡牌與接龍。</p>
+
+      <h3 class="group-title">完成感與攤位</h3>
+      <ul class="ideas">
+        <li class="idea c"><span class="who">Mary</span>重振沒落老夜市：用訂單金幣一攤攤重開攤位，每重開一攤解鎖新合成鏈與新常客</li>
+        <li class="idea c"><span class="who">Mary</span>完成感分層：秒級（合成）、分鐘級（訂單）、天級（攤位重開）、週級（收藏冊整頁完成），讓任何時段都有東西可完成</li>
+        <li class="idea u"><span class="who">老闆</span>消化完排隊人龍的爽感</li>
+        <li class="idea u"><span class="who">老闆</span>攤位招牌亮燈</li>
+        <li class="idea u"><span class="who">老闆</span>攤位由小間升級成大間</li>
+        <li class="idea u"><span class="who">老闆</span>新增夜市小遊戲（套圈圈等）</li>
+        <li class="idea c"><span class="who">Mary</span>夜市遊戲攤＝體力／獎勵的旁支迷你遊戲：套圈圈、射氣球、撈金魚、彈珠台，用合成產物換遊戲代幣</li>
+      </ul>
+
+      <h3 class="group-title">發明新菜單</h3>
+      <ul class="ideas">
+        <li class="idea u"><span class="who">老闆</span>發明新菜單</li>
+        <li class="idea u"><span class="who">老闆</span>新菜單雙線：（1）隱藏菜單——玩家自行嘗試跨鏈合成，但需先建好特定店家才能做；成功後菜單新增一項「老闆發明」（2）客人給線索解鎖</li>
+      </ul>
+      <p class="stall-lede" style="margin-top:14px;margin-bottom:6px">發明菜的六種用途 ⇣</p>
+      <ul class="ideas uses">
+        <li class="idea c fav"><span class="fav-tag">最心動</span><span class="who">Mary</span>發明菜成為高價訂單：特定客人（富豪／藝人／YouTuber）只點發明菜，給大量金幣與鑽石</li>
+        <li class="idea c"><span class="who">Mary</span>發明菜上「招牌菜」欄：設為招牌後攤位人潮／訂單頻率提升，可更換</li>
+        <li class="idea c fav"><span class="fav-tag">最心動</span><span class="who">Mary</span>發明菜＝稀有卡牌：每道有卡面、故事、星等，重複合成可升星</li>
+        <li class="idea c fav"><span class="fav-tag">最心動</span><span class="who">Mary</span>YouTuber 客人吃發明菜會「拍片爆紅」，觸發限時排隊人潮事件</li>
+        <li class="idea c"><span class="who">Mary</span>發明菜可交給夜市比賽評審，參加每週美食大賽排名</li>
+        <li class="idea c"><span class="who">Mary</span>發明菜作為攤位升級材料：小攤→大店需要上架 N 道發明菜</li>
+      </ul>
+      <div class="decision">老闆拍板：<b>發明菜 6 種用途全部保留</b>；最心動三道——<b>貴客專屬高價單</b>、<b>發明菜＝卡牌（卡面／故事／升星）</b>、<b>YouTuber 爆紅排隊事件</b>。</div>
+
+      <h3 class="group-title">卡牌從哪裡來</h3>
+      <ul class="ideas">
+        <li class="idea u"><span class="who">老闆</span>卡牌來源：夜市遊戲卡（套圈圈、射氣球等）</li>
+        <li class="idea u"><span class="who">老闆</span>卡牌來源：夜市美食名稱接龍</li>
+        <li class="idea u"><span class="who">老闆</span>卡牌來源：夜市招牌卡</li>
+        <li class="idea c"><span class="who">Mary</span>招牌卡：收集全台各地知名夜市風格招牌（士林／逢甲／六合／花園），集滿換掛到自己攤位上的外觀</li>
+        <li class="idea c"><span class="who">Mary</span>常客卡：12 位客人各有一張羈絆卡，服務越多次升級，解鎖他們的小故事（阿嬤的往事、8+9 的夢想）</li>
+      </ul>
+
+      <h3 class="group-title">美食接龍</h3>
+      <ul class="ideas">
+        <li class="idea u"><span class="who">老闆</span>美食字尾接龍：預先給定頭尾兩道食物，中間需經過 5~10 項食物接到最後一項即完成；獎勵鑽石或特殊卡
+          <div class="chain" aria-hidden="true"><span>頭</span><i>→</i><span>…</span><i>→</i><span>5~10 道</span><i>→</i><span>…</span><i>→</i><span>尾</span></div>
+        </li>
+        <li class="idea c"><span class="who">Mary</span>每日接龍題：每天一題頭尾固定的接龍（像 Wordle），全服同題、可分享結果到社群</li>
+        <li class="idea c"><span class="who">Mary</span>接龍與棋盤連動：接龍中的每道菜必須實際合成出來並出餐，接龍＝一條特殊長訂單</li>
+        <li class="idea c"><span class="who">Mary</span>接龍路線需跨多個攤位的菜，逼玩家擴建不同攤位；接龍完成可解鎖「夜市一條街」連通裝飾</li>
+      </ul>
+      <div class="decision">老闆拍板：<b>美食接龍綁在核心合成玩法</b>——接龍中的菜需實際在棋盤合成出餐。</div>
+    </div>
+  </section>
+
+  <!-- ============ STALL 2 ============ -->
+  <section class="stall" id="s2" aria-labelledby="s2h">
+    <div class="stall-head" style="--a1:#ff9a3c;--a2:#fff4e6"><div class="awning"></div></div>
+    <div class="signboard" style="--neon:var(--orange)">
+      <div class="no">第二攤</div>
+      <h2 id="s2h">儀式設計・一晚的節奏</h2>
+      <div class="en">Ritual Innovation</div>
+    </div>
+    <div class="counter">
+      <p class="stall-lede">從拉起鐵捲門到數紅包袋——把每天回來變成一場有開場、有高潮、有收尾的儀式。</p>
+      <div class="sky-bar" aria-hidden="true"></div>
+      <div class="timeline">
+        <article class="phase" style="--ph:#ffb35c;--orb:radial-gradient(circle at 35% 35%,#fff2c4,#ffb35c)">
+          <div class="time"><span class="orb" aria-hidden="true"></span><div><div class="clock">傍晚 · 上線</div><h3>開攤</h3></div></div>
+          <span class="shutter" aria-hidden="true"></span>
+          <ul class="ideas">
+            <li class="idea c"><span class="who">Mary</span>開攤儀式：每日首次上線拉鐵捲門點招牌，第一位客人為「今日貴人」雙倍獎勵</li>
+          </ul>
+        </article>
+        <article class="phase" style="--ph:#ff5fae;--orb:radial-gradient(circle at 35% 35%,#ffd1e8,#ff2d8a)">
+          <div class="time"><span class="orb" aria-hidden="true"></span><div><div class="clock">週末 · 節慶</div><h3>熱鬧</h3></div></div>
+          <ul class="ideas">
+            <li class="idea u"><span class="who">老闆</span>週末與節慶時人潮變多、獎勵增加</li>
+            <li class="idea c"><span class="who">Mary</span>台灣節慶限定活動：農曆新年（年貨大街）、元宵（猜燈謎＋湯圓鏈）、端午（粽子鏈）、中元（普渡供品、好兄弟客人）、中秋（烤肉＋月餅），各有限定合成鏈與卡牌</li>
+            <li class="idea u"><span class="who">老闆</span>節慶時可請花車或表演舞團到店門口表演</li>
+            <li class="idea c"><span class="who">Mary</span>請表演＝花費資源的限時增益：電音三太子／八家將／辦桌歌手／宋江陣到店門口，表演期間客流 ×2、出現特殊客人</li>
+            <li class="idea c"><span class="who">Mary</span>表演團可收集、可升級，成為另一種卡牌系列（陣頭卡）</li>
+          </ul>
+          <div class="decision">老闆拍板：請表演團靠<b>收集碎片</b>或<b>花金幣</b>（偏向不硬課金）。</div>
+        </article>
+        <article class="phase" style="--ph:#7b6cff;--orb:radial-gradient(circle at 65% 35%,#0b0a1c 30%,#fff8d6 32%)">
+          <div class="time"><span class="orb" aria-hidden="true"></span><div><div class="clock">深夜 · 離線</div><h3>收攤</h3></div></div>
+          <ul class="ideas">
+            <li class="idea c"><span class="who">Mary</span>收攤儀式：每晚結算「今晚營業額」動畫＋紅包袋；離線時攤位自動營業累積收入，上限滿了就得回來收</li>
+          </ul>
+          <div class="decision">老闆拍板：採用<b>收攤結算＋離線營業收入上限</b>的設計。</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STALL 3 ============ -->
+  <section class="stall" id="s3" aria-labelledby="s3h">
+    <div class="stall-head" style="--a1:#3fe3ff;--a2:#eafcff"><div class="awning"></div></div>
+    <div class="signboard" style="--neon:var(--coach)">
+      <div class="no">第三攤</div>
+      <h2 id="s3h">五感探索・聽看聞</h2>
+      <div class="en">Sensory Exploration</div>
+    </div>
+    <div class="counter">
+      <p class="stall-lede">夜市是用全身逛的。叫賣聲、油鍋聲、彈珠檯、霓虹燈、飄過來的香味——每一種感官都變成一個機制。</p>
+      <div class="senses">
+        <div class="sense" style="--sc:#ff9a3c">
+          <h3><span class="glyph" aria-hidden="true">聽</span>聽覺</h3>
+          <div class="marquee" aria-label="叫賣台詞">
+            <div class="track"><span>走過路過千萬不要錯過</span><span>破盤價流血價骨折價</span><span>最後三組</span><span>倒數 5-4-3-2-1</span><span>要的舉手</span><span aria-hidden="true">走過路過千萬不要錯過</span><span aria-hidden="true">破盤價流血價骨折價</span><span aria-hidden="true">最後三組</span><span aria-hidden="true">倒數 5-4-3-2-1</span><span aria-hidden="true">要的舉手</span></div>
+          </div>
+          <ul class="ideas">
+            <li class="idea u"><span class="who">老闆</span>聲音：叫賣秀（參考 YouTube 叫賣影片與老闆提供的台詞）</li>
+            <li class="idea u"><span class="who">老闆</span>聲音：彈珠檯</li>
+            <li class="idea u"><span class="who">老闆</span>聲音：油鍋炸東西</li>
+            <li class="idea c"><span class="who">Mary</span>叫賣按鈕：點擊老闆叫賣（錄好的台語／國語叫賣台詞）吸引路人，連點觸發「叫賣秀」combo 短時間湧入客人</li>
+            <li class="idea c"><span class="who">Mary</span>彈珠檯作為每日免費抽獎迷你遊戲，彈珠落點決定獎勵（卡片碎片／體力／金幣）<div class="pegs" aria-hidden="true"></div></li>
+            <li class="idea c"><span class="who">Mary</span>合成音效與食材相關：高階炸物合成時「滋～」油鍋聲越來越大，給爽感回饋</li>
+            <li class="idea c"><span class="who">Mary</span>叫賣秀節奏小遊戲：跟著台詞節拍點擊，人群越聚越多，combo 越高客人越多</li>
+            <li class="idea c"><span class="who">Mary</span>「破盤價→流血價→骨折價」階梯限時特賣：價格每段下降，玩家決定何時出手，越晚越便宜但可能被搶光
+              <div class="price-steps" aria-hidden="true"><span>破盤價</span><span>流血價</span><span>骨折價</span></div></li>
+            <li class="idea c"><span class="who">Mary</span>「最後三組」稀缺快閃單：限量高獎勵訂單，倒數 5-4-3-2-1 內完成即得</li>
+            <li class="idea c"><span class="who">Mary</span>「要的舉手」：叫賣秀尾聲客人搶單，玩家快速拖出指定品項給舉手的客人</li>
+            <li class="idea u"><span class="who">老闆</span>叫賣秀搶單：客人舉手，玩家需快速把物品交給舉手的人；以「破盤價→流血價→骨折價」表示越慢交貨獎勵越少（速度決定獎勵）</li>
+          </ul>
+        </div>
+        <div class="sense" style="--sc:#ff5fae">
+          <h3><span class="glyph" aria-hidden="true">看</span>視覺</h3>
+          <ul class="ideas">
+            <li class="idea u"><span class="who">老闆</span>視覺：明亮五顏六色的招牌</li>
+            <li class="idea c"><span class="who">Mary</span>招牌霓虹自訂：玩家用收集的字／顏色／燈管組合自己的霓虹招牌，招牌越亮人潮越多</li>
+          </ul>
+        </div>
+        <div class="sense" style="--sc:#5cf2a0">
+          <h3><span class="glyph" aria-hidden="true">聞</span>嗅覺</h3>
+          <div class="steam-box" aria-hidden="true"><span class="pot"></span><span class="steam"></span><span class="steam"></span><span class="steam"></span></div>
+          <p class="whiff">「怎麼有一股中藥味傳過來？」</p>
+          <ul class="ideas">
+            <li class="idea u"><span class="who">老闆</span>嗅覺：蚵仔煎、地瓜球、炸雞排、章魚燒的香味（可作為新合成鏈：蚵仔煎、章魚燒）</li>
+            <li class="idea c"><span class="who">Mary</span>香味飄散機制：攤位做出高階菜時冒出香味煙霧特效，香味飄到鄰近路人頭上引來新客；香味範圍隨攤位升級變大</li>
+            <li class="idea u"><span class="who">老闆</span>用文字＋動畫傳達味道：如「怎麼有一股中藥味傳過來」暗示中藥排骨；食物有熱氣動畫</li>
+            <li class="idea c"><span class="who">Mary</span>味道謎題＝隱藏菜單線索：神秘香味文字飄過畫面，玩家猜出並合成該菜即解鎖發明，連接「客人給線索」路線</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STALL 4 ============ -->
+  <section class="stall" id="s4" aria-labelledby="s4h">
+    <div class="stall-head" style="--a1:#5cf2a0;--a2:#ecfff4"><div class="awning"></div></div>
+    <div class="signboard" style="--neon:var(--jade)">
+      <div class="no">第四攤</div>
+      <h2 id="s4h">反向腦力激盪・翻牌攤</h2>
+      <div class="en">Reverse Brainstorming</div>
+    </div>
+    <div class="counter">
+      <p class="stall-lede">先問「怎麼讓玩家最快棄坑？」，老闆列出痛點，再一張張把招牌翻過來。點卡片翻牌。</p>
+      <button class="flip-all" type="button" id="flipAll">全部翻面</button>
+      <div class="flips">
+        <button class="flip" type="button" aria-pressed="false"><div class="flip-inner">
+          <div class="face front"><span class="lbl">痛點 · 老闆提出</span><p class="pain">難度設定太高</p><span class="hint">點我翻牌 ↻</span></div>
+          <div class="face back"><span class="lbl">翻轉</span><p><span class="who c">Mary</span>動態難度：連續失敗時訂單自動變簡單、給「阿嬤幫忙」免費提示</p></div>
+        </div></button>
+        <button class="flip" type="button" aria-pressed="false"><div class="flip-inner">
+          <div class="face front"><span class="lbl">痛點 · 老闆提出</span><p class="pain">剛開始體力不夠</p><span class="hint">點我翻牌 ↻</span></div>
+          <div class="face back"><span class="lbl">翻轉</span><p><span class="who c">Mary</span>新手前 3 天體力無限或超大體力池（新手開幕週），之後才進入正常回復</p></div>
+        </div></button>
+        <button class="flip" type="button" aria-pressed="false"><div class="flip-inner">
+          <div class="face front"><span class="lbl">痛點 · 老闆提出</span><p class="pain">做什麼事都要課金</p><span class="hint">點我翻牌 ↻</span></div>
+          <div class="face back"><span class="lbl">翻轉</span><p><span class="who c">Mary</span>付費買的是「省時間與造型」（招牌外觀、陣頭造型、月卡），而非過關必需；月卡＝每日登入領鑽石</p></div>
+        </div></button>
+        <button class="flip" type="button" aria-pressed="false"><div class="flip-inner">
+          <div class="face front"><span class="lbl">痛點 · 老闆提出</span><p class="pain">無預警跳出廣告</p><span class="hint">點我翻牌 ↻</span></div>
+          <div class="face back"><span class="lbl">翻轉</span><p><span class="who c">Mary</span>只有玩家主動選擇的激勵廣告（看廣告換體力／雙倍收攤紅包），絕不插頁</p></div>
+        </div></button>
+        <button class="flip" type="button" aria-pressed="false"><div class="flip-inner">
+          <div class="face front"><span class="lbl">痛點 · 老闆提出</span><p class="pain">永遠收集不到最後一張卡</p><span class="hint">點我翻牌 ↻</span></div>
+          <div class="face back"><span class="lbl">翻轉</span><p><span class="who c">Mary</span>卡牌保底：重複卡轉成「星星」可兌換任一缺卡；集卡冊有保底計數器</p></div>
+        </div></button>
+        <button class="flip" type="button" aria-pressed="false"><div class="flip-inner">
+          <div class="face front"><span class="lbl">痛點 · 老闆提出</span><p class="pain">節慶活動跟節慶無關</p><span class="hint">點我翻牌 ↻</span></div>
+          <div class="face back"><span class="lbl">翻轉</span><p><span class="who c">Mary</span>活動限定合成鏈、客人、卡牌皆取材自真實習俗（元宵猜燈謎、中元普渡）</p></div>
+        </div></button>
+      </div>
+
+      <h3 class="group-title">痛點：攤販建造雷同、沒個性 → 四種翻法</h3>
+      <ul class="ideas">
+        <li class="idea c"><span class="who">Mary</span>每個攤位有獨立老闆角色、裝潢風格、專屬合成鏈與小故事，升級外觀分支可選</li>
+        <li class="idea u"><span class="who">老闆</span>攤位擺飾由玩家自行決定（自由裝飾）</li>
+        <li class="idea u"><span class="who">老闆</span>建立攤位時可選擇不同老闆，老闆決定攤位風格</li>
+        <li class="idea c"><span class="who">Mary</span>老闆技能差異：「阿嬤老闆」出餐慢但客人給小費多、「年輕創業老闆」發明成功率高、「老師傅」高階品項機率高；老闆卡可收集</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ FINALE ============ -->
+  <section class="finale" id="finale" aria-labelledby="fh">
+    <div class="finale-title">
+      <span class="kicker">收攤後 · 總結大招牌</span>
+      <h2 id="fh">兩根骨幹，一個循環</h2>
+    </div>
+
+    <div class="backbones">
+      <article class="bb" style="--bc:var(--user)">
+        <span class="tag">A</span>
+        <h3>攤位的實力看得見</h3>
+        <div class="bulbs" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+        <ul>
+          <li>消化排隊人龍</li>
+          <li>招牌亮燈</li>
+          <li>攤位小間升大間</li>
+        </ul>
+      </article>
+      <article class="bb" style="--bc:var(--coach)">
+        <span class="tag">B</span>
+        <h3>新菜單雙線</h3>
+        <div class="bulbs" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+        <ul>
+          <li>隱藏菜單：先蓋好店，才能亂合碰運氣</li>
+          <li>客人給線索解鎖</li>
+        </ul>
+      </article>
+    </div>
+    <p class="stall-lede" style="color:var(--gold)">⇡ 老闆拍板的兩根骨幹 ⇡</p>
+
+    <div class="loop-box">
+      <svg viewBox="0 0 400 400" role="img" aria-labelledby="loopT loopD">
+        <title id="loopT">核心循環</title>
+        <desc id="loopD">蓋攤位，解鎖合成鏈與發明能力，發明菜，成為卡牌與貴客高價單，賺得金幣，再蓋或升級更多攤位。</desc>
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ffd23f"/></marker>
+          <radialGradient id="core" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#3b2a00"/><stop offset="1" stop-color="#100d24"/></radialGradient>
+        </defs>
+        <circle cx="200" cy="200" r="138" fill="none" stroke="#3a3366" stroke-width="14"/>
+        <circle cx="200" cy="200" r="138" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-dasharray="6 10" opacity=".8">
+          <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="30s" repeatCount="indefinite"/>
+        </circle>
+        <path d="M262 76 A138 138 0 0 1 324 138" fill="none" stroke="#ffd23f" stroke-width="3" marker-end="url(#ah)"/>
+        <path d="M324 262 A138 138 0 0 1 262 324" fill="none" stroke="#ffd23f" stroke-width="3" marker-end="url(#ah)"/>
+        <path d="M138 324 A138 138 0 0 1 76 262" fill="none" stroke="#ffd23f" stroke-width="3" marker-end="url(#ah)"/>
+        <path d="M76 138 A138 138 0 0 1 138 76" fill="none" stroke="#ffd23f" stroke-width="3" marker-end="url(#ah)"/>
+        <circle cx="200" cy="200" r="70" fill="url(#core)" stroke="#ffd23f55"/>
+        <text x="200" y="192" text-anchor="middle" fill="#ffd23f" font-size="17" font-weight="900">攤位＝</text>
+        <text x="200" y="216" text-anchor="middle" fill="#ffd23f" font-size="17" font-weight="900">基本單位</text>
+        <text x="200" y="238" text-anchor="middle" fill="#c9c2d8" font-size="11">建造與發明互為燃料</text>
+
+        <g class="node"><rect x="140" y="38" width="120" height="48" rx="12" fill="#2a0f22" stroke="#ff5fae" stroke-width="2.5"/>
+          <text x="200" y="68" text-anchor="middle" fill="#fff" font-size="18" font-weight="800">蓋攤位</text></g>
+        <g class="node"><rect x="288" y="168" width="104" height="64" rx="12" fill="#0d2230" stroke="#3fe3ff" stroke-width="2.5"/>
+          <text x="340" y="196" text-anchor="middle" fill="#fff" font-size="17" font-weight="800">發明菜</text>
+          <text x="340" y="218" text-anchor="middle" fill="#bfefff" font-size="10.5">解鎖合成鏈與發明</text></g>
+        <g class="node"><rect x="130" y="314" width="140" height="56" rx="12" fill="#2a2208" stroke="#ffd23f" stroke-width="2.5"/>
+          <text x="200" y="338" text-anchor="middle" fill="#fff" font-size="15.5" font-weight="800">卡牌</text>
+          <text x="200" y="358" text-anchor="middle" fill="#ffe9a3" font-size="13.5" font-weight="700">貴客高價單</text></g>
+        <g class="node"><rect x="8" y="172" width="104" height="56" rx="12" fill="#0d2a1e" stroke="#5cf2a0" stroke-width="2.5"/>
+          <text x="60" y="198" text-anchor="middle" fill="#fff" font-size="18" font-weight="800">金幣</text>
+          <text x="60" y="217" text-anchor="middle" fill="#c4f7dc" font-size="10.5">再蓋／升級攤位</text></g>
+
+        <circle class="moving-dot" r="8" fill="#fff" style="filter:drop-shadow(0 0 6px #ffd23f)">
+          <animateMotion dur="8s" repeatCount="indefinite" path="M200 62 A138 138 0 1 1 199.9 62"/>
+        </circle>
+      </svg>
+      <div class="loop-text">
+        <h3>核心循環</h3>
+        <p><b style="color:var(--user)">蓋攤位</b> → 解鎖合成鏈與發明能力 → <b style="color:var(--coach)">發明菜</b> → 成為 <b style="color:var(--gold)">卡牌與貴客高價單</b> → <b style="color:var(--jade)">金幣</b> → 再蓋／升級攤位。</p>
+        <p>攤位是遊戲的基本單位，建造與發明互為燃料：要發明得先蓋店，蓋店的錢靠發明菜賺來。</p>
+        <p style="font-size:.85rem;color:var(--dim)">— Mary 的洞見</p>
+      </div>
+    </div>
+
+    <div class="insights">
+      <article class="ins">
+        <h3>人龍＝攤位血條</h3>
+        <div class="queue" aria-hidden="true"><span class="stand"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span></div>
+        <div class="hp" aria-hidden="true"><span>攤位實力</span><span class="bar"><i></i></span></div>
+        <p style="margin-top:8px">排隊人龍是攤位實力的可視化指標，由<b>攤位等級</b>、<b>招牌亮度</b>、<b>招牌菜</b>決定。</p>
+      </article>
+      <article class="ins">
+        <h3>三種事件，其實是一件事</h3>
+        <div class="three"><span>叫賣秀</span><span>YouTuber 爆紅</span><span>陣頭表演</span></div>
+        <p class="three-arrow">↓ 同一件事的三種外衣 ↓</p>
+        <p style="text-align:center;margin-top:4px"><b>「製造人龍事件」</b>——而<b>消化人龍</b>就是它們的爽感收尾。</p>
+      </article>
+      <article class="ins">
+        <h3>線索的三種載體</h3>
+        <ul>
+          <li><b>客人台詞</b></li>
+          <li><b>味道文字</b>（「中藥味」）</li>
+          <li><b>美食接龍</b>（引導式發明，且跨攤位）</li>
+        </ul>
+        <p style="margin-top:8px">老闆的選擇可影響發明成功率，把建造與發明再綁緊。</p>
+      </article>
+      <article class="ins">
+        <h3>MVP 範圍與變現原則</h3>
+        <p>現有程式已有棋盤合成＋訂單＋客人；缺的是「攤位地圖」這層 meta。</p>
+        <div class="mvp">
+          <div class="now"><b>先做</b>攤位重建／升級（含招牌亮燈與人龍）＋隱藏菜單發明</div>
+          <div class="later"><b>之後擴充</b>卡牌、節慶、叫賣秀</div>
+        </div>
+        <div class="money"><span>賣時間與造型</span><span>只用激勵廣告</span><span>新手開幕週</span></div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p class="bye">收攤囉，明天見。</p>
+  <p>夜市留客計 · 2026-11-08 · 老闆 × Mary · 65 個點子</p>
+</footer>
+
+<script>
+(function(){
+  // lantern string
+  var row=document.getElementById('lanternRow');
+  if(row){
+    var cols=['#ff4a3d','#ffd23f','#ff5fae','#3fe3ff','#5cf2a0','#ff9a3c'];
+    var ns='http://www.w3.org/2000/svg', out='';
+    for(var i=0;i<14;i++){
+      var x=40+i*70, t=x/1000;
+      var y=Math.round((1-t)*(1-t)*10+2*(1-t)*t*34+t*t*14);
+      var c=cols[i%cols.length], d=(i%5)*0.35;
+      out+='<g class="lantern" style="transform-box:fill-box;animation-delay:-'+d+'s">'+
+        '<line x1="'+x+'" y1="'+y+'" x2="'+x+'" y2="'+(y+12)+'" stroke="#5a4a2a" stroke-width="1.5"/>'+
+        '<rect x="'+(x-7)+'" y="'+(y+11)+'" width="14" height="4" fill="#3a2a10"/>'+
+        '<ellipse cx="'+x+'" cy="'+(y+30)+'" rx="15" ry="16" fill="'+c+'" style="filter:drop-shadow(0 0 8px '+c+')"/>'+
+        '<path d="M'+(x-10)+' '+(y+20)+'Q'+x+' '+(y+30)+' '+(x-10)+' '+(y+40)+'M'+(x+10)+' '+(y+20)+'Q'+x+' '+(y+30)+' '+(x+10)+' '+(y+40)+'" stroke="#0004" fill="none"/>'+
+        '<rect x="'+(x-7)+'" y="'+(y+45)+'" width="14" height="4" fill="#3a2a10"/>'+
+        '<line x1="'+x+'" y1="'+(y+49)+'" x2="'+x+'" y2="'+(y+60)+'" stroke="'+c+'" stroke-width="2"/></g>';
+    }
+    row.innerHTML=out;
+  }
+  // flip cards
+  var flips=[].slice.call(document.querySelectorAll('.flip'));
+  flips.forEach(function(b){b.addEventListener('click',function(){b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');});});
+  var all=document.getElementById('flipAll');
+  if(all){all.addEventListener('click',function(){
+    var anyFront=flips.some(function(b){return b.getAttribute('aria-pressed')!=='true';});
+    flips.forEach(function(b){b.setAttribute('aria-pressed',anyFront?'true':'false');});
+    all.textContent=anyFront?'全部翻回痛點':'全部翻面';
+  });}
+  // reduced motion: pause SMIL
+  var mq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+  function apply(){document.querySelectorAll('svg').forEach(function(s){if(s.pauseAnimations){mq&&mq.matches?s.pauseAnimations():s.unpauseAnimations();}});}
+  if(mq){apply(); if(mq.addEventListener)mq.addEventListener('change',apply);}
+})();
+</script>
+</body>
+</html>

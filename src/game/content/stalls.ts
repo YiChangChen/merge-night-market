@@ -15,6 +15,11 @@ export type StallDef = {
   color: string;
   /** 霓虹招牌的顏色 */
   neon: string;
+  /**
+   * 重開需要的金幣（FR10）；null 代表開局就開著（手搖飲、炸物）。
+   * 玩家等級門檻沿用 CHAINS[c].unlockLevel（RC-1）。
+   */
+  reopenCoins: number | null;
 };
 
 export const STALLS = {
@@ -24,6 +29,7 @@ export const STALLS = {
     owner: { name: '阿珍', persona: '搖了二十年飲料，熟客的冰塊甜度不用開口，她都記得。' },
     color: '#5B3A29',
     neon: '#00F5D4',
+    reopenCoins: null,
   },
   fried: {
     id: 'fried',
@@ -31,6 +37,7 @@ export const STALLS = {
     owner: { name: '阿炮', persona: '油溫靠耳朵聽，講話跟油鍋一樣劈哩啪啦停不下來。' },
     color: '#7A2E1F',
     neon: '#FFBE0B',
+    reopenCoins: null,
   },
   noodle: {
     id: 'noodle',
@@ -38,6 +45,7 @@ export const STALLS = {
     owner: { name: '林嬸', persona: '攤子關了三年，每天清晨照樣熬湯，等有人幫她拉起鐵捲門。' },
     color: '#3D405B',
     neon: '#FF006E',
+    reopenCoins: 300,
   },
   dumpling: {
     id: 'dumpling',
@@ -45,6 +53,7 @@ export const STALLS = {
     owner: { name: '老王', persona: '退休的飯店點心師傅，小籠包一定要捏滿十八摺。' },
     color: '#2F4F4F',
     neon: '#8338EC',
+    reopenCoins: 600,
   },
   sweet: {
     id: 'sweet',
@@ -52,5 +61,6 @@ export const STALLS = {
     owner: { name: '小葵', persona: '剛畢業的甜點系女生，推著餐車，想讓夜市的最後一口是甜的。' },
     color: '#6D2E46',
     neon: '#FB5607',
+    reopenCoins: 1000,
   },
 } as const satisfies Record<ChainId, StallDef>;

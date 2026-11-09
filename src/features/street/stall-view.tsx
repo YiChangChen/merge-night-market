@@ -1,10 +1,12 @@
-import { memo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useOverlayStore } from '@/features/overlays';
 import { type ChainId, STALLS } from '@/game/content';
 import { useGameStore } from '@/game/store';
 
 import { NeonSign } from './neon-sign';
+import { RollingShutter } from './rolling-shutter';
 
 export const STALL_WIDTH = 220;
 
@@ -26,7 +28,7 @@ type StallViewProps = {
 };
 
 /**
- * 夜市街上的一個攤位。只訂閱自己的攤位等級：拖曳棋子、出單都不會讓它重繪。
+ * 夜市街上的一個攤位，點一下開啟攤位面板（UX-DR3）。只訂閱自己的攤位等級：拖曳棋子、出單都不會讓它重繪。
  * 圖層由下往上：外觀 → 霓虹 → 鐵捲門（Lv0）→ 老闆。招牌菜（E3）與人龍頭像（S2.3）之後加入。
  */
 export const StallView = memo(function StallView({ chain, animate }: StallViewProps) {
@@ -34,11 +36,22 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   const stall = STALLS[chain];
   const appearance = APPEARANCE[level];
   const closed = level === 0;
+  const facadeHeight = FACADE_MAX_HEIGHT * appearance.height;
+  // 重開演出（FxController 收到 stall_reopened 後觸發）
+  const opening = useOverlayStore((store) => store.shutterOpening[chain]);
+  const openPanel = useOverlayStore((store) => store.openStallPanel);
+  const finishShutter = useOverlayStore((store) => store.finishShutter);
+  const onShutterDone = useCallback(() => finishShutter(chain), [chain, finishShutter]);
 
   return (
-    <View testID={`stall-${chain}`} style={styles.stall}>
+    <Pressable
+      testID={`stall-${chain}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${stall.name}，${appearance.label}`}
+      onPress={() => openPanel(chain)}
+      style={styles.stall}>
       <NeonSign name={stall.name} color={stall.neon} level={level} animate={animate} />
-      <View style={[styles.facade, { height: FACADE_MAX_HEIGHT * appearance.height }]}>
+      <View style={[styles.facade, { height: facadeHeight }]}>
         <View style={[styles.body, { backgroundColor: closed ? '#2B2F45' : stall.color }]}>
           {closed ? (
             <View testID={`stall-${chain}-shutter`} style={styles.shutter}>
@@ -52,6 +65,9 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
             </View>
           )}
           <Text style={styles.levelLabel}>{appearance.label}</Text>
+          {opening !== undefined && !closed ? (
+            <RollingShutter key={opening} height={facadeHeight} onDone={onShutterDone} />
+          ) : null}
         </View>
       </View>
       <View style={styles.owner}>
@@ -66,7 +82,7 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
           </Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 });
 

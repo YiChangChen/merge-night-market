@@ -42,7 +42,7 @@ function order(requirements: Order['requirements']): Order {
 }
 
 describe('createGame', () => {
-  it('starts with level 1 generators, full energy and fillable orders', () => {
+  it('開局只有已開攤位（手搖飲、炸物）的產生器與訂單', () => {
     const state = createGame(NOW, 1);
     const generators = state.board.filter((piece) => piece?.kind === 'generator');
     expect(generators).toHaveLength(2);
@@ -50,7 +50,7 @@ describe('createGame', () => {
     expect(state.orders).toHaveLength(BALANCE.orderSlots);
     for (const { requirements } of state.orders) {
       for (const { chain, level } of requirements) {
-        expect(CHAINS[chain].unlockLevel).toBe(1);
+        expect(['tea', 'fried']).toContain(chain);
         expect(level).toBeGreaterThanOrEqual(2);
         expect(level).toBeLessThanOrEqual(CHAINS[chain].items.length);
       }
@@ -196,7 +196,7 @@ describe('orders', () => {
       ...withBoard(base, { 4: item(1, 'tea', 2) }),
       orders: [base.orders[0], target, base.orders[2]],
     };
-    const next = completeOrder(state, target.id);
+    const next = completeOrder(state, target.id, NOW);
     expect(next.board[4]).toBeNull();
     expect(next.coins).toBe(state.coins + target.coins);
     expect(next.xp).toBe(state.xp + target.xp);
@@ -211,11 +211,11 @@ describe('orders', () => {
   it('does nothing when items are missing or the order is unknown', () => {
     const target = order([{ chain: 'tea', level: 2 }]);
     const state = { ...withBoard(createGame(NOW, 1), {}), orders: [target] };
-    expect(completeOrder(state, target.id)).toBe(state);
-    expect(completeOrder(state, 12345)).toBe(state);
+    expect(completeOrder(state, target.id, NOW)).toBe(state);
+    expect(completeOrder(state, 12345, NOW)).toBe(state);
   });
 
-  it('levels up, grants energy and unlocks the next generator', () => {
+  it('升級時給體力，但不再自動放上產生器（RC-1、FR11）', () => {
     const target = { ...order([{ chain: 'tea', level: 2 }]), xp: xpToNextLevel(2) };
     const state: GameState = {
       ...withBoard(createGame(NOW, 1), { 4: item(1, 'tea', 2) }),
@@ -223,14 +223,15 @@ describe('orders', () => {
       xp: 0,
       orders: [target],
     };
-    const next = completeOrder(state, target.id);
+    const next = completeOrder(state, target.id, NOW);
     expect(next.level).toBe(3);
     expect(next.xp).toBe(0);
     expect(next.energy).toBe(state.energy + target.energy + BALANCE.levelUpEnergy);
-    expect(next.board.some((p) => p?.kind === 'generator' && p.chain === 'noodle')).toBe(true);
+    expect(next.board.some((p) => p?.kind === 'generator' && p.chain === 'noodle')).toBe(false);
+    expect(next.pendingGenerators).toEqual([]);
   });
 
-  it('never asks for a locked chain or an impossible level', () => {
+  it('訂單只出自已開的攤位，階數不超過該鏈範圍（RC-2、FR7）', () => {
     let state = createGame(NOW, 7);
     for (let level = 1; level <= 30; level++) {
       for (let i = 0; i < 40; i++) {
@@ -241,9 +242,10 @@ describe('orders', () => {
           xp: 0,
           orders: [target],
         };
-        state = completeOrder(ready, target.id);
+        state = completeOrder(ready, target.id, NOW);
         for (const { chain, level: required } of state.orders[0].requirements) {
-          expect(CHAINS[chain].unlockLevel).toBeLessThanOrEqual(level);
+          // 玩家等級再高，只要攤位還是鐵捲門，就不會出現在訂單裡
+          expect(state.stalls[chain].level).toBeGreaterThanOrEqual(1);
           expect(required).toBeGreaterThanOrEqual(2);
           expect(required).toBeLessThanOrEqual(CHAINS[chain].items.length);
         }
@@ -262,21 +264,21 @@ describe('selling and a full board', () => {
     expect(sellPiece(state, 1)).toBe(state);
   });
 
-  it('queues an unlocked generator on a full board and places it once a cell opens', () => {
+  it('棋盤全滿時待放的產生器依序等待，空出格子才放上去', () => {
     const base = fullBoard(createGame(NOW, 1));
     const orderCell = base.board.findIndex((piece) => piece?.kind === 'item');
     base.board[orderCell] = item(9999, 'fried', 6);
     const target = { ...order([{ chain: 'fried', level: 6 }]), xp: xpToNextLevel(2) };
 
-    // 交單空出的唯一一格會先給等待中的甜品車，升級解鎖的麵線鍋只能繼續等
+    // 交單空出的唯一一格先給排在前面的甜品車，麵線鍋繼續等；升級本身不會再加產生器
     const state: GameState = {
       ...base,
       level: 2,
       xp: 0,
       orders: [target],
-      pendingGenerators: ['sweet'],
+      pendingGenerators: ['sweet', 'noodle'],
     };
-    const afterOrder = completeOrder(state, target.id);
+    const afterOrder = completeOrder(state, target.id, NOW);
     expect(afterOrder.pendingGenerators).toEqual(['noodle']);
     expect(afterOrder.board[orderCell]).toMatchObject({ kind: 'generator', chain: 'sweet' });
 

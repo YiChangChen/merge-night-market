@@ -81,9 +81,61 @@ function flushPendingGenerators(state: GameState): GameState {
   return next;
 }
 
+/** 已重開（等級 ≥ 1）的攤位；訂單只從這些鏈產生（RC-2、FR7）。 */
+export function openStallChains(stalls: Record<ChainId, StallState>): ChainId[] {
+  return CHAIN_IDS.filter((chain) => stalls[chain].level >= 1);
+}
+
+/** 攤位等級帶來的訂單金幣倍率：Lv1 ×1.0、Lv2 ×1.1、Lv3 ×1.2（FR15）。 */
+function stallCoinMultiplier(level: number): number {
+  return 1 + BALANCE.stallOrderBonusPerLevel * (level - 1);
+}
+
+/** 一般訂單金幣 = Σ 5 × baseCost × 該攤加成（FR8、FR15）。兩品項訂單分別依各自攤位的等級計算。 */
+export function orderCoins(
+  requirements: readonly Requirement[],
+  stalls: Record<ChainId, StallState>
+): number {
+  return requirements.reduce(
+    (sum, r) =>
+      sum +
+      Math.round(
+        BALANCE.orderCoinsPerBase * baseCost(r.level) * stallCoinMultiplier(stalls[r.chain].level)
+      ),
+    0
+  );
+}
+
+/**
+ * 每張新訂單的期望金幣（數學期望值，對應 createOrder 的抽法）。
+ * 用來產出 docs/balance.md 的「各玩家等級每單期望金幣」表，S6.4 用它驗證教學、S7.5 用實測校正。
+ */
+export function expectedOrderCoins(
+  playerLevel: number,
+  stalls: Record<ChainId, StallState>
+): number {
+  const chains = openStallChains(stalls);
+  if (chains.length === 0) return 0;
+  // 單一品項的期望金幣：鏈均勻抽、階數在 2..maxLevel 均勻抽
+  const perRequirement =
+    chains.reduce((sum, chain) => {
+      const maxLevel = maxOrderItemLevel(playerLevel, chain);
+      let chainSum = 0;
+      for (let level = 2; level <= maxLevel; level++) {
+        chainSum += orderCoins([{ chain, level }], stalls);
+      }
+      return sum + chainSum / (maxLevel - 1);
+    }, 0) / chains.length;
+  const expectedCount =
+    playerLevel >= BALANCE.twoItemOrderMinLevel ? 1 + BALANCE.twoItemOrderChance : 1;
+  return perRequirement * expectedCount;
+}
+
 function createOrder(state: GameState): [Order, GameState] {
   let next = state;
-  const chains = unlockedChains(state.level);
+  const open = openStallChains(state.stalls);
+  // 存檔驗證不保證至少有一攤開著；全關時退回依玩家等級解鎖的鏈，避免抽籤落空
+  const chains = open.length > 0 ? open : unlockedChains(state.level);
   const requirements: Requirement[] = [];
 
   let count = 1;
@@ -108,7 +160,8 @@ function createOrder(state: GameState): [Order, GameState] {
     id: next.nextId,
     kind: 'normal',
     requirements,
-    coins: totalCost * BALANCE.orderCoinsPerBase,
+    // 建立當下就鎖定，之後攤位升級不回溯（RC-3）
+    coins: orderCoins(requirements, state.stalls),
     xp: requirements.reduce((sum, r) => sum + r.level, 0),
     energy: Math.ceil(totalCost * BALANCE.orderEnergyRefund),
   };
@@ -315,14 +368,13 @@ function applyLevelUps(state: GameState): GameState {
       level,
       energy: next.energy + BALANCE.levelUpEnergy,
     };
-    for (const id of CHAIN_IDS) {
-      if (CHAINS[id].unlockLevel === level) next = placeGenerator(next, id);
-    }
+    // 產生器不再隨玩家等級出現，只在攤位重開時放上棋盤（RC-1、FR11，見 S1.9 reopenStall）
   }
   return next;
 }
 
-export function completeOrder(state: GameState, orderId: number): GameState {
+// now 目前沒有用到；簽名先統一成 (state, ..., now)，S2.1 的人龍會用到
+export function completeOrder(state: GameState, orderId: number, _now: number): GameState {
   const orderIndex = state.orders.findIndex((order) => order.id === orderId);
   if (orderIndex === -1) return state;
   const order = state.orders[orderIndex];
@@ -347,7 +399,11 @@ export function completeOrder(state: GameState, orderId: number): GameState {
   const orders = [...afterOrder.orders];
   orders.splice(orderIndex, 1);
   orders.push(replacement);
-  return { ...afterOrder, orders };
+  return {
+    ...afterOrder,
+    orders,
+    events: [...afterOrder.events, { type: 'order_completed', kind: order.kind, coins: order.coins }],
+  };
 }
 
 // 賣掉品項騰出空間，避免棋盤塞滿無法合成時卡死。產生器不能賣。

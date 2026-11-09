@@ -259,7 +259,7 @@ export default function GameScreen() {
 
   const handleCompleteOrder = (id: number) => {
     setSelected(null);
-    apply((current) => completeOrder(current, id));
+    apply((current) => completeOrder(current, id, Date.now()));
   };
 
   return (

@@ -10,6 +10,8 @@ export const BALANCE = {
   // 產生器有這個機率直接產出 2 階品項
   spawnLevel2Chance: 0.15,
   orderCoinsPerBase: 5,
+  // 攤位每升 1 級，該攤品項的訂單金幣 +10%（FR15）；在訂單建立時鎖定（RC-3）
+  stallOrderBonusPerLevel: 0.1,
   // 訂單回補的體力，相對於製作該品項所需基礎品項數的比例
   orderEnergyRefund: 0.3,
   levelUpEnergy: 20,

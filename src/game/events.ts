@@ -2,12 +2,13 @@
 // 訂閱者只有 FxController、AudioService、Telemetry（見 game-architecture.md〈Event System〉）。
 // 訂閱者只能讀，不得在處理事件時同步呼叫 apply；真的需要時放進 queueMicrotask。
 import type { ChainId } from './content';
+import type { OrderKind } from './types';
 
 // type 一律是 snake_case 過去式，同時作為埋點事件名。
 // 目前只列出現有型別能表達的事件；發明、卡牌、廣告等事件由之後的 story 加入。
 export type GameEvent =
   | { type: 'item_merged'; chain: ChainId; level: number }
-  | { type: 'order_completed'; kind: 'normal'; coins: number }
+  | { type: 'order_completed'; kind: OrderKind; coins: number }
   | { type: 'queue_sold_out'; wave: number; length: number }
   | { type: 'stall_reopened' | 'stall_upgraded'; stall: ChainId; level: number };
 

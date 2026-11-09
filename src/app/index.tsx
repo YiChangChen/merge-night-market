@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInRight, LinearTransition, ZoomOut } from 'react-native-reanimated';
@@ -21,6 +22,9 @@ import {
   xpToNextLevel,
 } from '@/game/engine';
 import { useGameStore } from '@/game/store';
+// Spike A（暫時）：除錯入口，Story 1.3 結論出來後移除
+import { markNavStart } from '@/features/street';
+import { config } from '@/services/config';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
@@ -274,6 +278,17 @@ export default function GameScreen() {
             <Text style={styles.toastText}>{toast}</Text>
           </View>
         ) : null}
+        {config.debugTools ? (
+          <Pressable
+            testID="spike-street-entry"
+            onPress={() => {
+              markNavStart();
+              router.push('/spike-street');
+            }}
+            style={styles.spikeEntry}>
+            <Text style={styles.spikeEntryText}>Spike A</Text>
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -390,5 +405,22 @@ const styles = StyleSheet.create({
   toastText: {
     color: '#FFF3D6',
     fontSize: 14,
+  },
+  spikeEntry: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: '#FF006ECC',
+  },
+  spikeEntryText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

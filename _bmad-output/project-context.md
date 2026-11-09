@@ -60,7 +60,10 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - 目標：在 Pixel 6a 的 release build 上，拖曳與夜市街維持 60 FPS；冷啟動 ≤ 3 秒；分頁切換 ≤ 300 ms。
 - **熱路徑不寫 log、不配置大物件、不 `setState`**。熱路徑包括：手勢 callback、worklet、每秒 tick、`syncAll`、render。
 - 兩個分頁常駐並設 `freezeOnBlur`。所在分頁失焦時，循環動畫（霓虹、熱氣、人龍）要用 `useIsFocused` 暫停。
-- 夜市街的特效在 #4 決策閘門出結論之前**不得實作**，要等閘門結果回填到 game-architecture.md。
+- 夜市街與特效一律用**純 RN + Reanimated** 實作（#4 閘門暫定結論，2026-11-09）：
+  - 不得引入 Skia、Lottie、Rive。
+  - 每攤最多畫 4 個頭像，超過的部分顯示 `+k`。
+  - 這是 iPhone 上的暫定結論，Android 中階機複驗沒通過時會改變；改變時以 game-architecture.md 的 #4 為準。
 - 素材：
   - 一律 WebP；品項與頭像 ≤ 512px，攤位 ≤ 1024px。
   - `expo-image` 設 `cachePolicy="memory-disk"`。

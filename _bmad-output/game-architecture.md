@@ -19,7 +19,7 @@ brief: null
 
 ## Document Status
 
-**狀態：** 完成（9/9 步）。這份文件是 AI agent 實作時必須遵守的規範。#4 夜市街渲染的結論，要在 W1–2 閘門結束後回填。
+**狀態：** 完成（9/9 步）。這份文件是 AI agent 實作時必須遵守的規範。#4 夜市街渲染已於 2026-11-09 由 Spike A 暫定為純 RN + Reanimated（iPhone 量測，待 Android 中階機複驗）。
 
 ---
 
@@ -33,7 +33,7 @@ brief: null
 - **存檔 v2**：單一 JSON 加上版本遷移鏈。首次遷移前先備份 v1；遷移失敗時絕不覆寫原檔，也不會開新局。
 - **型別化 GameEvent**：演出、音效、埋點共用同一組事件。廣告（AdMob 17.4）、埋點（PostHog）、崩潰回報（Sentry）都包在服務介面後面，Web 版一律 no-op。
 - **4 個自訂模式**：拖放解析、人龍波次、阿嬤保底計數、激勵廣告交易。
-- **夜市街渲染方式**：由 W1–2 的效能閘門決定，依序嘗試純 RN → Skia → Lottie → 降級。
+- **夜市街渲染方式**：純 RN + Reanimated（Spike A 暫定結論；待 Android 中階機複驗，見 #4）。
 
 **專案結構：** 先分層、層內再按功能。共有 14 個核心系統，分層邊界由 ESLint 強制。
 
@@ -137,7 +137,7 @@ brief: null
 |---|---|---|
 | 目標平台 | iOS 16.4+ / Android 8+，只支援直式 | iOS 16.4 是 SDK 58 的下限。Android 目前 minSdk 是 24（預設值），**待辦**：`npx expo install expo-build-properties`，並在 app.json 設定 `android.minSdkVersion: 26`。Web 不是目標平台；app.json 保留 web 設定只是為了開發預覽 |
 | 渲染：棋盤與一般 UI | RN View/Image + `expo-image`，動畫用 Reanimated 4（UI-thread worklets） | 已實作 |
-| 渲染：夜市街與特效 | **待決 #4** | 決定前不得實作 |
+| 渲染：夜市街與特效 | **純 RN + Reanimated（#4 暫定）** | 不需要 Skia／Lottie；待 Android 複驗 |
 | 輸入 | react-native-gesture-handler 3 | Pan、Tap |
 | 場景與畫面管理 | Expo Router（路由放在 `src/app/`） | 分頁結構見 #3 |
 | 建置與發佈 | EAS Build / Submit / Update，採 CNG | **待建立**：用 `npx eas-cli@latest build:configure` 產生 `eas.json`（development / preview / production），並在 app.json 設定 `runtimeVersion: { policy: "fingerprint" }`。**原生依賴有變動就必須重建，不能只推 OTA** |
@@ -170,7 +170,7 @@ brief: null
 | 1 | 狀態管理與切分 | 已定：Zustand 薄殼加 selector（State Management） |
 | 2 | 存檔格式與 v1→v2 遷移 | 已定：單一 JSON 加遷移鏈（Data Persistence） |
 | 3 | 導覽結構與常駐 | 已定：Router Tabs，兩頁常駐並設 freezeOnBlur（Navigation） |
-| 4 | **夜市街與特效渲染** | **刻意延後，交給 W1–2 決策閘門決定**（見下方） |
+| 4 | **夜市街與特效渲染** | **暫定：純 RN + Reanimated**（2026-11-09 Spike A，iPhone 量測；待 Android 中階機複驗，見下方） |
 | 5 | 激勵廣告 SDK | 已定：AdMob 17.4 加 UMP 與 ATT（Rewarded Ads）；仍需在 W1–2 做 spike 驗證 |
 | 6 | 數據埋點 | 已定：PostHog |
 | 7 | 音效引擎 | 已定：expo-audio 58.0.11 |
@@ -183,6 +183,20 @@ brief: null
 - 門檻：60 FPS、街道與棋盤互切 ≤ 300 ms、冷啟動 ≤ 3 秒。
 - 依序嘗試：純 RN → RN + Skia 特效層（@shopify/react-native-skia 2.14.0）→ RN + Lottie/Rive 預製動畫（lottie-react-native 7.5.0）→ 降級（頭像上限 10、霓虹改為靜態分段圖）。第一個通過門檻的方案就採用。
 - 結果要回填到本表與 Architectural Decisions 的 Decision Summary #4。
+
+**#4 閘門結果（第一階段，2026-11-09）**
+
+| 項目 | 結果 |
+|---|---|
+| 量測裝置 | iPhone 16（60 Hz），以 Expo Go 搭配 `--no-dev --minify` 執行。使用者沒有 Android 手機、Mac 或 Apple Developer 付費帳號，無法照原規格在 Pixel 6a release build 上量測 |
+| 場景 | 純 RN + Reanimated：5 攤 × 4 層（外觀、霓虹 3 段閃爍、鐵捲門循環、每攤 4 個頭像晃動），共 20 個頭像，每 5 秒放一次 30 粒子煙火；約 70 個 animated view 同時播放，量測時持續左右捲動 |
+| FPS（30 秒 × 3 次，中位數） | UI 執行緒 60.1 FPS、卡頓 0.0%；JS 執行緒 60.1 FPS（3 次結果相同） |
+| 進入夜市街（點擊到首次 onLayout，22 次中位數） | 72 ms |
+| 冷啟動、記憶體 | 未量測：Expo Go 下沒有參考價值；沒有 Mac 就無法用 Instruments |
+| **結論** | **暫定採用純 RN + Reanimated**，不引入 Skia 或 Lottie。頭像上限暫定每攤 N = 4（實測值） |
+| 待辦 | 取得 Android 中階機後，用原本的方法（release build、Flashlight、`adb`）複驗 FPS、冷啟動和記憶體，最晚在 S7.6 之前完成。如果沒通過，再依序評估 Skia → Lottie → 降級。原型保留在 `src/features/street/__spike__/` 供複驗使用，S1.7 改寫成正式畫面時移除 |
+
+**限制：**iPhone 的效能高於 Pixel 6a，而且 Expo Go 不是真正的 release build，所以第一階段只能排除「純 RN 在高階機上就不夠」的情況，不能保證中階 Android 也能達標。
 
 ### 交接給後續章節
 
@@ -201,7 +215,7 @@ brief: null
 | 1 | 狀態管理 | Zustand 薄殼包住純函式規則引擎，元件以 selector 訂閱 | zustand 5.1.0 | 兩個分頁常駐，必須按切片訂閱，避免拖曳時連帶重繪夜市街；規則引擎維持純函式 |
 | 2 | 存檔 | 單一 JSON key + 遷移鏈 + v1 原檔備份 | AsyncStorage 2.2.0 | 存檔小於 20 KB；單一 key 天然具原子性；遷移可測試 |
 | 3 | 導覽 | Expo Router Tabs（兩頁常駐、freezeOnBlur）+ 收藏冊 modal 路由 + 根層 Overlay Host | expo-router ~58 | 切換 ≤ 300 ms；全螢幕演出不污染導覽堆疊 |
-| 4 | 夜市街渲染 | W1–2 決策閘門（見 Engine & Framework #4）；本節只定元件骨架 | — | 等量測數據出來再決定 |
+| 4 | 夜市街渲染 | 純 RN + Reanimated（Spike A 暫定，待 Android 複驗；見 Engine & Framework #4 閘門結果） | react-native-reanimated 4.7.1（既有） | iPhone 實測：UI／JS 60 FPS、卡頓 0%、進入 72 ms；不需要新增原生依賴 |
 | 5 | 激勵廣告 | Google Mobile Ads（AdMob）+ UMP + ATT，包在 `AdService` 介面後面 | react-native-google-mobile-ads 17.4.0、expo-tracking-transparency 58.0.2 | 有官方 Expo plugin；v17 符合 RN 0.88 + New Architecture；之後可在 AdMob 後台開 mediation |
 | 6 | 埋點 | PostHog | posthog-react-native 4.85.3 | 無額外原生依賴；內建留存報表 |
 | 7 | 崩潰回報 | Sentry | @sentry/react-native 8.34.0 | 直接提供 crash-free sessions 指標 |
@@ -1003,7 +1017,7 @@ export const upgradeCost = (state: GameState, stall: StallId) => STALLS[stall].l
 - [ ] ESLint 加上分層規則：`no-restricted-imports`、`no-restricted-syntax`（`src/game/**` 禁用 `Date.now` 與 `Math.random`）、`no-console`
 - [ ] 安裝 `zustand` 5.1，建立 `store.ts`，`useGame` 改成包在 store 外面的薄層
 - [ ] 原生套件前置關卡：`react-native-google-mobile-ads`、`@sentry/react-native`、`expo-audio`、候選特效套件，逐一確認 New Architecture 支援與 `expo-doctor` 通過
-- [ ] **Spike A**：夜市街效能閘門（#4）
+- [x] **Spike A**：夜市街效能閘門（#4）：iPhone 暫定通過（純 RN），待 Android 複驗
 - [ ] **Spike B**：AdMob 激勵廣告，在雙平台以開發版建置播放測試廣告，並走完 UMP 與 ATT 流程
 
 ### Issues Resolved

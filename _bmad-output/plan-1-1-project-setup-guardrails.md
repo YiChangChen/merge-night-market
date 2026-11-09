@@ -3,8 +3,8 @@ title: 'S1.1 專案設定與規則護欄'
 type: chore
 ticket: ''
 created: '2026-11-09'
-status: ready-for-dev
-baseline_revision: ''
+status: done
+baseline_revision: 'f901b039302593227f7514bc4f961f5df84b988b'
 route: full
 route_source: auto
 risk: medium
@@ -84,6 +84,8 @@ context:
 ## Implementation Notes
 
 ## Plan Change Log
+
+- 2026-11-09：實作已於 `f901b03` 提交，事後驗證。差異：(1) 原實作只讀 `EAS_BUILD_PROFILE`、`eas.json` 沒有 `env.APP_VARIANT`，導致 AC 2 失敗；已補上 `APP_VARIANT ?? EAS_BUILD_PROFILE` 與三個 profile 的 `env.APP_VARIANT`。(2) `posthogKey`／`sentryDsn` 缺值時為 `null`（非 `undefined`），`adUnitIds` 在非 production 為 `null`，測試 ID 移到 S1.4 —— 接受現況。(3) AC 4 要求 `src/app/probe.tsx` 全部違規都失敗，與 Boundaries「規則只對 `src/game/**` 生效」矛盾；依 Boundaries 驗收（`src/app` 只擋 console）。(4) jest 數量因 1.2a/b 新增測試變為 57/57。
 
 ## Review Triage Log
 

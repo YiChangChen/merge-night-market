@@ -1,15 +1,15 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
- * EAS 建置時由 EAS 注入 EAS_BUILD_PROFILE（development / preview / production）。
- * 本機 `expo start` 沒有這個變數，視為 development。
+ * 建置 profile 優先讀 APP_VARIANT（eas.json 各 profile 的 env 注入，本機也可手動設定），
+ * 其次讀 EAS 建置時自動注入的 EAS_BUILD_PROFILE；兩者都沒有時視為 development。
  */
 type BuildProfile = 'development' | 'preview' | 'production';
 
+const rawProfile = process.env.APP_VARIANT ?? process.env.EAS_BUILD_PROFILE;
+
 const profile: BuildProfile =
-  process.env.EAS_BUILD_PROFILE === 'production' || process.env.EAS_BUILD_PROFILE === 'preview'
-    ? process.env.EAS_BUILD_PROFILE
-    : 'development';
+  rawProfile === 'production' || rawProfile === 'preview' ? rawProfile : 'development';
 
 const isProduction = profile === 'production';
 

@@ -2,3 +2,4 @@
 export * from './balance';
 export * from './chains';
 export * from './customers';
+export * from './stalls';

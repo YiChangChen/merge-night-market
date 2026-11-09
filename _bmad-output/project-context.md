@@ -89,7 +89,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - 平台專屬實作用 `*.web.ts` 後綴。每個原生服務都必須提供 web 版的 no-op。
 - 內容與數值只放在 `src/game/content/*.ts`（`as const satisfies`）。元件與服務不得寫死數字或金鑰；金鑰一律透過 `services/config.ts` 讀 `expo-constants` 的 extra。
 - 日誌只用 `log.<level>(scope, msg, data)`，`console.*` 會被 lint 擋下。log 不得包含完整存檔或個資。
-- 樣式用 `StyleSheet.create`，放在檔案底部，沿用既有寫法。
+- 樣式用 `StyleSheet.create`，放在檔案底部，沿用既有寫法。RN 0.88 已移除 `StyleSheet.absoluteFillObject`，一律用 `StyleSheet.absoluteFill`。
 
 ### Testing Rules
 
@@ -105,6 +105,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
   - 放在該 feature 的 `__tests__/`，檔名 `<module>-test.tsx`。
   - 依賴服務層時，用 `jest.mock('@/services/…')` 隔離。
 - 路由整合測試用 `expo-router/testing-library` 的 `renderRouter`。**測試檔不得放在 `src/app/`**，因為那裡的每個檔案都會被當成路由。
+- **Reanimated 的 Jest 設定**（在 `jest.setup.js`，S1.7）：mock `react-native-worklets`、把 Reanimated 的 `initializers`（含 `.native` 與 `lib/module` 版本）換成空函式，再使用 `react-native-reanimated/mock`。原因是 jest-expo 以 iOS 平台解析，原生初始化會呼叫 JSReanimated 不支援的 `setCSSEventHandler`；原生版 `makeMutable` 搭配 Worklets mock 也沒有 `get`／`set`。動畫在測試裡會直接跳到目標值。
 - `jest.setup.js` 已經 mock 了 AsyncStorage 和 gesture-handler；`@/` 別名由 `package.json` 的 `moduleNameMapper` 解析。
   - **陷阱**：AsyncStorage 官方 mock 的方法本身就是 `jest.fn`。要模擬失敗時用 `jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(...)`，**不要 `jest.spyOn` + `mockRestore`**，那會清掉 mock 的實作，讓後面的測試讀不到資料。
 - **服務層測試的例外**：存檔的資料安全（先備份再寫入、失敗絕不覆寫）是 NFR5 的核心保證，所以 `src/services/__tests__/save-test.ts` 會用 AsyncStorage mock 驗證。其他服務仍然不寫單元測試。
@@ -113,7 +114,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 ### Platform & Build Rules
 
 - 開發一律使用 `expo-dev-client` 開發版建置。
-  - 例外（2026-11-09）：使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號，所以實機驗證和效能量測暫時用 Expo Go（`npx expo start --go`，量測加上 `--no-dev --minify`）。前提是所有原生依賴都是 SDK 對應版本（`npx expo install --check` 沒有警告）。
+  - 例外（2026-11-09）：使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號，所以實機驗證和效能量測暫時用 Expo Go，啟動指令固定為 `npx expo start --go --tunnel --no-dev --minify`。開發模式的路由 bundle 每個 4–7 MB，經過 tunnel 會逾時，手機上會出現 Gateway Timeout，網頁上會出現 Failed to fetch。這個模式下 `__DEV__` 是 false，所以除錯工具（含分頁切換計時）不會出現。前提是所有原生依賴都是 SDK 對應版本（`npx expo install --check` 沒有警告）。
   - Expo Go **不會**驗證到原生設定（`expo-build-properties`、config plugin、`runtimeVersion`），也不能用 Expo Go 不支援的原生套件（例如 AdMob）。這些要等開發版或 preview 建置再驗證。
 - **新增或升級原生依賴時，必須重建開發版**（`npx eas-cli@latest build --profile development`），不能只推 OTA。`runtimeVersion` 採 fingerprint 策略。
 - 不得手動建立或修改 `ios/`、`android/`（CNG）。原生設定一律寫在 `app.config.ts` 與 config plugin。

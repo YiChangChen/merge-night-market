@@ -21,6 +21,7 @@ export function resolveDebugTools(extra: Extra, isDev: boolean): boolean {
 const extra = (Constants.expoConfig?.extra ?? {}) as Extra;
 
 export const config = {
+  appVersion: Constants.expoConfig?.version ?? '0.0.0',
   buildProfile: extra.buildProfile ?? 'development',
   debugTools: resolveDebugTools(extra, __DEV__),
 } as const;

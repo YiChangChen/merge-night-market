@@ -194,7 +194,7 @@ brief: null
 | 進入夜市街（點擊到首次 onLayout，22 次中位數） | 72 ms |
 | 冷啟動、記憶體 | 未量測：Expo Go 下沒有參考價值；沒有 Mac 就無法用 Instruments |
 | **結論** | **暫定採用純 RN + Reanimated**，不引入 Skia 或 Lottie。頭像上限暫定每攤 N = 4（實測值） |
-| 待辦 | 取得 Android 中階機後，用原本的方法（release build、Flashlight、`adb`）複驗 FPS、冷啟動和記憶體，最晚在 S7.6 之前完成。如果沒通過，再依序評估 Skia → Lottie → 降級。原型保留在 `src/features/street/__spike__/` 供複驗使用，S1.7 改寫成正式畫面時移除 |
+| 待辦 | 取得 Android 中階機後，用原本的方法（release build、Flashlight、`adb`）複驗 FPS、冷啟動和記憶體，最晚在 S7.6 之前完成。如果沒通過，再依序評估 Skia → Lottie → 降級。原型已在 S1.7 移除；複驗直接量測正式的夜市街畫面（`src/features/street/`） |
 
 **限制：**iPhone 的效能高於 Pixel 6a，而且 Expo Go 不是真正的 release build，所以第一階段只能排除「純 RN 在高階機上就不夠」的情況，不能保證中階 Android 也能達標。
 
@@ -304,6 +304,7 @@ src/app/
   settings.tsx          設定（presentation: 'modal'），入口在夜市街左上角；顯示版本號、音訊開關，長按版本號開啟除錯面板
 ```
 
+- **分頁實作（S1.7）**：`import { Tabs } from 'expo-router/js-tabs'`（`expo-router` 的 `Tabs` 匯出已棄用）。自訂 tab bar 的 props 是 Expo Router 58 內建的介面：`state`、`emitter`、`navigateToTab(routeKey)`、`insets`，**沒有** React Navigation 的 `navigation` 物件。`lazy: false` 讓兩頁開機就掛載，`freezeOnBlur: true` 讓背景分頁凍結。
 - **Overlay Host**：掛在根層。發明演出、完售煙火、攤位重開／升級面板、阿嬤提示、升星演出都在這裡以元件形式顯示，不走路由。
 - 觸發來源只有兩種：使用者點擊（例如攤位面板），或 `GameEvent`（例如完售、首次發明）。
 - 分頁失焦時，該頁的循環動畫（霓虹閃爍、熱氣、人龍）必須暫停。

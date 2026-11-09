@@ -7,7 +7,7 @@
   status: 第一階段已完成（2026-11-09，iPhone 暫定通過，純 RN）；第二階段見下一筆
 - source_plan: _bmad-output/implementation-artifacts/1-3-spike-a-street-performance-gate.md
   summary: Spike A 第二階段：在 Android 中階機上複驗夜市街效能（release build、Flashlight、adb；FPS、冷啟動、記憶體）
-  evidence: 使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號；第一階段在 iPhone 上量到 UI／JS 60 FPS、卡頓 0%、進入 72 ms，但無法代表 Pixel 6a。最晚在 S7.6 之前完成；沒通過時依序評估 Skia → Lottie → 降級。原型保留在 src/features/street/__spike__/ 供複驗使用
+  evidence: 使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號；第一階段在 iPhone 上量到 UI／JS 60 FPS、卡頓 0%、進入 72 ms，但無法代表 Pixel 6a。最晚在 S7.6 之前完成；沒通過時依序評估 Skia → Lottie → 降級。原型已在 S1.7 移除，複驗直接量測正式的夜市街畫面（Flashlight 量 FPS；分頁切換時間在設定畫面顯示，需開啟除錯工具）
 ## Deferred from: code review of Epic 1 stories 1.1–1.5 (2026-11-09)
 - source_plan: _bmad-output/implementation-artifacts/1-1-project-setup-and-lint-guardrails.md
   summary: ESLint 只強制規則層邊界；services、features、ui 的分層 import 限制還沒有 lint 規則

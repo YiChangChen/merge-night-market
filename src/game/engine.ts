@@ -8,6 +8,8 @@ import {
   CUSTOMERS,
   type CustomerDef,
 } from './content';
+import type { GameEvent } from './events';
+import { nextRandom, randomInt } from './random';
 
 export type ItemPiece = { id: number; kind: 'item'; chain: ChainId; level: number };
 export type GeneratorPiece = { id: number; kind: 'generator'; chain: ChainId };
@@ -37,24 +39,11 @@ export type GameState = {
   pendingGenerators: ChainId[];
   nextId: number;
   rngSeed: number;
+  // 暫態：本次 apply 產生的事件，store 分派後就移除，不寫入存檔（S1.5 的 v2 改為必填）
+  events?: GameEvent[];
 };
 
 export type SpawnBlocker = 'no-energy' | 'board-full';
-
-// mulberry32：種子放在 state 裡，讓結果可重現，存讀檔也不會改變
-function nextRandom(state: GameState): [number, GameState] {
-  const seed = (state.rngSeed + 0x6d2b79f5) | 0;
-  let t = seed;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  const value = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  return [value, { ...state, rngSeed: seed }];
-}
-
-function randomInt(state: GameState, maxExclusive: number): [number, GameState] {
-  const [value, next] = nextRandom(state);
-  return [Math.floor(value * maxExclusive), next];
-}
 
 // 製作某階品項需要的基礎品項數，也是數值的基準
 export function baseCost(level: number): number {
@@ -183,7 +172,10 @@ export function syncEnergy(state: GameState, now: number): GameState {
   };
 }
 
-export function msUntilNextEnergy(state: GameState, now: number): number | null {
+export function msUntilNextEnergy(
+  state: Pick<GameState, 'energy' | 'energyUpdatedAt'>,
+  now: number
+): number | null {
   if (state.energy >= BALANCE.maxEnergy) return null;
   return Math.max(0, state.energyUpdatedAt + BALANCE.energyRegenMs - now);
 }
@@ -297,7 +289,7 @@ export function movePiece(state: GameState, from: number, to: number): GameState
 }
 
 // 為訂單找到要交出的格子；品項不夠時回傳 null
-export function findOrderCells(state: GameState, order: Order): number[] | null {
+export function findOrderCells(state: Pick<GameState, 'board'>, order: Order): number[] | null {
   const used = new Set<number>();
   for (const requirement of order.requirements) {
     const cell = state.board.findIndex(

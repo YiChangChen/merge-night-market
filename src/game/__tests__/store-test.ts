@@ -1,0 +1,101 @@
+import { BALANCE } from '../content';
+import { createGame, type GameState } from '../engine';
+import { type GameEvent, gameEvents } from '../events';
+import { useGameStore } from '../store';
+
+const NOW = 1_000_000;
+
+function freshGame(overrides: Partial<GameState> = {}): GameState {
+  return { ...createGame(NOW, 1), ...overrides };
+}
+
+describe('useGameStore', () => {
+  let now: jest.SpyInstance<number, []>;
+
+  beforeEach(() => {
+    now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    useGameStore.setState({ state: null });
+  });
+
+  afterEach(() => {
+    now.mockRestore();
+  });
+
+  it('還沒讀檔（state 為 null）時，apply 不做任何事', () => {
+    const action = jest.fn((state: GameState) => state);
+
+    useGameStore.getState().apply(action);
+
+    expect(action).not.toHaveBeenCalled();
+    expect(useGameStore.getState().state).toBeNull();
+  });
+
+  it('hydrate 會先結算時間，再放進 store', () => {
+    const loaded = freshGame({ energy: 50, energyUpdatedAt: NOW - 3 * BALANCE.energyRegenMs });
+
+    useGameStore.getState().hydrate(loaded);
+
+    expect(useGameStore.getState().state?.energy).toBe(53);
+  });
+
+  it('apply 先執行 syncAll，再把結算後的 state 交給 action', () => {
+    useGameStore.setState({ state: freshGame({ energy: 50, energyUpdatedAt: NOW }) });
+    now.mockReturnValue(NOW + 2 * BALANCE.energyRegenMs);
+    let seen: number | undefined;
+
+    useGameStore.getState().apply((state) => {
+      seen = state.energy;
+      return { ...state, coins: state.coins + 7 };
+    });
+
+    expect(seen).toBe(52);
+    expect(useGameStore.getState().state?.energy).toBe(52);
+    expect(useGameStore.getState().state?.coins).toBe(freshGame().coins + 7);
+  });
+
+  it('依序分派 action 產生的事件，分派後 state 不再帶 events', () => {
+    useGameStore.setState({ state: freshGame() });
+    const events: GameEvent[] = [
+      { type: 'item_merged', chain: 'tea', level: 2 },
+      { type: 'stall_upgraded', stall: 'tea', level: 2 },
+    ];
+    const received: GameEvent[] = [];
+    const unsubscribe = gameEvents.subscribe((event) => received.push(event));
+
+    useGameStore.getState().apply((state) => ({ ...state, events }));
+    unsubscribe();
+
+    expect(received).toEqual(events);
+    expect(useGameStore.getState().state).not.toHaveProperty('events');
+  });
+
+  it('訂閱者收到事件時，store 已經是新的 state', () => {
+    useGameStore.setState({ state: freshGame({ coins: 0 }) });
+    let coinsSeen: number | undefined;
+    const unsubscribe = gameEvents.subscribe(() => {
+      coinsSeen = useGameStore.getState().state?.coins;
+    });
+
+    useGameStore.getState().apply((state) => ({
+      ...state,
+      coins: 99,
+      events: [{ type: 'item_merged', chain: 'tea', level: 2 }],
+    }));
+    unsubscribe();
+
+    expect(coinsSeen).toBe(99);
+  });
+
+  it('action 沒有改變 state 時，不觸發 store 更新', () => {
+    const state = freshGame({ energyUpdatedAt: NOW });
+    useGameStore.setState({ state });
+    const listener = jest.fn();
+    const unsubscribe = useGameStore.subscribe(listener);
+
+    useGameStore.getState().apply((current) => current);
+    unsubscribe();
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(useGameStore.getState().state).toBe(state);
+  });
+});

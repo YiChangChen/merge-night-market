@@ -3,15 +3,15 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInRight, LinearTransition, ZoomOut } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/shallow';
 
-import { Board, PieceIcon } from '@/components/board';
-import { customerArtSize, CustomerTray } from '@/components/customer-tray';
+import { Board, PieceIcon } from '@/features/board';
+import { customerArtSize, CustomerTray } from '@/features/orders';
 import { BALANCE, CHAINS } from '@/game/content';
 import {
   completeOrder,
   customerForOrder,
   findOrderCells,
-  type GameState,
   getSpawnBlocker,
   movePiece,
   msUntilNextEnergy,
@@ -20,7 +20,7 @@ import {
   tapGenerator,
   xpToNextLevel,
 } from '@/game/engine';
-import { useGame } from '@/game/use-game';
+import { useGameStore } from '@/game/store';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
@@ -43,13 +43,27 @@ function formatCountdown(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-function Hud({ state }: { state: GameState }) {
+function Hud() {
+  const state = useGameStore(
+    useShallow((store) =>
+      store.state
+        ? {
+            level: store.state.level,
+            xp: store.state.xp,
+            coins: store.state.coins,
+            energy: store.state.energy,
+            energyUpdatedAt: store.state.energyUpdatedAt,
+          }
+        : null
+    )
+  );
   // 倒數只影響這裡，計時放在 Hud 裡，每秒才不會重畫整個畫面
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+  if (!state) return null;
   const untilNext = msUntilNextEnergy(state, now);
   return (
     <View style={styles.hud}>
@@ -66,18 +80,19 @@ function Hud({ state }: { state: GameState }) {
 }
 
 function Orders({
-  state,
   artSize,
   onComplete,
 }: {
-  state: GameState;
   artSize: { width: number; height: number };
   onComplete: (id: number) => void;
 }) {
+  const orders = useGameStore((store) => store.state?.orders);
+  const board = useGameStore((store) => store.state?.board);
+  if (!orders || !board) return null;
   return (
     <View style={styles.orders}>
-      {state.orders.map((order) => {
-        const ready = findOrderCells(state, order) !== null;
+      {orders.map((order) => {
+        const ready = findOrderCells({ board }, order) !== null;
         return (
           <Animated.View
             key={order.id}
@@ -122,15 +137,15 @@ function Orders({
 }
 
 function InfoBar({
-  state,
   selected,
   onSell,
 }: {
-  state: GameState;
   selected: number | null;
   onSell: (cell: number) => void;
 }) {
-  const piece = selected !== null ? state.board[selected] : null;
+  const piece = useGameStore((store) =>
+    selected !== null ? (store.state?.board[selected] ?? null) : null
+  );
   if (!piece || selected === null) {
     return (
       <View style={styles.info}>
@@ -167,7 +182,8 @@ function InfoBar({
 }
 
 export default function GameScreen() {
-  const { state, apply } = useGame();
+  const board = useGameStore((store) => store.state?.board);
+  const apply = useGameStore((store) => store.apply);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<number | null>(null);
@@ -179,7 +195,7 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  if (!state) return <View style={styles.screen} />;
+  if (!board) return <View style={styles.screen} />;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);
   const artSize = customerArtSize((boardWidth + ORDER_GAP) / BALANCE.orderSlots);
@@ -201,6 +217,9 @@ export default function GameScreen() {
   );
 
   const handleTapCell = (cell: number) => {
+    // 事件當下才讀最新的 state，不必為了這裡訂閱整個 state
+    const state = useGameStore.getState().state;
+    if (!state) return;
     const piece = state.board[cell];
     setSelected(piece ? cell : null);
     if (piece?.kind !== 'generator') return;
@@ -238,12 +257,12 @@ export default function GameScreen() {
         ]}
       />
       <View style={[styles.content, { width: boardWidth }]}>
-        <Hud state={state} />
-        <Orders state={state} artSize={artSize} onComplete={handleCompleteOrder} />
-        <InfoBar state={state} selected={selected} onSell={handleSell} />
+        <Hud />
+        <Orders artSize={artSize} onComplete={handleCompleteOrder} />
+        <InfoBar selected={selected} onSell={handleSell} />
         <View style={styles.boardArea}>
           <Board
-            board={state.board}
+            board={board}
             cellSize={cellSize}
             selected={selected}
             onTapCell={handleTapCell}

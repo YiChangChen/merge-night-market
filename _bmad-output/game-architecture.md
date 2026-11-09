@@ -438,7 +438,7 @@ async function show(placement: Placement): Promise<AdResult> {
 
 ### Logging
 
-**格式：** `log.<level>(scope, message, data?)`，`scope` 是字面量型別：`'save' | 'ads' | 'audio' | 'telemetry' | 'store' | 'boot' | 'fx'`。
+**格式：** `log.<level>(scope, message, data?)`，`scope` 是字面量型別：`'save' | 'ads' | 'audio' | 'telemetry' | 'store' | 'boot' | 'fx' | 'render'`（`render` 給根層 ErrorBoundary 使用，S1.2c 加入）。
 
 **輸出目的地：**
 - 開發版：輸出到 console。

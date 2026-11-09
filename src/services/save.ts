@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { createGame, type GameState, isValidSave } from '@/game/engine';
 
+import { log } from './log';
+
 const SAVE_KEY = 'merge-night-market/save';
 
 export function newGame(): GameState {
@@ -15,9 +17,7 @@ export async function loadGame(): Promise<GameState> {
     const save: unknown = raw ? JSON.parse(raw) : null;
     if (isValidSave(save)) return save;
   } catch (error) {
-    // TODO(S1.2c): 改用 log.warn
-    // eslint-disable-next-line no-console
-    console.warn('無法讀取存檔，改開新遊戲', error);
+    log.warn('save', '無法讀取存檔，改開新遊戲', error);
   }
   return newGame();
 }
@@ -26,8 +26,6 @@ export function saveGame(state: GameState) {
   // events 是暫態，不寫入存檔
   const { events: _events, ...data } = state;
   AsyncStorage.setItem(SAVE_KEY, JSON.stringify(data)).catch((error) => {
-    // TODO(S1.2c): 改用 log.warn
-    // eslint-disable-next-line no-console
-    console.warn('無法寫入存檔', error);
+    log.warn('save', '無法寫入存檔', error);
   });
 }

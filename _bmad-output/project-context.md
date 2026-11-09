@@ -96,6 +96,12 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - **只要改到存檔形狀**，同一個 PR 內必須完成三件事：遞增 `version`、新增 `migrations[n]`、新增 `__tests__/fixtures/save-v<n>-*.json`。`migration-test.ts` 要驗證遷移後 `isValidSave` 通過，且金幣、XP、棋盤內容不變。
 - `content-test.ts` 要驗證配方、卡牌、素材檔名（等於 `RecipeId`）一一對應。
 - 服務層不寫單元測試。規則層不 mock 任何東西，因為它本來就是純函式。
+- 畫面元件測試用 `@testing-library/react-native` 14：
+  - `render`、`fireEvent.*` 都是 async，一律要 `await`。
+  - 放在該 feature 的 `__tests__/`，檔名 `<module>-test.tsx`。
+  - 依賴服務層時，用 `jest.mock('@/services/…')` 隔離。
+- 路由整合測試用 `expo-router/testing-library` 的 `renderRouter`。**測試檔不得放在 `src/app/`**，因為那裡的每個檔案都會被當成路由。
+- `jest.setup.js` 已經 mock 了 AsyncStorage 和 gesture-handler；`@/` 別名由 `package.json` 的 `moduleNameMapper` 解析。
 - **完成定義：** `npx expo lint`、`npx tsc --noEmit`、`npx jest` 全部通過。
 
 ### Platform & Build Rules

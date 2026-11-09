@@ -124,3 +124,44 @@ describe('useGameStore', () => {
     expect(useGameStore.getState().state).toBe(state);
   });
 });
+
+describe('時間快轉（除錯面板）', () => {
+  let now: jest.SpyInstance<number, []>;
+
+  beforeEach(() => {
+    now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    useGameStore.setState({ state: null, status: { kind: 'loading' }, timeOffsetMs: 0 });
+  });
+
+  afterEach(() => {
+    now.mockRestore();
+    useGameStore.setState({ timeOffsetMs: 0 });
+  });
+
+  it('advanceTime 讓下一次 syncAll 使用快轉後的時間（體力依快轉時間回復）', () => {
+    useGameStore.setState({
+      state: { ...createGame(NOW, 1), energy: 50, energyUpdatedAt: NOW },
+      status: { kind: 'ready' },
+    });
+
+    useGameStore.getState().advanceTime(3 * BALANCE.energyRegenMs);
+
+    expect(useGameStore.getState().timeOffsetMs).toBe(3 * BALANCE.energyRegenMs);
+    expect(useGameStore.getState().state?.energy).toBe(53);
+  });
+
+  it('偏移量會累加；resetTime 歸零', () => {
+    useGameStore.getState().advanceTime(1000);
+    useGameStore.getState().advanceTime(2000);
+    expect(useGameStore.getState().timeOffsetMs).toBe(3000);
+
+    useGameStore.getState().resetTime();
+    expect(useGameStore.getState().timeOffsetMs).toBe(0);
+  });
+
+  it('快轉量不合法時不變', () => {
+    useGameStore.getState().advanceTime(-1000);
+    useGameStore.getState().advanceTime(Number.NaN);
+    expect(useGameStore.getState().timeOffsetMs).toBe(0);
+  });
+});

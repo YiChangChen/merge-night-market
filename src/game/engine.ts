@@ -73,6 +73,16 @@ function placeGenerator(state: GameState, chain: ChainId): GameState {
   return { ...state, board, nextId: state.nextId + 1 };
 }
 
+/**
+ * 確保這條鏈有產生器：棋盤上或待放佇列裡已經有就不動，沒有就放一個（棋盤滿時進待放佇列）。
+ * 攤位重開（S1.9 reopenStall）與除錯面板都用它，避免同一條鏈出現兩個產生器。
+ */
+export function ensureGenerator(state: GameState, chain: ChainId): GameState {
+  const onBoard = state.board.some((piece) => piece?.kind === 'generator' && piece.chain === chain);
+  if (onBoard || state.pendingGenerators.includes(chain)) return state;
+  return placeGenerator(state, chain);
+}
+
 function flushPendingGenerators(state: GameState): GameState {
   let next: GameState = { ...state, pendingGenerators: [] };
   for (const chain of state.pendingGenerators) {

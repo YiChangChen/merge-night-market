@@ -541,6 +541,11 @@ gameEvents.subscribe((e) => { if (e.type === 'queue_sold_out') fx.play('firework
 - **除錯面板**：加金幣、加體力、設定玩家等級、設定攤位等級、清除人龍冷卻、直接發現指定配方、時間快轉（偏移注入給 `syncAll` 的 `now`）、重置每日計數。
 - **存檔匯入／匯出**：把目前存檔 JSON 複製到剪貼簿，或從剪貼簿貼上載入。貼上的資料要先跑一次遷移與驗證，失敗時拒絕載入。也用來製作 v1 fixture。
 
+**實作狀態（S1.8）：**
+- 已完成：加金幣、加體力、設定玩家等級、設定攤位等級、時間快轉、存檔匯入／匯出。
+- 規則函式在 `src/game/debug.ts`；時間快轉是 store 的 `timeOffsetMs`；剪貼簿 I/O 在 `src/services/save-transfer.ts`；面板是 `src/app/debug.tsx`（modal）。
+- 待補：清除人龍冷卻（S2.1）、直接發現指定配方（E3）、重置每日計數（S6.1）。這三項由各自的 story 隨機制一起加入。
+
 **啟用方式：** 在設定畫面（`settings.tsx`，入口在夜市街左上角，E1 S1.7 建立）長按版本號 2 秒。只有在 `__DEV__` 或 development / preview profile 才渲染。production profile 透過 `extra.debugTools = false` 加上條件 import，把相關程式碼整段排除。
 
 **效能量測：** 不內建 FPS 覆蓋層。W1–2 的 spike 和每個 epic 的驗收，改用 RN Dev Menu 的 Perf Monitor 做粗略觀察，正式數據則以外部工具在 Pixel 6a 的 release build 上量測（例如 Android GPU 呈現模式分析或 Flashlight）。量測方法在 Validation 章節定稿。

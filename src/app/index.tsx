@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/shallow';
 
 import { Board, PieceIcon } from '@/features/board';
+import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
 import { BALANCE, CHAINS } from '@/game/content';
 import {
@@ -25,6 +26,7 @@ import { useGameStore } from '@/game/store';
 // Spike A（暫時）：除錯入口，Story 1.3 結論出來後移除
 import { markNavStart } from '@/features/street';
 import { config } from '@/services/config';
+import { retryLoadGame } from '@/services/game-session';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
@@ -187,6 +189,9 @@ function InfoBar({
 
 export default function GameScreen() {
   const board = useGameStore((store) => store.state?.board);
+  const loadFailure = useGameStore((store) =>
+    store.status.kind === 'failed' ? store.status.reason : null
+  );
   const apply = useGameStore((store) => store.apply);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -199,6 +204,7 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  if (loadFailure) return <SaveErrorScreen reason={loadFailure} onRetry={retryLoadGame} />;
   if (!board) return <View style={styles.screen} />;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);

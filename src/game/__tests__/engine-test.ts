@@ -9,7 +9,6 @@ import {
   findSpawns,
   type GameState,
   getSpawnBlocker,
-  isValidSave,
   movePiece,
   msUntilNextEnergy,
   type Order,
@@ -19,6 +18,7 @@ import {
   tapGenerator,
   xpToNextLevel,
 } from '../engine';
+import { isValidSaveV2, serializeSave } from '../save';
 
 const NOW = 1_000_000;
 
@@ -38,7 +38,7 @@ function fullBoard(state: GameState): GameState {
 }
 
 function order(requirements: Order['requirements']): Order {
-  return { id: 900, requirements, coins: 10, xp: 2, energy: 1 };
+  return { id: 900, kind: 'normal', requirements, coins: 10, xp: 2, energy: 1 };
 }
 
 describe('createGame', () => {
@@ -296,20 +296,24 @@ describe('content', () => {
   });
 });
 
-describe('isValidSave', () => {
-  it('accepts a real game after a JSON round trip', () => {
-    expect(isValidSave(JSON.parse(JSON.stringify(createGame(NOW, 1))))).toBe(true);
+describe('createGame（v2）', () => {
+  it('產生合法的 v2 存檔', () => {
+    expect(isValidSaveV2(JSON.parse(serializeSave(createGame(NOW, 1))))).toBe(true);
   });
 
-  it.each([
-    ['null', null],
-    ['a string', 'save'],
-    ['another version', { ...createGame(NOW, 1), version: 2 }],
-    ['a short board', { ...createGame(NOW, 1), board: [] }],
-    ['a non-numeric energy', { ...createGame(NOW, 1), energy: 'lots' }],
-    ['NaN coins', { ...createGame(NOW, 1), coins: NaN }],
-  ])('rejects %s', (_name, value) => {
-    expect(isValidSave(value)).toBe(false);
+  it('開局只開手搖飲與炸物攤，人龍 12 人，教學從第 0 步開始', () => {
+    const state = createGame(NOW, 1);
+
+    expect(state.version).toBe(2);
+    expect(state.stalls.tea.level).toBe(1);
+    expect(state.stalls.fried.level).toBe(1);
+    expect(state.stalls.noodle.level).toBe(0);
+    expect(state.stalls.dumpling.level).toBe(0);
+    expect(state.stalls.sweet.level).toBe(0);
+    expect(state.queue).toEqual({ wave: 1, length: 12, remaining: 12, cooldownEndsAt: null, bonus: 0 });
+    expect(state.meta).toEqual({ firstLaunchAt: NOW, tutorialStep: 0, hintedRecipes: [] });
+    expect(state.orders.every((order) => order.kind === 'normal')).toBe(true);
+    expect(state.events).toEqual([]);
   });
 });
 

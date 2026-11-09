@@ -8,42 +8,31 @@ import {
   CUSTOMERS,
   type CustomerDef,
 } from './content';
-import type { GameEvent } from './events';
+import { queueCapacity } from './queue';
 import { nextRandom, randomInt } from './random';
+import {
+  type GameState,
+  type ItemPiece,
+  type Order,
+  type Piece,
+  type Requirement,
+  SAVE_VERSION,
+  type StallState,
+} from './types';
 
-export type ItemPiece = { id: number; kind: 'item'; chain: ChainId; level: number };
-export type GeneratorPiece = { id: number; kind: 'generator'; chain: ChainId };
-export type Piece = ItemPiece | GeneratorPiece;
-
-export type Requirement = { chain: ChainId; level: number };
-
-export type Order = {
-  id: number;
-  requirements: Requirement[];
-  coins: number;
-  xp: number;
-  energy: number;
-};
-
-export type GameState = {
-  version: 1;
-  board: (Piece | null)[];
-  orders: Order[];
-  energy: number;
-  // 體力回復的計時起點
-  energyUpdatedAt: number;
-  coins: number;
-  level: number;
-  xp: number;
-  // 升級解鎖但棋盤已滿、等有空位才放上去的產生器
-  pendingGenerators: ChainId[];
-  nextId: number;
-  rngSeed: number;
-  // 暫態：本次 apply 產生的事件，store 分派後就移除，不寫入存檔（S1.5 的 v2 改為必填）
-  events?: GameEvent[];
-};
+// 型別定義在 types.ts；這裡重新匯出，既有的 import 路徑不必修改
+export type { GameState, GeneratorPiece, ItemPiece, Order, Piece, Requirement } from './types';
 
 export type SpawnBlocker = 'no-energy' | 'board-full';
+
+/** 依玩家等級推算攤位狀態：已解鎖的鏈視為已重開的 Lv1，其餘是鐵捲門（FR9、FR46）。 */
+export function stallsForPlayerLevel(level: number): Record<ChainId, StallState> {
+  const stalls = {} as Record<ChainId, StallState>;
+  for (const chain of CHAIN_IDS) {
+    stalls[chain] = { level: CHAINS[chain].unlockLevel <= level ? 1 : 0, signatureDish: null };
+  }
+  return stalls;
+}
 
 // 製作某階品項需要的基礎品項數，也是數值的基準
 export function baseCost(level: number): number {
@@ -117,6 +106,7 @@ function createOrder(state: GameState): [Order, GameState] {
   const totalCost = requirements.reduce((sum, r) => sum + baseCost(r.level), 0);
   const order: Order = {
     id: next.nextId,
+    kind: 'normal',
     requirements,
     coins: totalCost * BALANCE.orderCoinsPerBase,
     xp: requirements.reduce((sum, r) => sum + r.level, 0),
@@ -131,8 +121,11 @@ export function customerForOrder(order: Order): CustomerDef {
 }
 
 export function createGame(now: number, seed: number): GameState {
+  const stalls = stallsForPlayerLevel(1);
+  const queue = { wave: 1, length: 0, remaining: 0, cooldownEndsAt: null, bonus: 0 };
+  const length = queueCapacity({ stalls, queue });
   let state: GameState = {
-    version: 1,
+    version: SAVE_VERSION,
     board: Array<Piece | null>(BOARD_SIZE).fill(null),
     orders: [],
     energy: BALANCE.maxEnergy,
@@ -143,6 +136,13 @@ export function createGame(now: number, seed: number): GameState {
     pendingGenerators: [],
     nextId: 1,
     rngSeed: seed,
+    stalls,
+    queue: { ...queue, length, remaining: length },
+    inventions: {},
+    meta: { firstLaunchAt: now, tutorialStep: 0, hintedRecipes: [] },
+    daily: { dateKey: '', adEnergyUsed: 0, adDoubleUsed: 0 },
+    lastSellout: null,
+    events: [],
   };
   for (const chain of unlockedChains(1)) {
     state = placeGenerator(state, chain);
@@ -360,23 +360,3 @@ export function sellPiece(state: GameState, cell: number): GameState {
 }
 
 // 存檔可能損毀或來自舊版，讀取時只接受形狀正確的資料
-export function isValidSave(value: unknown): value is GameState {
-  if (typeof value !== 'object' || value === null) return false;
-  const save = value as Partial<GameState>;
-  return (
-    save.version === 1 &&
-    Array.isArray(save.board) &&
-    save.board.length === BOARD_SIZE &&
-    Array.isArray(save.orders) &&
-    Array.isArray(save.pendingGenerators) &&
-    [
-      save.energy,
-      save.energyUpdatedAt,
-      save.coins,
-      save.level,
-      save.xp,
-      save.nextId,
-      save.rngSeed,
-    ].every((field) => typeof field === 'number' && Number.isFinite(field))
-  );
-}

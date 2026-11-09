@@ -14,18 +14,35 @@ const TICK_MS = 1000;
 const settle = () => useGameStore.getState().apply((state) => state);
 
 function saveNow() {
+  // 讀檔失敗時 state 是 null，所以不會覆寫原本的存檔
   const { state } = useGameStore.getState();
   if (state) saveGame(state);
 }
 
+// 每次讀檔遞增；舊的讀檔結果（例如 session 已停止或使用者按了重試）一律丟棄
+let loadGeneration = 0;
+
+function loadIntoStore() {
+  const generation = ++loadGeneration;
+  loadGame().then((result) => {
+    if (generation !== loadGeneration) return;
+    const store = useGameStore.getState();
+    if (result.kind === 'ready') store.hydrate(result.state);
+    else store.failLoad(result.reason);
+  });
+}
+
+/** 存檔讀取失敗畫面的「重試」：回到 loading 再讀一次。 */
+export function retryLoadGame() {
+  useGameStore.getState().resetLoad();
+  loadIntoStore();
+}
+
 /** 啟動遊戲執行週期，回傳停止函式。 */
 export function startGameSession(): () => void {
-  let cancelled = false;
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-  loadGame().then((loaded) => {
-    if (!cancelled) useGameStore.getState().hydrate(loaded);
-  });
+  loadIntoStore();
 
   // state 一有變動就延後存檔，連續操作只寫一次
   const unsubscribeSave = useGameStore.subscribe((store, previous) => {
@@ -47,7 +64,8 @@ export function startGameSession(): () => void {
   });
 
   return () => {
-    cancelled = true;
+    // 讓還沒回來的讀檔結果失效
+    loadGeneration += 1;
     clearTimeout(saveTimer);
     clearInterval(tick);
     unsubscribeSave();

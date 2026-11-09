@@ -15,6 +15,10 @@ export const BALANCE = {
   levelUpEnergy: 20,
   twoItemOrderMinLevel: 3,
   twoItemOrderChance: 0.4,
+  // 開幕週長度：首次啟動後 72 小時（FR36）
+  openingWeekMs: 72 * 60 * 60 * 1000,
+  // 新手教學的步數；meta.tutorialStep 達到這個值代表教學完成（FR40）
+  tutorialSteps: 3,
 } as const;
 
 export const BOARD_SIZE = BALANCE.boardColumns * BALANCE.boardRows;

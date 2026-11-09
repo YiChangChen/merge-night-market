@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "board": [
+    {
+      "id": 1,
+      "kind": "generator",
+      "chain": "tea"
+    },
+    {
+      "id": 2,
+      "kind": "generator",
+      "chain": "fried"
+    },
+    {
+      "id": 6,
+      "kind": "generator",
+      "chain": "noodle"
+    },
+    {
+      "id": 7,
+      "kind": "generator",
+      "chain": "dumpling"
+    },
+    {
+      "id": 8,
+      "kind": "generator",
+      "chain": "sweet"
+    },
+    {
+      "id": 9,
+      "kind": "item",
+      "chain": "tea",
+      "level": 4
+    },
+    {
+      "id": 10,
+      "kind": "item",
+      "chain": "fried",
+      "level": 4
+    },
+    {
+      "id": 11,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 4
+    },
+    {
+      "id": 12,
+      "kind": "item",
+      "chain": "dumpling",
+      "level": 4
+    },
+    {
+      "id": 13,
+      "kind": "item",
+      "chain": "sweet",
+      "level": 4
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "orders": [
+    {
+      "id": 3,
+      "requirements": [
+        {
+          "chain": "fried",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    },
+    {
+      "id": 4,
+      "requirements": [
+        {
+          "chain": "tea",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    },
+    {
+      "id": 5,
+      "requirements": [
+        {
+          "chain": "fried",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    }
+  ],
+  "energy": 100,
+  "energyUpdatedAt": 1761999995000,
+  "coins": 2480,
+  "level": 7,
+  "xp": 22,
+  "pendingGenerators": [],
+  "nextId": 14,
+  "rngSeed": -1895507007
+}

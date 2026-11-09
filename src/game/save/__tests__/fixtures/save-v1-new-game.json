@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "board": [
+    {
+      "id": 1,
+      "kind": "generator",
+      "chain": "tea"
+    },
+    {
+      "id": 2,
+      "kind": "generator",
+      "chain": "fried"
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "orders": [
+    {
+      "id": 3,
+      "requirements": [
+        {
+          "chain": "fried",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    },
+    {
+      "id": 4,
+      "requirements": [
+        {
+          "chain": "fried",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    },
+    {
+      "id": 5,
+      "requirements": [
+        {
+          "chain": "fried",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    }
+  ],
+  "energy": 100,
+  "energyUpdatedAt": 1762000000000,
+  "coins": 0,
+  "level": 1,
+  "xp": 0,
+  "pendingGenerators": [],
+  "nextId": 6,
+  "rngSeed": -1895507009
+}

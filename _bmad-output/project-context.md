@@ -105,6 +105,8 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
   - 依賴服務層時，用 `jest.mock('@/services/…')` 隔離。
 - 路由整合測試用 `expo-router/testing-library` 的 `renderRouter`。**測試檔不得放在 `src/app/`**，因為那裡的每個檔案都會被當成路由。
 - `jest.setup.js` 已經 mock 了 AsyncStorage 和 gesture-handler；`@/` 別名由 `package.json` 的 `moduleNameMapper` 解析。
+  - **陷阱**：AsyncStorage 官方 mock 的方法本身就是 `jest.fn`。要模擬失敗時用 `jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(...)`，**不要 `jest.spyOn` + `mockRestore`**，那會清掉 mock 的實作，讓後面的測試讀不到資料。
+- **服務層測試的例外**：存檔的資料安全（先備份再寫入、失敗絕不覆寫）是 NFR5 的核心保證，所以 `src/services/__tests__/save-test.ts` 會用 AsyncStorage mock 驗證。其他服務仍然不寫單元測試。
 - **完成定義：** `npx expo lint`、`npx tsc --noEmit`、`npx jest` 全部通過。
 
 ### Platform & Build Rules

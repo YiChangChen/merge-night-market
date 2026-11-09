@@ -1,0 +1,387 @@
+{
+  "version": 1,
+  "board": [
+    {
+      "id": 1,
+      "kind": "generator",
+      "chain": "tea"
+    },
+    {
+      "id": 2,
+      "kind": "generator",
+      "chain": "fried"
+    },
+    {
+      "id": 6,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 3
+    },
+    {
+      "id": 7,
+      "kind": "item",
+      "chain": "tea",
+      "level": 4
+    },
+    {
+      "id": 8,
+      "kind": "item",
+      "chain": "fried",
+      "level": 1
+    },
+    {
+      "id": 9,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 2
+    },
+    {
+      "id": 10,
+      "kind": "item",
+      "chain": "tea",
+      "level": 3
+    },
+    {
+      "id": 11,
+      "kind": "item",
+      "chain": "fried",
+      "level": 4
+    },
+    {
+      "id": 12,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 1
+    },
+    {
+      "id": 13,
+      "kind": "item",
+      "chain": "tea",
+      "level": 2
+    },
+    {
+      "id": 60,
+      "kind": "generator",
+      "chain": "noodle"
+    },
+    {
+      "id": 15,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 4
+    },
+    {
+      "id": 16,
+      "kind": "item",
+      "chain": "tea",
+      "level": 1
+    },
+    {
+      "id": 17,
+      "kind": "item",
+      "chain": "fried",
+      "level": 2
+    },
+    {
+      "id": 18,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 3
+    },
+    {
+      "id": 19,
+      "kind": "item",
+      "chain": "tea",
+      "level": 4
+    },
+    {
+      "id": 20,
+      "kind": "item",
+      "chain": "fried",
+      "level": 1
+    },
+    {
+      "id": 21,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 2
+    },
+    {
+      "id": 22,
+      "kind": "item",
+      "chain": "tea",
+      "level": 3
+    },
+    {
+      "id": 23,
+      "kind": "item",
+      "chain": "fried",
+      "level": 4
+    },
+    {
+      "id": 24,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 1
+    },
+    {
+      "id": 25,
+      "kind": "item",
+      "chain": "tea",
+      "level": 2
+    },
+    {
+      "id": 26,
+      "kind": "item",
+      "chain": "fried",
+      "level": 3
+    },
+    {
+      "id": 27,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 4
+    },
+    {
+      "id": 28,
+      "kind": "item",
+      "chain": "tea",
+      "level": 1
+    },
+    {
+      "id": 29,
+      "kind": "item",
+      "chain": "fried",
+      "level": 2
+    },
+    {
+      "id": 30,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 3
+    },
+    {
+      "id": 31,
+      "kind": "item",
+      "chain": "tea",
+      "level": 4
+    },
+    {
+      "id": 32,
+      "kind": "item",
+      "chain": "fried",
+      "level": 1
+    },
+    {
+      "id": 33,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 2
+    },
+    {
+      "id": 34,
+      "kind": "item",
+      "chain": "tea",
+      "level": 3
+    },
+    {
+      "id": 35,
+      "kind": "item",
+      "chain": "fried",
+      "level": 4
+    },
+    {
+      "id": 36,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 1
+    },
+    {
+      "id": 37,
+      "kind": "item",
+      "chain": "tea",
+      "level": 2
+    },
+    {
+      "id": 38,
+      "kind": "item",
+      "chain": "fried",
+      "level": 3
+    },
+    {
+      "id": 39,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 4
+    },
+    {
+      "id": 40,
+      "kind": "item",
+      "chain": "tea",
+      "level": 1
+    },
+    {
+      "id": 41,
+      "kind": "item",
+      "chain": "fried",
+      "level": 2
+    },
+    {
+      "id": 42,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 3
+    },
+    {
+      "id": 43,
+      "kind": "item",
+      "chain": "tea",
+      "level": 4
+    },
+    {
+      "id": 44,
+      "kind": "item",
+      "chain": "fried",
+      "level": 1
+    },
+    {
+      "id": 45,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 2
+    },
+    {
+      "id": 46,
+      "kind": "item",
+      "chain": "tea",
+      "level": 3
+    },
+    {
+      "id": 47,
+      "kind": "item",
+      "chain": "fried",
+      "level": 4
+    },
+    {
+      "id": 48,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 1
+    },
+    {
+      "id": 49,
+      "kind": "item",
+      "chain": "tea",
+      "level": 2
+    },
+    {
+      "id": 50,
+      "kind": "item",
+      "chain": "fried",
+      "level": 3
+    },
+    {
+      "id": 51,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 4
+    },
+    {
+      "id": 52,
+      "kind": "item",
+      "chain": "tea",
+      "level": 1
+    },
+    {
+      "id": 53,
+      "kind": "item",
+      "chain": "fried",
+      "level": 2
+    },
+    {
+      "id": 54,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 3
+    },
+    {
+      "id": 55,
+      "kind": "item",
+      "chain": "tea",
+      "level": 4
+    },
+    {
+      "id": 56,
+      "kind": "item",
+      "chain": "fried",
+      "level": 1
+    },
+    {
+      "id": 57,
+      "kind": "item",
+      "chain": "noodle",
+      "level": 2
+    },
+    {
+      "id": 58,
+      "kind": "item",
+      "chain": "tea",
+      "level": 3
+    },
+    {
+      "id": 59,
+      "kind": "item",
+      "chain": "fried",
+      "level": 4
+    }
+  ],
+  "orders": [
+    {
+      "id": 3,
+      "requirements": [
+        {
+          "chain": "fried",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    },
+    {
+      "id": 4,
+      "requirements": [
+        {
+          "chain": "tea",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    },
+    {
+      "id": 5,
+      "requirements": [
+        {
+          "chain": "tea",
+          "level": 2
+        }
+      ],
+      "coins": 10,
+      "xp": 2,
+      "energy": 1
+    }
+  ],
+  "energy": 0,
+  "energyUpdatedAt": 1761999970000,
+  "coins": 1200,
+  "level": 7,
+  "xp": 3,
+  "pendingGenerators": [
+    "dumpling",
+    "sweet"
+  ],
+  "nextId": 61,
+  "rngSeed": -1895507006
+}

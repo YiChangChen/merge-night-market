@@ -14,7 +14,7 @@ describe('useGameStore', () => {
 
   beforeEach(() => {
     now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
-    useGameStore.setState({ state: null });
+    useGameStore.setState({ state: null, status: { kind: 'loading' } });
   });
 
   afterEach(() => {
@@ -28,6 +28,31 @@ describe('useGameStore', () => {
 
     expect(action).not.toHaveBeenCalled();
     expect(useGameStore.getState().state).toBeNull();
+  });
+
+  it('hydrate 之後狀態是 ready', () => {
+    useGameStore.getState().hydrate(freshGame());
+
+    expect(useGameStore.getState().status).toEqual({ kind: 'ready' });
+  });
+
+  it('讀檔失敗：狀態是 failed、state 維持 null，apply 不做任何事（不會觸發存檔）', () => {
+    const action = jest.fn((state: GameState) => state);
+
+    useGameStore.getState().failLoad('migration-failed');
+    useGameStore.getState().apply(action);
+
+    expect(useGameStore.getState().status).toEqual({ kind: 'failed', reason: 'migration-failed' });
+    expect(useGameStore.getState().state).toBeNull();
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('resetLoad 讓重試回到 loading', () => {
+    useGameStore.getState().failLoad('storage-error');
+
+    useGameStore.getState().resetLoad();
+
+    expect(useGameStore.getState().status).toEqual({ kind: 'loading' });
   });
 
   it('hydrate 會先結算時間，再放進 store', () => {
@@ -53,7 +78,7 @@ describe('useGameStore', () => {
     expect(useGameStore.getState().state?.coins).toBe(freshGame().coins + 7);
   });
 
-  it('依序分派 action 產生的事件，分派後 state 不再帶 events', () => {
+  it('依序分派 action 產生的事件，分派後 events 清空', () => {
     useGameStore.setState({ state: freshGame() });
     const events: GameEvent[] = [
       { type: 'item_merged', chain: 'tea', level: 2 },
@@ -66,7 +91,7 @@ describe('useGameStore', () => {
     unsubscribe();
 
     expect(received).toEqual(events);
-    expect(useGameStore.getState().state).not.toHaveProperty('events');
+    expect(useGameStore.getState().state?.events).toEqual([]);
   });
 
   it('訂閱者收到事件時，store 已經是新的 state', () => {

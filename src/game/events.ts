@@ -13,14 +13,25 @@ export type GameEvent =
 
 export type GameEventListener = (event: GameEvent) => void;
 
+export type EventErrorHandler = (error: unknown, event: GameEvent) => void;
+
 export type EventBus = {
   subscribe(listener: GameEventListener): () => void;
   emit(event: GameEvent): void;
+  /** 由服務層在啟動時接上（例如 log.error）；規則層不能 import log。 */
+  setErrorHandler(handler: EventErrorHandler): void;
 };
 
-export function createEventBus(onError: (error: unknown, event: GameEvent) => void): EventBus {
+// 預設不做任何事：訂閱者的錯誤絕不能重新丟出，否則在 RN 正式版會變成全域致命錯誤讓 App 閃退
+const ignoreError: EventErrorHandler = () => {};
+
+export function createEventBus(onError: EventErrorHandler = ignoreError): EventBus {
   const listeners = new Set<GameEventListener>();
+  let handleError = onError;
   return {
+    setErrorHandler(handler) {
+      handleError = handler;
+    },
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -33,17 +44,17 @@ export function createEventBus(onError: (error: unknown, event: GameEvent) => vo
         try {
           listener(event);
         } catch (error) {
-          // 一個訂閱者壞掉（例如音效載入失敗）不能讓其他訂閱者收不到事件
-          onError(error, event);
+          // 一個訂閱者壞掉（例如音效載入失敗）不能讓其他訂閱者收不到事件，也不能讓 App 閃退
+          try {
+            handleError(error, event);
+          } catch {
+            // 錯誤處理器本身出錯也一律吞掉
+          }
         }
       }
     },
   };
 }
 
-// 訂閱者的錯誤延後重新丟出，交給全域錯誤處理（之後由 Sentry 接手），不中斷這一輪分派。
-export const gameEvents = createEventBus((error) => {
-  queueMicrotask(() => {
-    throw error;
-  });
-});
+// 錯誤處理器在 services/game-session.ts 接到 log.error（之後 log.error 會送 Sentry，S7.4）。
+export const gameEvents = createEventBus();

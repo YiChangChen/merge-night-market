@@ -4,7 +4,7 @@ baseline_commit: e4be9f69dc90cda4a2eaf16a1cb3acfb69586a99
 
 # Story 1.2b: Zustand store、apply 與 GameEvent
 
-Status: review
+Status: done
 
 ## Story
 
@@ -110,3 +110,9 @@ So that 兩個分頁都能用 selector 訂閱 state，演出、音效和埋點�
 ## Change Log
 
 - 2026-11-09：完成 Story 1.2b：Zustand store、apply、GameEvent 匯流排、存檔與執行週期移到服務層、畫面改用 selector。狀態改為 review。
+
+### Review Findings（code review 2026-11-09，範圍 e4be9f6..main）
+
+- [x] [Review][Patch] 訂閱者錯誤用 `queueMicrotask` 重新丟出，在 RN 正式版會變成全域致命錯誤，一個音效訂閱者壞掉就讓 App 閃退；改成可注入的錯誤處理器，由 services 接到 log.error [src/game/events.ts:44-48]
+- [x] [Review][Patch] 已棄用的 `useGame()` 會訂閱整個 state，違反 selector 規則，而且已經沒有呼叫端；直接刪除 [src/game/use-game.ts]
+- [x] [Review][Patch] `store-test` 用 `jest.spyOn(Date, 'now')` mock 時鐘，違反「規則層不 mock」；store.ts 是邊界，把這個例外記進 project-context [src/game/__tests__/store-test.ts:16]

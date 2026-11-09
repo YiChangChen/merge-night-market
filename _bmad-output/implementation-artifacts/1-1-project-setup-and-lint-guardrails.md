@@ -4,7 +4,7 @@ baseline_commit: e4be9f69dc90cda4a2eaf16a1cb3acfb69586a99
 
 # Story 1.1: 專案設定與規則護欄
 
-Status: review
+Status: done
 
 ## Story
 
@@ -102,4 +102,14 @@ So that 之後每個 story 都在同一套規則下開發，AI agent 違反分�
 
 ## Change Log
 
+- 2026-11-09（e10da7e，另一個 session）：建置 profile 改成優先讀 `APP_VARIANT`，其次才讀 `EAS_BUILD_PROFILE`。原因是本機用 `APP_VARIANT=production` 求值時，`debugTools` 仍然是 true。`eas.json` 的三個 profile 都注入了 `env.APP_VARIANT`；沒有金鑰時，對應欄位是 `null`，不是空字串或 `undefined`。AC1 和 Completion Notes 寫的「依 EAS_BUILD_PROFILE」以這筆為準。
+- 2026-11-09（code review）：`services/config.ts` 新增執行期防護 `resolveDebugTools`，只有開發模式或 preview 建置才會開啟除錯工具；ESLint 規則層護欄補上 react-native-*、@react-native-*、@expo/*、zustand、不帶子路徑的 import、new Date()、performance.now()、Date['now']、globalThis.Math.random。
+
 - 2026-11-09：完成 Story 1.1：app.config.ts、eas.json、expo-build-properties、套件版本對齊、ESLint 分層護欄。狀態改為 review。
+
+### Review Findings（code review 2026-11-09，範圍 e4be9f6..main）
+
+- [x] [Review][Patch]（原 Decision，使用者選擇執行期 fail-closed：只在 __DEV__ 或 preview 開啟除錯工具）沒有設定 APP_VARIANT／EAS_BUILD_PROFILE 時，debugTools 預設為開啟 — `eas update` 這類只在建置以外求值 config 的流程，會把 `debugTools: true`（Spike A 入口、`/spike-street`）推給正式版玩家。需要決定採用「執行期 fail-closed」或「預設 production」等做法。[app.config.ts:9-14]
+- [x] [Review][Patch] ESLint 規則層護欄有漏洞：`react-native-*`、`@react-native-*/*`、`@expo/*`、`zustand`（store.ts 以外）、不帶子路徑的 `../../services`、`new Date()`、`performance.now()`、`Date['now']` 都沒被擋下 [eslint.config.js:5-60]
+- [x] [Review][Patch] Story 1.1 的紀錄沒有反映 e10da7e 的 APP_VARIANT 修正（AC1 和 Completion Notes 仍寫依 EAS_BUILD_PROFILE、空字串／undefined）[1-1-project-setup-and-lint-guardrails.md]
+- [x] [Review][Defer] ESLint 只強制規則層邊界；services、features、ui 的分層 import 限制還沒有 lint 規則 [eslint.config.js] — deferred, AC 範圍外

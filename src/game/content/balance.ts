@@ -15,6 +15,10 @@ export const BALANCE = {
   levelUpEnergy: 20,
   twoItemOrderMinLevel: 3,
   twoItemOrderChance: 0.4,
+  // 人龍長度 = min(queueBase + queuePerStallLevel × Σ攤位等級, queueMax) + 額外人潮（FR17）
+  queueBase: 8,
+  queuePerStallLevel: 2,
+  queueMax: 20,
   // 開幕週長度：首次啟動後 72 小時（FR36）
   openingWeekMs: 72 * 60 * 60 * 1000,
   // 新手教學的步數；meta.tutorialStep 達到這個值代表教學完成（FR40）

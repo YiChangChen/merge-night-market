@@ -48,13 +48,13 @@ development_status:
   # Epic 1：夜市街開張
   epic-1: in-progress
   1-0-content-finalization-and-art-manifest: done
-  1-1-project-setup-and-lint-guardrails: review
-  1-2a-layered-file-relocation: review
-  1-2b-zustand-store-apply-and-game-events: review
-  1-2c-log-service-and-error-boundary: review
-  1-3-spike-a-street-performance-gate: review
+  1-1-project-setup-and-lint-guardrails: done
+  1-2a-layered-file-relocation: done
+  1-2b-zustand-store-apply-and-game-events: done
+  1-2c-log-service-and-error-boundary: done
+  1-3-spike-a-street-performance-gate: done
   1-4-spike-b-admob-test-rewarded-ad: backlog
-  1-5-save-v2-and-v1-migration: review
+  1-5-save-v2-and-v1-migration: done
   1-6-stall-driven-generators-and-orders: backlog
   1-7-tabs-street-screen-and-settings: backlog
   1-8-debug-panel-and-save-import-export: backlog

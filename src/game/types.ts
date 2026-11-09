@@ -13,8 +13,9 @@ export type RecipeId = string;
 
 export type ItemPiece = { id: number; kind: 'item'; chain: ChainId; level: number };
 export type GeneratorPiece = { id: number; kind: 'generator'; chain: ChainId };
-// 發明菜（E3）。存檔格式 v2 已經接受這種棋子（見 isValidSaveV2），
-// 但要到 S3.2 才加進 Piece，讓棋盤與規則一起處理，屆時不需要再升版。
+// 發明菜（E3）。形狀先定在這裡；S3.2 會把它加進 Piece，並讓 isValidSaveV2 接受 kind: 'dish'。
+// 在那之前驗證器一律拒絕，因為棋盤還畫不了發明菜（載入會在 render 時崩潰）。
+// 「接受更多」不需要升版：舊版 App 讀到發明菜只會顯示讀檔失敗、不會覆寫。
 export type DishPiece = { id: number; kind: 'dish'; recipe: RecipeId; count: 1 | 2 | 3 };
 export type Piece = ItemPiece | GeneratorPiece;
 

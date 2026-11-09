@@ -4,7 +4,7 @@ baseline_commit: e72374b
 
 # Story 1.2c: 日誌服務與 ErrorBoundary
 
-Status: review
+Status: done
 
 ## Story
 

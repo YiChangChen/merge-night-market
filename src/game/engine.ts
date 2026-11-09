@@ -358,5 +358,3 @@ export function sellPiece(state: GameState, cell: number): GameState {
   board[cell] = null;
   return flushPendingGenerators({ ...state, board, coins: state.coins + sellPrice(piece) });
 }
-
-// 存檔可能損毀或來自舊版，讀取時只接受形狀正確的資料

@@ -26,7 +26,7 @@ import { useGameStore } from '@/game/store';
 // Spike A（暫時）：除錯入口，Story 1.3 結論出來後移除
 import { markNavStart } from '@/features/street';
 import { config } from '@/services/config';
-import { retryLoadGame } from '@/services/game-session';
+import { retryLoadGame, startOverAfterSaveFailure } from '@/services/game-session';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
@@ -204,7 +204,15 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  if (loadFailure) return <SaveErrorScreen reason={loadFailure} onRetry={retryLoadGame} />;
+  if (loadFailure) {
+    return (
+      <SaveErrorScreen
+        reason={loadFailure}
+        onRetry={retryLoadGame}
+        onStartOver={startOverAfterSaveFailure}
+      />
+    );
+  }
   if (!board) return <View style={styles.screen} />;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);

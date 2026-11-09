@@ -39,3 +39,38 @@ describe('ErrorScreen', () => {
     expect(screen.getByText('找不到品項圖')).toBeTruthy();
   });
 });
+
+describe('SaveErrorScreen', () => {
+  // 延後載入，避免和上方 ErrorScreen 的 log mock 互相影響
+  const { SaveErrorScreen } = jest.requireActual('../save-error-screen');
+
+  it('「備份後開新局」要再按一次確認才會執行，取消則回到原畫面', async () => {
+    const onStartOver = jest.fn();
+    await render(<SaveErrorScreen reason="invalid" onRetry={jest.fn()} onStartOver={onStartOver} />);
+
+    await fireEvent.press(screen.getByText('備份後開新局'));
+    expect(onStartOver).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByText('取消'));
+    expect(screen.getByText('備份後開新局')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('備份後開新局'));
+    await fireEvent.press(screen.getByText('確定開新局'));
+    expect(onStartOver).toHaveBeenCalledTimes(1);
+  });
+
+  it('存檔來自較新版本時只提示更新，不提供開新局', async () => {
+    await render(<SaveErrorScreen reason="newer-version" onRetry={jest.fn()} onStartOver={jest.fn()} />);
+
+    expect(screen.getByText('這份存檔來自較新的版本，請先更新 App 再開啟。')).toBeTruthy();
+    expect(screen.queryByText('備份後開新局')).toBeNull();
+  });
+
+  it('「重試」呼叫 onRetry', async () => {
+    const onRetry = jest.fn();
+    await render(<SaveErrorScreen reason="corrupt-json" onRetry={onRetry} onStartOver={jest.fn()} />);
+
+    await fireEvent.press(screen.getByText('重試'));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});

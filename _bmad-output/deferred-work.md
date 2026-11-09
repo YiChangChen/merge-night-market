@@ -8,3 +8,19 @@
 - source_plan: _bmad-output/implementation-artifacts/1-3-spike-a-street-performance-gate.md
   summary: Spike A 第二階段：在 Android 中階機上複驗夜市街效能（release build、Flashlight、adb；FPS、冷啟動、記憶體）
   evidence: 使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號；第一階段在 iPhone 上量到 UI／JS 60 FPS、卡頓 0%、進入 72 ms，但無法代表 Pixel 6a。最晚在 S7.6 之前完成；沒通過時依序評估 Skia → Lottie → 降級。原型保留在 src/features/street/__spike__/ 供複驗使用
+## Deferred from: code review of Epic 1 stories 1.1–1.5 (2026-11-09)
+- source_plan: _bmad-output/implementation-artifacts/1-1-project-setup-and-lint-guardrails.md
+  summary: ESLint 只強制規則層邊界；services、features、ui 的分層 import 限制還沒有 lint 規則
+  evidence: 架構〈Architectural Boundaries〉寫明所有層都由 no-restricted-imports 強制執行；S1.1 AC4 只要求規則層
+- source_plan: _bmad-output/implementation-artifacts/1-3-spike-a-street-performance-gate.md
+  summary: Spike 卡頓門檻固定 25 ms（120 Hz 會漏報）、沒有顯示 JS 執行緒的卡頓比例、沒有量回棋盤方向
+  evidence: 這次在 60 Hz 的 iPhone 16 上量測，結果有效；Android 複驗會改用 Flashlight。如果要沿用 App 內面板，先把門檻改成依螢幕更新率計算
+- source_plan: _bmad-output/implementation-artifacts/1-3-spike-a-street-performance-gate.md
+  summary: Spike A 入口按鈕疊在棋盤右下角的格子上
+  evidence: 暫時的除錯入口，S1.7 會和 spike 一起移除
+- source_plan: _bmad-output/implementation-artifacts/1-5-save-v2-and-v1-migration.md
+  summary: createGame(now, seed) 違反「now 放在最後一個參數」
+  evidence: v1 就是這個簽名，呼叫端很多（測試、services）；之後整理規則層時一起改
+- source_plan: _bmad-output/implementation-artifacts/1-5-save-v2-and-v1-migration.md
+  summary: production 的 AdMob ad unit ID 沒有在建置時檢查是否存在
+  evidence: 屬於 S6.2 的範圍（正式 ad unit ID 注入）

@@ -4,7 +4,7 @@ baseline_commit: e4be9f69dc90cda4a2eaf16a1cb3acfb69586a99
 
 # Story 1.2a: 分層搬檔（只改路徑）
 
-Status: review
+Status: done
 
 ## Story
 

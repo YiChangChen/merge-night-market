@@ -4,7 +4,7 @@ baseline_commit: 75f15da
 
 # Story 1.3: Spike A：夜市街效能閘門
 
-Status: review
+Status: done
 
 ## Story
 
@@ -101,3 +101,10 @@ So that 用數據決定夜市街的渲染方案（架構 #4），之後的畫面
 
 - 2026-11-09：使用者只有 iPhone、沒有 Mac 和付費帳號，量測改成兩階段（iPhone 暫定、Android 複驗）。原型、效能面板和量測文件完成，等待量測數字。
 - 2026-11-09：iPhone 量測通過（UI／JS 60 FPS、卡頓 0%、進入 72 ms），#4 暫定採用純 RN + Reanimated，回填架構文件，Android 複驗記入 deferred-work。狀態改為 review。
+
+### Review Findings（code review 2026-11-09，範圍 e4be9f6..main）
+
+- [x] [Review][Patch] 量測按鈕快速連點兩次，會啟動兩個 rAF 迴圈和兩個計時器，其中一個停不掉；量測中按「清除」，這一輪結果仍會被加回去。改用 ref 做防護 [src/features/street/__spike__/use-frame-recorder.ts:47-63]
+- [x] [Review][Patch] project-context 規定「不能用 Expo Go」，但 S1.3、S1.5 的實機驗證都用 Expo Go；把這個例外和限制記進 project-context（原生設定沒有被驗證到）[_bmad-output/project-context.md]
+- [x] [Review][Defer] 卡頓門檻固定 25 ms，在 120 Hz 螢幕會漏掉掉幀；JS 執行緒的卡頓比例沒有顯示；沒有量「回棋盤」方向 [src/features/street/__spike__/stats.ts:4] — deferred, 這次是 60 Hz 的 iPhone 16，結果有效；Android 複驗改用 Flashlight
+- [x] [Review][Defer] Spike A 入口按鈕疊在棋盤右下角格子上 [src/app/index.tsx] — deferred, 暫時的除錯入口，S1.7 會和 spike 一起移除

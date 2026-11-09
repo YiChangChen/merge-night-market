@@ -13,6 +13,10 @@ export function useFrameRecorder() {
   const jsDeltas = useRef<number[]>([]);
   const rafId = useRef<number | null>(null);
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 用 ref 防止連點：state 要等 React commit 才更新，連點兩次會啟動兩個量測
+  const measuringRef = useRef(false);
+  // 按「清除」時遞增；量測中途清除，這一輪結果就不再加回去
+  const epoch = useRef(0);
   const [measuring, setMeasuring] = useState(false);
   const [runs, setRuns] = useState<RunResult[]>([]);
 
@@ -33,19 +37,24 @@ export function useFrameRecorder() {
     rafId.current = null;
   };
 
-  const finish = () => {
+  const finish = (runEpoch: number) => {
     uiFrames.setActive(false);
     stopJsLoop();
-    const result: RunResult = {
-      ui: summarizeFrames(uiDeltas.get()),
-      js: summarizeFrames(jsDeltas.current),
-    };
-    setRuns((previous) => [...previous, result]);
+    stopTimer.current = null;
+    measuringRef.current = false;
+    if (runEpoch === epoch.current) {
+      const result: RunResult = {
+        ui: summarizeFrames(uiDeltas.get()),
+        js: summarizeFrames(jsDeltas.current),
+      };
+      setRuns((previous) => [...previous, result]);
+    }
     setMeasuring(false);
   };
 
   const start = () => {
-    if (measuring) return;
+    if (measuringRef.current) return;
+    measuringRef.current = true;
     uiDeltas.set([]);
     jsDeltas.current = [];
     setMeasuring(true);
@@ -60,16 +69,24 @@ export function useFrameRecorder() {
     };
     rafId.current = requestAnimationFrame(loop);
 
-    stopTimer.current = setTimeout(finish, MEASURE_MS);
+    const runEpoch = epoch.current;
+    stopTimer.current = setTimeout(() => finish(runEpoch), MEASURE_MS);
+  };
+
+  const clearRuns = () => {
+    epoch.current += 1;
+    setRuns([]);
   };
 
   useEffect(
     () => () => {
       if (stopTimer.current) clearTimeout(stopTimer.current);
       stopJsLoop();
+      uiFrames.setActive(false);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在卸載時清理
     []
   );
 
-  return { start, measuring, runs, clearRuns: () => setRuns([]) };
+  return { start, measuring, runs, clearRuns };
 }

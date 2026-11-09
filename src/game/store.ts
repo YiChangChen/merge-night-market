@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 
 import { gameEvents } from './events';
-import type { SaveFailure } from './save';
+import type { LoadFailure } from './save';
 import { syncAll } from './time';
 import type { GameState } from './types';
 
@@ -13,7 +13,7 @@ export type GameAction = (state: GameState) => GameState;
 export type LoadStatus =
   | { kind: 'loading' }
   | { kind: 'ready' }
-  | { kind: 'failed'; reason: SaveFailure | 'storage-error' };
+  | { kind: 'failed'; reason: LoadFailure };
 
 type GameStore = {
   // ready 之前一律是 null
@@ -24,7 +24,7 @@ type GameStore = {
   // 讀檔完成後放進 store，並先結算離線期間的時間
   hydrate: (state: GameState) => void;
   // 讀檔失敗：state 維持 null，所以不會有任何寫入存檔
-  failLoad: (reason: SaveFailure | 'storage-error') => void;
+  failLoad: (reason: LoadFailure) => void;
   // 重新讀檔前回到 loading
   resetLoad: () => void;
 };

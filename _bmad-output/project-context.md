@@ -99,6 +99,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - **只要改到存檔形狀**，同一個 PR 內必須完成三件事：遞增 `version`、新增 `migrations[n]`、新增 `__tests__/fixtures/save-v<n>-*.json`。`migration-test.ts` 要驗證遷移後 `isValidSave` 通過，且金幣、XP、棋盤內容不變。
 - `content-test.ts` 要驗證配方、卡牌、素材檔名（等於 `RecipeId`）一一對應。
 - 服務層不寫單元測試。規則層不 mock 任何東西，因為它本來就是純函式。
+  - 例外：`store.ts` 是規則層與外界的邊界，會自己讀 `Date.now()`，所以 `store-test.ts` 可以用 `jest.spyOn(Date, 'now')` 固定時間。其他規則層函式一律從參數傳入 `now`。
 - 畫面元件測試用 `@testing-library/react-native` 14：
   - `render`、`fireEvent.*` 都是 async，一律要 `await`。
   - 放在該 feature 的 `__tests__/`，檔名 `<module>-test.tsx`。
@@ -111,14 +112,16 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 
 ### Platform & Build Rules
 
-- 不能用 Expo Go，一律使用 `expo-dev-client` 開發版建置。
+- 開發一律使用 `expo-dev-client` 開發版建置。
+  - 例外（2026-11-09）：使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號，所以實機驗證和效能量測暫時用 Expo Go（`npx expo start --go`，量測加上 `--no-dev --minify`）。前提是所有原生依賴都是 SDK 對應版本（`npx expo install --check` 沒有警告）。
+  - Expo Go **不會**驗證到原生設定（`expo-build-properties`、config plugin、`runtimeVersion`），也不能用 Expo Go 不支援的原生套件（例如 AdMob）。這些要等開發版或 preview 建置再驗證。
 - **新增或升級原生依賴時，必須重建開發版**（`npx eas-cli@latest build --profile development`），不能只推 OTA。`runtimeVersion` 採 fingerprint 策略。
 - 不得手動建立或修改 `ios/`、`android/`（CNG）。原生設定一律寫在 `app.config.ts` 與 config plugin。
 - 新的原生套件要先通過三項檢查才能採用：支援 New Architecture、相容 RN 0.88、`npx expo-doctor` 通過。
 - 廣告：
   - development 與 preview 建置一律用 `TestIds.REWARDED`。
   - 啟動順序固定為 UMP → ATT → `mobileAds().initialize()`。
-- 除錯面板與存檔匯入匯出只在 `__DEV__` 或 development/preview profile 下渲染。
+- 除錯面板與存檔匯入匯出只在 `__DEV__` 或 development/preview profile 下渲染。一律讀 `config.debugTools`（`services/config.ts`），它在執行期還會再檢查一次：只有開發模式或 preview 建置才會開啟。所以就算 OTA 更新漏設 `APP_VARIANT`，正式版也看不到除錯工具。
 - 只支援直式單手操作，可點擊目標至少 44 pt。
 
 ### Critical Don't-Miss Rules

@@ -46,6 +46,32 @@ describe('createEventBus', () => {
     expect(onError).toHaveBeenCalledWith(error, merged);
   });
 
+  it('沒有設定錯誤處理器時，訂閱者的錯誤被吞掉，不會重新丟出', async () => {
+    const bus = createEventBus();
+    const microtasks = jest.spyOn(globalThis, 'queueMicrotask');
+    bus.subscribe(() => {
+      throw new Error('音效載入失敗');
+    });
+
+    expect(() => bus.emit(merged)).not.toThrow();
+    expect(microtasks).not.toHaveBeenCalled();
+    microtasks.mockRestore();
+  });
+
+  it('setErrorHandler 可以在之後接上（例如 log.error），處理器本身出錯也不會往外丟', () => {
+    const bus = createEventBus();
+    const handler = jest.fn(() => {
+      throw new Error('handler broke');
+    });
+    bus.setErrorHandler(handler);
+    bus.subscribe(() => {
+      throw new Error('boom');
+    });
+
+    expect(() => bus.emit(merged)).not.toThrow();
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it('訂閱者在處理事件時取消訂閱，不影響這一輪的其他訂閱者', () => {
     const bus = createEventBus(jest.fn());
     const received: string[] = [];

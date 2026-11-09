@@ -147,16 +147,25 @@ describe('isValidSaveV2', () => {
     expect(isValidSaveV2(saved())).toBe(true);
   });
 
-  it('接受 E3 才會出現的發明菜棋子（格式在 v2 就已保留）', () => {
+  // 放一個合法的新棋子到空格（id 用 nextId，不會撞號），再由各案例改壞它
+  const withPiece = (s: any, piece: any) => {
+    s.board[s.board.indexOf(null)] = { id: s.nextId, ...piece };
+    s.nextId += 1;
+  };
+
+  it('接受棋盤上新增的合法品項', () => {
     const save = saved();
-    save.board[0] = { id: 999, kind: 'dish', recipe: 'tea-fried', count: 3 };
+    withPiece(save, { kind: 'item', chain: 'sweet', level: 7 });
     expect(isValidSaveV2(save)).toBe(true);
   });
 
   it.each([
-    ['品項階數超過該鏈長度', (s: any) => (s.board[0] = { id: 1, kind: 'item', chain: 'tea', level: 99 })],
-    ['未知的棋子種類', (s: any) => (s.board[0] = { id: 1, kind: 'bomb' })],
-    ['發明菜份數 4', (s: any) => (s.board[0] = { id: 1, kind: 'dish', recipe: 'x', count: 4 })],
+    // 引擎與畫面還處理不了的資料（S3.2／E4 之前）
+    ['發明菜棋子（S3.2 之前）', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 1 })],
+    ['貴客單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried' })],
+    ['線索單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'clue', expiresAt: 1 })],
+    // 型別
+    ['未知的棋子種類', (s: any) => withPiece(s, { kind: 'bomb' })],
     ['未知的鏈', (s: any) => (s.pendingGenerators = ['pizza'])],
     ['攤位等級 4', (s: any) => (s.stalls.tea.level = 4)],
     ['缺少一個攤位', (s: any) => delete s.stalls.sweet],
@@ -164,6 +173,26 @@ describe('isValidSaveV2', () => {
     ['人龍冷卻時間不是數字', (s: any) => (s.queue.cooldownEndsAt = 'soon')],
     ['meta 缺少 firstLaunchAt', (s: any) => delete s.meta.firstLaunchAt],
     ['lastSellout 缺少 doubled', (s: any) => (s.lastSellout = { wave: 1, coins: 1, energy: 1, xp: 1 })],
+    // 語意：會讓畫面或規則崩潰的資料
+    ['品項階數超過該鏈長度', (s: any) => withPiece(s, { kind: 'item', chain: 'tea', level: 99 })],
+    ['品項階數 0', (s: any) => withPiece(s, { kind: 'item', chain: 'tea', level: 0 })],
+    ['訂單需求階數超過該鏈長度', (s: any) => (s.orders[0].requirements = [{ chain: 'fried', level: 7 }])],
+    ['訂單需求階數 0', (s: any) => (s.orders[0].requirements = [{ chain: 'tea', level: 0 }])],
+    ['訂單沒有需求（免費領獎）', (s: any) => (s.orders[0].requirements = [])],
+    ['訂單需求超過 2 項', (s: any) => s.orders[0].requirements.push(...Array(2).fill({ chain: 'tea', level: 2 }))],
+    ['訂單 id 為負數', (s: any) => (s.orders[0].id = -1)],
+    ['訂單 id 為小數', (s: any) => (s.orders[0].id = 1.5)],
+    ['nextId 為小數', (s: any) => (s.nextId = 1000.5)],
+    ['nextId 不大於現有最大 id', (s: any) => (s.nextId = 1)],
+    ['棋子與訂單 id 重複', (s: any) => withPiece(s, { kind: 'item', chain: 'tea', level: 1, id: s.orders[0].id })],
+    ['玩家等級 0', (s: any) => (s.level = 0)],
+    ['玩家等級為小數', (s: any) => (s.level = 2.5)],
+    ['金幣為負數', (s: any) => (s.coins = -10)],
+    ['體力為負數', (s: any) => (s.energy = -1)],
+    ['待放產生器重複', (s: any) => (s.pendingGenerators = ['noodle', 'noodle'])],
+    ['待放產生器的鏈已經在棋盤上', (s: any) => (s.pendingGenerators = ['tea'])],
+    ['人龍剩餘人數大於長度', (s: any) => (s.queue.remaining = s.queue.length + 1)],
+    ['教學步數超過上限', (s: any) => (s.meta.tutorialStep = 99)],
   ])('拒絕：%s', (_name, corrupt) => {
     const save = saved();
     corrupt(save);

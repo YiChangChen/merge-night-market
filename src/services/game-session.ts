@@ -3,9 +3,11 @@
 import { AppState } from 'react-native';
 
 import { BALANCE } from '@/game/content';
+import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
 
-import { loadGame, saveGame } from './save';
+import { log } from './log';
+import { type LoadResult, loadGame, saveGame, startOverAfterBackup } from './save';
 
 const SAVE_DEBOUNCE_MS = 500;
 const TICK_MS = 1000;
@@ -22,27 +24,45 @@ function saveNow() {
 // 每次讀檔遞增；舊的讀檔結果（例如 session 已停止或使用者按了重試）一律丟棄
 let loadGeneration = 0;
 
-function loadIntoStore() {
+function loadIntoStore(load: () => Promise<LoadResult>) {
   const generation = ++loadGeneration;
-  loadGame().then((result) => {
-    if (generation !== loadGeneration) return;
-    const store = useGameStore.getState();
-    if (result.kind === 'ready') store.hydrate(result.state);
-    else store.failLoad(result.reason);
-  });
+  load()
+    .then((result) => {
+      if (generation !== loadGeneration) return;
+      const store = useGameStore.getState();
+      if (result.kind === 'ready') store.hydrate(result.state);
+      else store.failLoad(result.reason);
+    })
+    .catch((error) => {
+      // 例如 hydrate 或訂閱者拋出例外：顯示錯誤畫面，不能卡在載入中
+      if (generation !== loadGeneration) return;
+      log.error('save', '讀檔流程發生未預期的錯誤', error);
+      useGameStore.getState().failLoad('unexpected-error');
+    });
 }
 
 /** 存檔讀取失敗畫面的「重試」：回到 loading 再讀一次。 */
 export function retryLoadGame() {
   useGameStore.getState().resetLoad();
-  loadIntoStore();
+  loadIntoStore(loadGame);
+}
+
+/** 存檔讀取失敗畫面的「備份後開新局」：原檔先備份，成功後才開新局。 */
+export function startOverAfterSaveFailure() {
+  useGameStore.getState().resetLoad();
+  loadIntoStore(startOverAfterBackup);
 }
 
 /** 啟動遊戲執行週期，回傳停止函式。 */
 export function startGameSession(): () => void {
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-  loadIntoStore();
+  // 事件訂閱者（演出、音效、埋點）出錯時只記錄，不讓 App 閃退
+  gameEvents.setErrorHandler((error, event) => {
+    log.error('store', '事件訂閱者發生錯誤', { type: event.type, error });
+  });
+
+  loadIntoStore(loadGame);
 
   // state 一有變動就延後存檔，連續操作只寫一次
   const unsubscribeSave = useGameStore.subscribe((store, previous) => {

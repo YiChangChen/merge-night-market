@@ -12,6 +12,9 @@ export type SaveFailure =
   | 'migration-failed'
   | 'invalid';
 
+/** 讀檔失敗的所有原因：解析失敗，加上服務層的儲存錯誤與未預期的例外。 */
+export type LoadFailure = SaveFailure | 'storage-error' | 'unexpected-error';
+
 export type ParseResult =
   | { kind: 'empty' }
   | { kind: 'loaded'; state: GameState; migratedFrom: number | null }

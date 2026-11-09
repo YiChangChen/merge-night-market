@@ -4,7 +4,7 @@ baseline_commit: 0194d90
 
 # Story 1.5: 存檔 v2 與 v1 遷移
 
-Status: review
+Status: done
 
 ## Story
 
@@ -111,3 +111,23 @@ So that 新版本不會讓我失去任何進度。
 ## Change Log
 
 - 2026-11-09：完成 Story 1.5：GameState v2、v1→v2 遷移與 4 份 fixture、v1 備份、讀檔失敗畫面與不覆寫保證。狀態改為 review。
+
+### Review Findings（code review 2026-11-09，範圍 e4be9f6..main）
+
+- [x] [Review][Patch]（原 Decision，使用者選擇加上「備份後開新局」：先把原檔存到 save.corrupt.bak 再開新局；newer-version 仍只提示更新）存檔讀取失敗時只有「重試」：損毀、驗證失敗、遷移失敗都是固定結果，重試永遠失敗，玩家就卡死了。需要決定要不要提供「備份後開新局」這個出口。[src/features/errors/save-error-screen.tsx]
+- [x] [Review][Patch] 驗證器接受發明菜棋子和 vip／clue 訂單，但現在的引擎和畫面處理不了它們：存檔「合法」卻在 render 時崩潰，ErrorBoundary 重試也救不回來。在 E3／E4 實作之前一律拒絕 [src/game/save/validate.ts:28-55]
+- [x] [Review][Patch] 驗證器只檢查型別，沒有檢查語意。以下資料能通過驗證，但會讓畫面或規則崩潰：
+  - 訂單需求的階數超出該鏈範圍、需求是空陣列
+  - id、nextId 不是正整數，或 nextId 不大於現有的最大 id
+  - level 不是 ≥ 1 的整數
+  - 金幣、體力、XP 為負數
+  - id 重複
+  - pendingGenerators 重複，或該鏈的產生器已經在棋盤上
+
+  [src/game/save/validate.ts]
+- [x] [Review][Patch] 讀檔流程沒有 `.catch`：遷移或解析途中意外拋出例外時，畫面會永遠停在載入中，也不會留下 log [src/services/game-session.ts:26-32, src/services/save.ts]
+- [x] [Review][Patch] 備份 key 寫死成 `save.v1.bak`：之後的 v2→v3 遷移會把 v2 資料寫進 v1 的 key，或者因為已經有 v1 備份而沒有備份到 v2；改成依來源版本命名 [src/services/save.ts:16,48]
+- [x] [Review][Patch] 人龍數值（8、2、20）寫死在 queue.ts，違反「數值只放在 content/balance.ts」[src/game/queue.ts:5-7]
+- [x] [Review][Patch] engine.ts 結尾留下一行描述已刪除函式的註解 [src/game/engine.ts:最後一行]
+- [x] [Review][Defer] `createGame(now, seed)` 的 `now` 不在最後一個參數 [src/game/engine.ts] — deferred, pre-existing（v1 就是這個簽名），呼叫端很多，之後整理規則層時一起改
+- [x] [Review][Defer] production 的 AdMob ad unit ID 沒有在建置時檢查是否存在 [app.config.ts] — deferred, 屬於 S6.2 的範圍

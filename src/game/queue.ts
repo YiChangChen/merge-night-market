@@ -1,6 +1,6 @@
 // 排隊人龍（NP-2）：ACTIVE → SOLD_OUT → COOLDOWN → 開新波。
 // 不得 import engine.ts（engine 已經 import 這裡，會循環依賴）。
-import { BALANCE, CHAIN_IDS } from './content';
+import { BALANCE, CHAIN_IDS, type ChainId } from './content';
 import type { GameState, QueueState } from './types';
 
 /** 人龍長度 = min(8 + 2 × Σ已開攤位等級, 20) + 額外人潮（FR17）。新局為 12。 */
@@ -10,6 +10,37 @@ export function queueCapacity(state: Pick<GameState, 'stalls' | 'queue'>): numbe
     Math.min(BALANCE.queueBase + BALANCE.queuePerStallLevel * levels, BALANCE.queueMax) +
     state.queue.bonus
   );
+}
+
+/**
+ * 把剩下的客人依各攤等級比例分配到已開的攤位（S2.3、FR43），總和恆等於 remaining。
+ * 最大餘數法：先取整數部分，剩下的人依小數部分由大到小補 1，相同時依 CHAIN_IDS 順序。
+ * 衍生值，不存檔；冷卻中 remaining 為 0，全部為 0。
+ */
+export function distributeQueue(
+  state: Pick<GameState, 'stalls' | 'queue'>
+): Record<ChainId, number> {
+  const counts = Object.fromEntries(CHAIN_IDS.map((chain) => [chain, 0])) as Record<
+    ChainId,
+    number
+  >;
+  const remaining = state.queue.remaining;
+  const open = CHAIN_IDS.filter((chain) => state.stalls[chain].level >= 1);
+  const totalLevels = open.reduce((sum, chain) => sum + state.stalls[chain].level, 0);
+  if (remaining <= 0 || totalLevels === 0) return counts;
+
+  const fractions: { chain: ChainId; fraction: number }[] = [];
+  let assigned = 0;
+  for (const chain of open) {
+    const quota = (remaining * state.stalls[chain].level) / totalLevels;
+    counts[chain] = Math.floor(quota);
+    assigned += counts[chain];
+    fractions.push({ chain, fraction: quota - counts[chain] });
+  }
+  // sort 是穩定排序，小數相同時保留 CHAIN_IDS 的順序
+  fractions.sort((a, b) => b.fraction - a.fraction);
+  for (let i = 0; i < remaining - assigned; i++) counts[fractions[i].chain] += 1;
+  return counts;
 }
 
 /** 本波已出單人數（計量條的「今晚客流 x/y」的 x）；波中加長時不會歸零。 */

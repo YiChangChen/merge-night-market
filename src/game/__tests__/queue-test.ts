@@ -2,6 +2,7 @@
 import { BALANCE, BOARD_SIZE, type ChainId } from '../content';
 import { completeOrder, createGame, type GameState, type Order, type Piece } from '../engine';
 import {
+  distributeQueue,
   growActiveWave,
   isQueueFinalStretch,
   queueCapacity,
@@ -250,5 +251,42 @@ describe('計量條用的小工具（S2.2）', () => {
     expect(isQueueFinalStretch(queue({ remaining: 3 }))).toBe(true);
     expect(isQueueFinalStretch(queue({ remaining: 1 }))).toBe(true);
     expect(isQueueFinalStretch(queue({ remaining: 0, cooldownEndsAt: NOW }))).toBe(false);
+  });
+});
+
+describe('distributeQueue（S2.3、FR43）', () => {
+  const sum = (counts: Record<ChainId, number>) =>
+    Object.values(counts).reduce((total, count) => total + count, 0);
+
+  it('各攤等級相同時平均分配；鐵捲門分到 0', () => {
+    // 新局：tea、fried Lv1，其餘鐵捲門
+    const counts = distributeQueue(withQueue({ remaining: 12 }));
+    expect(counts).toEqual({ tea: 6, fried: 6, noodle: 0, dumpling: 0, sweet: 0 });
+  });
+
+  it('依等級比例：Lv2 對 Lv1 為 2:1', () => {
+    const state = withStallLevels(withQueue({ remaining: 12 }), { tea: 2 });
+    expect(distributeQueue(state)).toMatchObject({ tea: 8, fried: 4 });
+  });
+
+  it('餘數依小數部分分配，相同時依攤位順序', () => {
+    // 3 攤 Lv1、7 人：各 2.33 → 2、2、2，剩 1 人給第一攤
+    const state = withStallLevels(withQueue({ remaining: 7 }), { noodle: 1 });
+    expect(distributeQueue(state)).toMatchObject({ tea: 3, fried: 2, noodle: 2 });
+  });
+
+  it.each([
+    [{ tea: 3, fried: 1 }, 1],
+    [{ tea: 2, fried: 2, noodle: 1, dumpling: 3 }, 13],
+    [{ tea: 1, fried: 3, noodle: 2, dumpling: 1, sweet: 2 }, 19],
+    [{ tea: 3, fried: 3, noodle: 3, dumpling: 3, sweet: 3 }, 20],
+  ] as const)('總和守恆：%o、%i 人', (levels, remaining) => {
+    const state = withStallLevels(withQueue({ remaining }), levels);
+    expect(sum(distributeQueue(state))).toBe(remaining);
+  });
+
+  it('冷卻中全部為 0', () => {
+    const state = withQueue({ remaining: 0, cooldownEndsAt: NOW + COOLDOWN });
+    expect(sum(distributeQueue(state))).toBe(0);
   });
 });

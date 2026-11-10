@@ -65,7 +65,7 @@ describe('StallView', () => {
     expect(screen.queryByTestId('stall-tea-preload', { includeHiddenElements: true })).toBeNull();
   });
 
-  it('只訂閱自己的攤位：棋盤、金幣或其他攤位改變時不重繪', async () => {
+  it('只訂閱自己的攤位：棋盤、金幣改變時不重繪', async () => {
     const onRender = jest.fn();
     await render(
       <Profiler id="tea" onRender={onRender}>
@@ -79,12 +79,25 @@ describe('StallView', () => {
         ...state,
         coins: state.coins + 100,
         board: [...state.board].reverse(),
-        stalls: { ...state.stalls, fried: { level: 2, signatureDish: null } },
       }));
     });
     expect(onRender.mock.calls.length).toBe(rendersAfterMount);
 
     await setTeaLevel(2);
     expect(onRender.mock.calls.length).toBe(rendersAfterMount + 1);
+  });
+
+  it('其他攤位升級時，只有排隊人數改變的部分重繪（S2.3：人龍依等級比例分配）', async () => {
+    await render(<StallView chain="tea" animate={false} />);
+    expect(screen.getByLabelText('排隊 6 人')).toBeTruthy();
+
+    await act(async () => {
+      useGameStore.getState().apply((state: GameState) => ({
+        ...state,
+        stalls: { ...state.stalls, fried: { level: 2, signatureDish: null } },
+      }));
+    });
+    // tea Lv1 對 fried Lv2：12 人分成 4 與 8
+    expect(screen.getByLabelText('排隊 4 人')).toBeTruthy();
   });
 });

@@ -14,6 +14,7 @@ import { useGameStore } from '@/game/store';
 
 import { NeonSign } from './neon-sign';
 import { RollingShutter } from './rolling-shutter';
+import { StallQueue } from './stall-queue';
 
 export const STALL_WIDTH = 220;
 
@@ -40,7 +41,7 @@ type StallViewProps = {
 
 /**
  * 夜市街上的一個攤位，點一下開啟攤位面板（UX-DR3）。只訂閱自己的攤位等級：拖曳棋子、出單都不會讓它重繪。
- * 圖層由下往上：外觀 → 霓虹 → 重開演出 → 老闆。招牌菜（E3）與人龍頭像（S2.3）之後加入。
+ * 由上往下：霓虹 → 外觀（重開演出疊在上面）→ 排隊頭像（S2.3）→ 老闆。招牌菜在 E3 加入。
  */
 export const StallView = memo(function StallView({ chain, animate }: StallViewProps) {
   const level = useGameStore((store) => store.state?.stalls[chain].level ?? 0);
@@ -124,6 +125,7 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
         ) : null}
         <Text style={styles.levelLabel}>{appearance.label}</Text>
       </View>
+      <StallQueue chain={chain} animate={animate} />
       <View style={styles.owner}>
         <Image
           source={stall.art.owner}

@@ -61,18 +61,20 @@ GDD〈素材需求〉的 54 張新美術，依交付批次列出。每張圖完�
 
 ## E3 批次：發明菜圖示（10 張）
 
+提示詞：[art-prompts-e3.md](art-prompts-e3.md)（建議一張 5×2 素材表一次生成）。
+
 | # | 素材 | 路徑 | 尺寸上限 | 狀態 |
 |---|---|---|---|---|
-| 32 | 紅茶鹽酥雞套餐 | `dishes/tea-fried.webp` | 512 | 占位 |
-| 33 | 茶香蚵仔麵線 | `dishes/tea-noodle.webp` | 512 | 占位 |
-| 34 | 雞排麵線 | `dishes/fried-noodle.webp` | 512 | 占位 |
-| 35 | 奶茶煎餃 | `dishes/tea-dumpling.webp` | 512 | 占位 |
-| 36 | 炸煎雙拼 | `dishes/fried-dumpling.webp` | 512 | 占位 |
-| 37 | 麵線小籠湯 | `dishes/noodle-dumpling.webp` | 512 | 占位 |
-| 38 | 珍奶雞蛋糕 | `dishes/tea-sweet.webp` | 512 | 占位 |
-| 39 | 甜鹹地瓜雞 | `dishes/fried-sweet.webp` | 512 | 占位 |
-| 40 | 夜市甜鹹雙拼 | `dishes/noodle-sweet.webp` | 512 | 占位 |
-| 41 | 冰火小籠塔 | `dishes/dumpling-sweet.webp` | 512 | 占位 |
+| 32 | 紅茶鹽酥雞套餐 | `dishes/tea-fried.webp` | 512 | 定稿 |
+| 33 | 茶香蚵仔麵線 | `dishes/tea-noodle.webp` | 512 | 定稿 |
+| 34 | 雞排麵線 | `dishes/fried-noodle.webp` | 512 | 定稿 |
+| 35 | 奶茶煎餃 | `dishes/tea-dumpling.webp` | 512 | 定稿 |
+| 36 | 炸煎雙拼 | `dishes/fried-dumpling.webp` | 512 | 定稿 |
+| 37 | 麵線小籠湯 | `dishes/noodle-dumpling.webp` | 512 | 定稿 |
+| 38 | 珍奶雞蛋糕 | `dishes/tea-sweet.webp` | 512 | 定稿 |
+| 39 | 甜鹹地瓜雞 | `dishes/fried-sweet.webp` | 512 | 定稿 |
+| 40 | 夜市甜鹹雙拼 | `dishes/noodle-sweet.webp` | 512 | 定稿 |
+| 41 | 冰火小籠塔 | `dishes/dumpling-sweet.webp` | 512 | 定稿 |
 
 ## E4 批次：阿嬤（1 張）
 

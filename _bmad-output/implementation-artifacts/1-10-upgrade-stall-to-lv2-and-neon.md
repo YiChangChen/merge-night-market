@@ -83,7 +83,7 @@ So that 我每次回來都能讓夜市更熱鬧一點。
   - **檢查**：`src/` 裡的 `TODO(content)` 是 0；`content-stalls-test` 新增檢查，確認 41 個檔案都存在，也都接上了；美術清單 E1 的 31 列都標為定稿。
   - 原始素材表搬到 `art-source/`，不會被打包。
 - AC7：要在 E1 retro 時處理。
-- **測試**：`stalls-test` 增加 12 個、`stall-panel-test` 增加 5 個，共 221 個通過；lint、tsc 也通過，iOS 和 Android 打包成功。
+- **測試**：`stalls-test` 增加 11 個（code review 更正：原本誤寫為 12）、`stall-panel-test` 增加 5 個，共 221 個通過；lint、tsc 也通過，iOS 和 Android 打包成功。
 
 ## File List
 
@@ -101,3 +101,11 @@ So that 我每次回來都能讓夜市更熱鬧一點。
 - 2026-11-10：實機檢查通過（iPhone 16），包括夜市街新美術和修正後的棋盤訂單列。狀態改為 done。AC5 延後（deferred-work），AC7 交給 Epic 1 retro。
 - 2026-11-10：E1 美術定稿並接上（AC6），等待實機檢查。
 - 2026-11-10：完成 Story 1.10 的程式部分：升級到 Lv2、招牌通電演出、攤位面板的升級區塊。AC5（Android 量測）與 AC6（E1 美術）受阻，狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 194119f..main）
+
+- [x] [Review][Patch] 素材尺寸超過規範上限，卻標為定稿：老闆頭像 699–807 px（上限 512）、霓虹圖層寬 1262–1370 px（上限 1024）。縮到上限以內，並在 content 測試加上尺寸檢查 [assets/images/owners, assets/images/stalls/*/neon-*.webp]
+- [x] [Review][Patch] 面板把「訂單金幣 +10%」寫死在畫面上，違反「元件不得寫死數字」；改成從 `BALANCE.stallOrderBonusPerLevel` 計算 [src/features/overlays/stall-panel.tsx]
+- [x] [Review][Patch] 美術清單第 1 列的路徑還寫 `street/background-*.webp`（切塊），實際是單一檔 `street/background.webp` [docs/art-manifest.md]
+- [x] [Review][Patch] Completion Notes 寫「stalls-test 增加 12 個」，實際是 11 個 [本檔案]
+- [x] [Review][Defer] 目前快速連點「升級」不會重複扣款，因為第二次判定時 Lv3 需要發明菜。S3.5 開放 Lv3 之後，在面板關閉前連點可能升兩級 [src/features/overlays/stall-panel.tsx] — deferred, 在 S3.5 加上「按下後立刻停用按鈕」的防護

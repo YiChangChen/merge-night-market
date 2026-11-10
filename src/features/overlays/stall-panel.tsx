@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 
-import { type ChainId, STALLS } from '@/game/content';
+import { BALANCE, type ChainId, STALLS } from '@/game/content';
 import { reopenCheck, reopenStall, upgradeCheck, upgradeStall } from '@/game/stalls';
 import { useGameStore } from '@/game/store';
 
@@ -47,11 +47,11 @@ export function StallPanel({ chain }: { chain: ChainId }) {
 
   // 按下後關閉面板，讓玩家看到夜市街上的演出（鐵捲門拉起／招牌通電）
   const onReopen = () => {
-    apply((state) => reopenStall(state, chain, Date.now()));
+    apply((state, now) => reopenStall(state, chain, now));
     close();
   };
   const onUpgrade = () => {
-    apply((state) => upgradeStall(state, chain, Date.now()));
+    apply((state, now) => upgradeStall(state, chain, now));
     close();
   };
 
@@ -79,7 +79,9 @@ export function StallPanel({ chain }: { chain: ChainId }) {
       ) : upgrade ? (
         <>
           <Text style={styles.section}>升級到 {LEVEL_NAMES[upgrade.targetLevel]}</Text>
-          <Text style={styles.info}>效果：這一攤的訂單金幣 +10%，霓虹招牌多亮一段</Text>
+          <Text style={styles.info}>
+            效果：這一攤的訂單金幣 +{Math.round(BALANCE.stallOrderBonusPerLevel * 100)}%，霓虹招牌多亮一段
+          </Text>
           <Condition label={`金幣 ${upgrade.coins}`} current={`目前 ${coins}`} met={upgrade.coinsMet} />
           {upgrade.needsDish ? (
             <Condition label="1 份含這一攤食材的發明菜" current="即將開放" met={false} />
@@ -99,6 +101,9 @@ export function StallPanel({ chain }: { chain: ChainId }) {
             </Text>
           </Pressable>
         </>
+      ) : level === 0 ? (
+        // 沒有重開條件的鐵捲門（開局攤位只會因為除錯或匯入而關閉）
+        <Text style={styles.info}>暫停營業中。</Text>
       ) : (
         <Text style={styles.info}>已經是最高等級的大店。</Text>
       )}

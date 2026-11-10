@@ -4,7 +4,7 @@ baseline_commit: cebce7d
 
 # Story 1.9: 重開攤位
 
-Status: review
+Status: done
 
 ## Story
 
@@ -87,3 +87,11 @@ So that 我可以解鎖新的產品線和新的訂單。
 ## Change Log
 
 - 2026-11-10：完成 Story 1.9：重開攤位規則、攤位面板、Overlay Host、FxController 與鐵捲門演出。狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 194119f..main）
+
+- [x] [Review][Patch] 攤位面板開著時按 Android 返回鍵，面板不會關閉，而是切換分頁或直接離開 App；加上 BackHandler，按返回鍵時先關閉面板 [src/features/overlays/overlay-host.tsx]
+- [x] [Review][Patch] 攤位在重開演出途中又被調回 Lv0（除錯或匯入）時，演出的狀態不會被清除，之後再次開啟時會莫名重播；攤位關閉時一併清除它的演出狀態 [src/features/street/stall-view.tsx]
+- [x] [Review][Patch] 已經關閉的開局攤位，面板會顯示「已經是最高等級的大店」；改成顯示「暫停營業」[src/features/overlays/stall-panel.tsx]
+- [x] [Review][Patch] 重開之後霓虹會亮起第一段，但沒有播放通電演出（FR14「每次升級都播放通電演出」）；FxController 收到 stall_reopened 時，除了鐵捲門，也一併播放通電 [src/features/overlays/fx-controller.ts]
+- [x] [Review][Defer] T7 的實機檢查（點攤位開啟面板）沒有另外記錄 — deferred, 在 S1.10 的實機檢查時一起看過夜市街；重開的完整流程要等玩家實際玩到 Lv3 才能測

@@ -8,6 +8,7 @@ import { CHAIN_IDS, type ChainId, STALLS } from '@/game/content';
 import {
   debugAddCoins,
   debugAddEnergy,
+  debugMinStallLevel,
   debugSetPlayerLevel,
   debugSetStallLevel,
 } from '@/game/debug';
@@ -20,6 +21,7 @@ const MINUTE = 60 * 1000;
 const IMPORT_FAILURES: Record<string, string> = {
   'empty-clipboard': '剪貼簿是空的',
   'not-ready': '遊戲還在讀檔',
+  'load-failed': '存檔讀取失敗時不能匯入，請先在棋盤畫面處理（重試或備份後開新局）',
   'corrupt-json': '不是合法的 JSON',
   'unknown-version': '缺少版本號',
   'newer-version': '存檔來自較新的版本',
@@ -49,18 +51,21 @@ function DebugButton({ label, onPress, testID }: { label: string; onPress: () =>
 function StallRow({ chain }: { chain: ChainId }) {
   const level = useGameStore((store) => store.state?.stalls[chain].level ?? 0);
   const apply = useGameStore((store) => store.apply);
-  const setLevel = (next: number) => {
-    if (next < 0 || next > 3) return;
-    apply((state) => debugSetStallLevel(state, chain, next as StallLevel));
-  };
+  // 用 apply 傳入的最新 state 計算，快速連點時每一下都算數
+  const step = (delta: 1 | -1) =>
+    apply((state) => {
+      const next = state.stalls[chain].level + delta;
+      if (next < debugMinStallLevel(chain) || next > 3) return state;
+      return debugSetStallLevel(state, chain, next as StallLevel);
+    });
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{STALLS[chain].name}</Text>
-      <DebugButton testID={`debug-stall-${chain}-down`} label="−" onPress={() => setLevel(level - 1)} />
+      <DebugButton testID={`debug-stall-${chain}-down`} label="−" onPress={() => step(-1)} />
       <Text testID={`debug-stall-${chain}-level`} style={styles.value}>
         Lv{level}
       </Text>
-      <DebugButton testID={`debug-stall-${chain}-up`} label="＋" onPress={() => setLevel(level + 1)} />
+      <DebugButton testID={`debug-stall-${chain}-up`} label="＋" onPress={() => step(1)} />
     </View>
   );
 }
@@ -165,7 +170,7 @@ export function DebugPanel() {
           <DebugButton testID="debug-import" label="從剪貼簿匯入" onPress={onImport} />
         </View>
         <Text style={styles.note}>
-          匯入會先執行遷移與驗證，不合法的存檔一律拒絕。時間快轉只影響這次執行，不會寫進存檔。
+          匯入會先執行遷移與驗證，不合法的存檔一律拒絕，匯入時也會取消時間快轉。快轉量本身不存檔，但快轉期間結算出的時間會被存起來；App 重開或按「歸零」後，計時改回真實時間，可能少掉不到 2 分鐘的體力回復。
         </Text>
       </ScrollView>
     </SafeAreaView>

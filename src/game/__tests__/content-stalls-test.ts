@@ -41,3 +41,44 @@ describe('E1 美術（art-manifest #1–#31）', () => {
     expect(existsSync(`${root}/street/background.webp`)).toBe(true);
   });
 });
+
+describe('E1 美術尺寸上限（art-manifest，code review 2026-11-10）', () => {
+  type FsRead = { readFileSync(file: string): Uint8Array };
+  const { readFileSync } = jest.requireActual<FsRead>('fs');
+  const root = `${process.cwd()}/assets/images`;
+
+  /** 從 WebP 檔頭讀寬高（支援 VP8X 延伸格式與 VP8L 無損格式）。 */
+  function webpSize(file: string): { width: number; height: number } {
+    const b = readFileSync(`${root}/${file}`);
+    const chunk = String.fromCharCode(b[12], b[13], b[14], b[15]);
+    if (chunk === 'VP8X') {
+      return {
+        width: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)),
+        height: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)),
+      };
+    }
+    if (chunk === 'VP8L') {
+      return {
+        width: 1 + (((b[22] & 0x3f) << 8) | b[21]),
+        height: 1 + (((b[24] & 0x0f) << 10) | (b[23] << 2) | ((b[22] & 0xc0) >> 6)),
+      };
+    }
+    // VP8（簡單有損）：起始碼之後是 14 位元的寬高
+    return { width: (b[26] | (b[27] << 8)) & 0x3fff, height: (b[28] | (b[29] << 8)) & 0x3fff };
+  }
+
+  it.each(CHAIN_IDS)('%s：頭像 ≤ 512、霓虹寬 ≤ 1024、攤位外觀 ≤ 1024', (chain) => {
+    const owner = webpSize(`owners/${chain}.webp`);
+    expect(Math.max(owner.width, owner.height)).toBeLessThanOrEqual(512);
+    const neon = [1, 2, 3].map((i) => webpSize(`stalls/${chain}/neon-${i}.webp`));
+    for (const layer of neon) {
+      expect(layer.width).toBeLessThanOrEqual(1024);
+      // 三層同一張畫布，疊起來才會對齊
+      expect(layer).toEqual(neon[0]);
+    }
+    for (const name of ['shutter', 'lv1', 'lv2', 'lv3']) {
+      const facade = webpSize(`stalls/${chain}/${name}.webp`);
+      expect(Math.max(facade.width, facade.height)).toBeLessThanOrEqual(1024);
+    }
+  });
+});

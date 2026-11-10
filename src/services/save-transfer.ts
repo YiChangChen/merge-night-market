@@ -11,7 +11,7 @@ export type ExportResult = { ok: true; length: number } | { ok: false };
 
 export type ImportResult =
   | { ok: true; level: number; coins: number; migratedFrom: number | null }
-  | { ok: false; reason: LoadFailure | 'empty-clipboard' | 'not-ready' };
+  | { ok: false; reason: LoadFailure | 'empty-clipboard' | 'not-ready' | 'load-failed' };
 
 /** 把目前的存檔（不含暫態 events）複製到剪貼簿。 */
 export async function exportSaveToClipboard(): Promise<ExportResult> {
@@ -30,7 +30,10 @@ export async function exportSaveToClipboard(): Promise<ExportResult> {
 
 /** 從剪貼簿讀取存檔：遷移、驗證都通過才取代目前的遊戲狀態（之後由自動存檔寫入）。 */
 export async function importSaveFromClipboard(): Promise<ImportResult> {
-  if (useGameStore.getState().status.kind !== 'ready') return { ok: false, reason: 'not-ready' };
+  const status = useGameStore.getState().status.kind;
+  // 讀檔失敗時不匯入：匯入後的自動存檔會蓋掉讀不出來的原檔，必須先經過「備份後開新局」
+  if (status === 'failed') return { ok: false, reason: 'load-failed' };
+  if (status !== 'ready') return { ok: false, reason: 'not-ready' };
 
   let text: string;
   try {
@@ -48,6 +51,8 @@ export async function importSaveFromClipboard(): Promise<ImportResult> {
     return { ok: false, reason: result.reason };
   }
 
+  // 匯入的存檔要依真實時間結算：先取消時間快轉，避免匯入的存檔被多給體力
+  useGameStore.getState().resetTime();
   useGameStore.getState().hydrate(result.state);
   log.info('save', '已從剪貼簿匯入存檔', {
     level: result.state.level,

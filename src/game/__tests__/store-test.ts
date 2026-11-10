@@ -165,3 +165,20 @@ describe('時間快轉（除錯面板）', () => {
     expect(useGameStore.getState().timeOffsetMs).toBe(0);
   });
 });
+
+describe('apply 傳入目前時間（code review 2026-11-10）', () => {
+  it('action 的第二個參數是含快轉偏移量的時間', () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    useGameStore.setState({ state: createGame(NOW, 1), status: { kind: 'ready' }, timeOffsetMs: 5000 });
+    let seen: number | undefined;
+
+    useGameStore.getState().apply((state, current) => {
+      seen = current;
+      return state;
+    });
+
+    expect(seen).toBe(NOW + 5000);
+    useGameStore.setState({ timeOffsetMs: 0 });
+    now.mockRestore();
+  });
+});

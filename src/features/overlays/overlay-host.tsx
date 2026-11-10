@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 
 import { useOverlayStore } from './overlay-store';
 import { StallPanel } from './stall-panel';
@@ -10,6 +11,16 @@ import { StallPanel } from './stall-panel';
 export function OverlayHost() {
   const stallPanel = useOverlayStore((store) => store.stallPanel);
   const close = useOverlayStore((store) => store.closeStallPanel);
+
+  // Android 返回鍵：面板開著時先關面板，不要切換分頁或離開 App
+  useEffect(() => {
+    if (!stallPanel) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      close();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [close, stallPanel]);
 
   if (!stallPanel) return null;
   return (

@@ -85,3 +85,26 @@ describe('importSaveFromClipboard', () => {
     expect(useGameStore.getState().state).toBeNull();
   });
 });
+
+describe('匯入與時間快轉（code review 2026-11-10）', () => {
+  it('匯入前取消時間快轉，匯入的存檔依真實時間結算，不會被多給體力', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    useGameStore.setState({ timeOffsetMs: 60 * 60 * 1000 });
+    const exported = { ...createGame(NOW, 3), energy: 40, energyUpdatedAt: NOW };
+    await Clipboard.setStringAsync(serializeSave(exported));
+
+    await importSaveFromClipboard();
+
+    expect(useGameStore.getState().timeOffsetMs).toBe(0);
+    expect(useGameStore.getState().state?.energy).toBe(40);
+    now.mockRestore();
+  });
+});
+
+it('讀檔失敗時拒絕匯入，原因是 load-failed（避免自動存檔蓋掉讀不出來的原檔）', async () => {
+  useGameStore.setState({ state: null, status: { kind: 'failed', reason: 'invalid' } });
+  await Clipboard.setStringAsync(serializeSave(createGame(NOW, 2)));
+
+  expect(await importSaveFromClipboard()).toEqual({ ok: false, reason: 'load-failed' });
+  expect(useGameStore.getState().state).toBeNull();
+});

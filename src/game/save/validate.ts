@@ -68,6 +68,8 @@ function isValidOrder(value: unknown): boolean {
 function isValidStalls(value: unknown): boolean {
   return (
     isObject(value) &&
+    // 至少一攤開著，訂單才有地方出（開局的手搖飲、炸物永遠不會關）
+    CHAIN_IDS.some((chain) => isObject(value[chain]) && (value[chain] as Json).level !== 0) &&
     CHAIN_IDS.every((chain) => {
       const stall = value[chain];
       return (

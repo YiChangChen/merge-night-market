@@ -88,3 +88,18 @@ describe('除錯用規則函式（S1.8）', () => {
     expect(debugAddEnergy(state, 100).energy).toBe(BALANCE.maxEnergy + 100);
   });
 });
+
+describe('除錯函式的邊界（code review 2026-11-10）', () => {
+  it('開局攤位（手搖飲、炸物）不能調成鐵捲門，否則之後永遠回不來', () => {
+    const state = createGame(NOW, 1);
+    expect(debugSetStallLevel(state, 'tea', 0)).toBe(state);
+    expect(debugSetStallLevel(state, 'fried', 0)).toBe(state);
+    expect(debugSetStallLevel(debugSetStallLevel(state, 'noodle', 1), 'noodle', 0).stalls.noodle.level).toBe(0);
+  });
+
+  it('玩家等級上限 99', () => {
+    const state = createGame(NOW, 1);
+    expect(debugSetPlayerLevel(state, 99).level).toBe(99);
+    expect(debugSetPlayerLevel(state, 100)).toBe(state);
+  });
+});

@@ -77,3 +77,11 @@ describe('DebugPanel（S1.8）', () => {
     warn.mockRestore();
   });
 });
+
+it('開局攤位的 − 不會把攤位調成鐵捲門（code review 2026-11-10）', async () => {
+  await render(<DebugPanel />);
+
+  await fireEvent.press(screen.getByTestId('debug-stall-tea-down'));
+
+  expect(useGameStore.getState().state?.stalls.tea.level).toBe(1);
+});

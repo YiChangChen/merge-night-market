@@ -193,3 +193,68 @@ describe('升級攤位（S1.10）', () => {
     jest.useRealTimers();
   });
 });
+
+describe('攤位面板的邊界（code review 2026-11-10）', () => {
+  it('關閉的開局攤位顯示「暫停營業中」，不會說是最高等級', async () => {
+    setGame({ stalls: { ...createGame(NOW, 1).stalls, tea: { level: 0, signatureDish: null } } });
+    useOverlayStore.setState({ stallPanel: 'tea' });
+    await render(<OverlayHost />);
+
+    expect(screen.getByText('暫停營業中。')).toBeTruthy();
+    expect(screen.queryByText('已經是最高等級的大店。')).toBeNull();
+  });
+
+  it('升級效果的百分比來自數值設定', async () => {
+    useOverlayStore.setState({ stallPanel: 'tea' });
+    await render(<OverlayHost />);
+
+    expect(screen.getByText(/訂單金幣 \+10%/)).toBeTruthy();
+  });
+});
+
+describe('演出狀態與返回鍵（code review 2026-11-10）', () => {
+  it('重開時同時播放鐵捲門與霓虹通電', () => {
+    const stop = startFxController();
+    gameEvents.emit({ type: 'stall_reopened', stall: 'noodle', level: 1 });
+    stop();
+
+    expect(useOverlayStore.getState().shutterOpening.noodle).toBeDefined();
+    expect(useOverlayStore.getState().neonPowerOn.noodle).toBeDefined();
+  });
+
+  it('演出途中攤位被關閉時，清掉演出狀態，之後不會莫名重播', async () => {
+    setGame({ stalls: { ...createGame(NOW, 1).stalls, noodle: { level: 1, signatureDish: null } } });
+    useOverlayStore.getState().playShutter('noodle');
+    useOverlayStore.getState().playNeonPowerOn('noodle');
+    await render(<StallView chain="noodle" animate={false} />);
+
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && { ...store.state, stalls: { ...store.state.stalls, noodle: { level: 0, signatureDish: null } } },
+      }));
+    });
+
+    expect(useOverlayStore.getState().shutterOpening.noodle).toBeUndefined();
+    expect(useOverlayStore.getState().neonPowerOn.noodle).toBeUndefined();
+  });
+
+  it('Android 返回鍵關閉面板', async () => {
+    const { BackHandler } = jest.requireActual<typeof import('react-native')>('react-native');
+    const listeners: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+      listeners.push(handler as () => boolean);
+      return { remove: jest.fn() };
+    });
+    useOverlayStore.setState({ stallPanel: 'tea' });
+    await render(<OverlayHost />);
+
+    let handled = false;
+    await act(async () => {
+      handled = listeners[listeners.length - 1]();
+    });
+
+    expect(handled).toBe(true);
+    expect(useOverlayStore.getState().stallPanel).toBeNull();
+    spy.mockRestore();
+  });
+});

@@ -136,3 +136,9 @@ describe('expectedOrderCoins（各玩家等級每單期望金幣）', () => {
     expect(total / samples / expectedOrderCoins(level, open)).toBeCloseTo(1, 1);
   });
 });
+
+describe('鐵捲門攤位的倍率（code review 2026-11-10）', () => {
+  it('攤位等級 0 不會產生 ×0.9 的負加成', () => {
+    expect(orderCoins([{ chain: 'noodle', level: 2 }], stalls({ noodle: 0 }))).toBe(10);
+  });
+});

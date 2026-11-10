@@ -24,3 +24,16 @@
 - source_plan: _bmad-output/implementation-artifacts/1-5-save-v2-and-v1-migration.md
   summary: production 的 AdMob ad unit ID 沒有在建置時檢查是否存在
   evidence: 屬於 S6.2 的範圍（正式 ad unit ID 注入）
+## Deferred from: code review of Epic 1 stories 1.6–1.10 (2026-11-10)
+- source_plan: _bmad-output/implementation-artifacts/1-7-tabs-street-screen-and-settings.md
+  summary: freezeOnBlur 凍結夜市街之後，霓虹的 withRepeat 迴圈可能還在 UI 執行緒上跑
+  evidence: 只是理論上可能，測試裡驗證不了。Android 複驗時要量「夜市街在背景時，棋盤拖曳的 FPS」；如果受影響，改用 useFocusEffect 直接停止動畫
+- source_plan: _bmad-output/implementation-artifacts/1-8-debug-panel-and-save-import-export.md
+  summary: 除錯程式碼仍然會被打包進正式版（執行期才判斷，沒有在建置時排除）
+  evidence: 架構〈Debug Tools〉要求整段排除。要在 S7.7 正式建置前，改用建置時就決定的環境變數，讓 Metro 刪掉這段程式碼
+- source_plan: _bmad-output/implementation-artifacts/1-10-upgrade-stall-to-lv2-and-neon.md
+  summary: S3.5 開放 Lv3 升級後，快速連點「升級」可能升兩級
+  evidence: 目前 Lv3 需要發明菜，所以第二次判定會失敗；S3.5 要加上按下後立刻停用按鈕
+- source_plan: _bmad-output/implementation-artifacts/1-9-reopen-stall.md
+  summary: 重開攤位的完整流程沒有實機測試
+  evidence: 需要玩家 Lv3 加上 300 金幣；可以等開發版或 preview 建置能用除錯面板時再測，或在實際遊玩時順便確認

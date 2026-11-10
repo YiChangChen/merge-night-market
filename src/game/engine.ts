@@ -98,7 +98,8 @@ export function openStallChains(stalls: Record<ChainId, StallState>): ChainId[] 
 
 /** 攤位等級帶來的訂單金幣倍率：Lv1 ×1.0、Lv2 ×1.1、Lv3 ×1.2（FR15）。 */
 function stallCoinMultiplier(level: number): number {
-  return 1 + BALANCE.stallOrderBonusPerLevel * (level - 1);
+  // 鐵捲門（0）不會出現在訂單裡；以 Lv1 為下限，避免出現 ×0.9 的負加成
+  return 1 + BALANCE.stallOrderBonusPerLevel * (Math.max(level, 1) - 1);
 }
 
 /** 一般訂單金幣 = Σ 5 × baseCost × 該攤加成（FR8、FR15）。兩品項訂單分別依各自攤位的等級計算。 */

@@ -4,7 +4,7 @@ baseline_commit: b040665
 
 # Story 1.7: 底部分頁、夜市街與設定畫面
 
-Status: review
+Status: done
 
 ## Story
 
@@ -116,3 +116,9 @@ So that 我隨時看得到夜市被我點亮到什麼程度。
 - 2026-11-10（S1.10 實機檢查時發現）：棋盤畫面的訂單列高度塌成 0，客人圖被資訊列蓋住（S1.7 的實機截圖其實已經出現這個問題，但當時沒有注意到）。原因推測是訂單卡 `order` 設了 `flex: 1`，而外層格子沒有固定高度，在版面引擎裡會被算成 0。修正：移除這個 `flex: 1`，並把訂單列的高度明確設為「客人圖 + 標籤」，和計算棋盤大小時預留的空間一致。
 
 - 2026-11-09：完成 Story 1.7：底部分頁、夜市街、設定畫面，移除 Spike A 原型。等待實機檢查與分頁切換實測（T9），狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 194119f..main）
+
+- [x] [Review][Patch] 自訂 `TabBar` 沒有透過 `BottomTabBarHeightCallbackContext` 回報實際高度，`useBottomTabBarHeight()` 拿到的是估計值（49 + 安全區），棋盤最下面一列會被 tab bar 蓋住 6–14 px [src/features/tabs/tab-bar.tsx]
+- [x] [Review][Patch] 棋盤背景 `night-market-background-direct.jpg` 在路由檔裡 require，違反「素材只能在 content/*.ts 裡 require」（這是既有寫法，S1.7 搬檔時沿用下來）[src/app/(tabs)/index.tsx]
+- [x] [Review][Defer] `freezeOnBlur` 讓失焦的夜市街凍結之後，`useIsFocused` 觸發的重繪可能不會被提交，霓虹的 `withRepeat` 迴圈也許還在 UI 執行緒上跑 [src/features/street/street-screen.tsx] — deferred, 只是理論上可能，沒辦法在測試裡驗證；S1.3 量測時這些動畫全部在畫面上，也維持 60 FPS。Android 複驗時要一起量測「夜市街在背景時，棋盤拖曳的 FPS」

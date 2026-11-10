@@ -4,7 +4,7 @@ baseline_commit: 02eeccf
 
 # Story 1.8: 除錯面板與存檔匯入匯出
 
-Status: review
+Status: done
 
 ## Story
 
@@ -105,3 +105,17 @@ So that 不必真的玩上好幾個小時，就能重現 bug、測試後期內�
 ## Change Log
 
 - 2026-11-10：完成 Story 1.8：除錯面板、時間快轉、存檔匯入匯出。狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 194119f..main）
+
+- [x] [Review][Patch] 時間快轉的偏移量沒有一致套用，和面板說明不符：
+  - HUD 的體力倒數沒有加上偏移量，快轉後會顯示錯誤的時間。
+  - UI 呼叫規則時傳入的是 `Date.now()`，不是 store 的時間（S2.1 開始用 `now` 之後就會出錯）。
+  - 匯入存檔時沿用了目前的偏移量，匯入的存檔會被多給體力。
+  - 快轉後的時間戳會被存進存檔，面板卻寫「不會寫進存檔」。
+
+  修法：`apply` 把 store 的 `now` 傳給 action，HUD 使用同一個時間，匯入前先把偏移量歸零，面板說明改成正確的描述 [src/game/store.ts, src/features/debug/debug-panel.tsx, src/services/save-transfer.ts]
+- [x] [Review][Patch] 除錯面板可以把手搖飲、炸物調成 Lv0，但這兩攤沒有重開條件，之後就永遠回不來；設定玩家等級也沒有上限。開局的攤位最低只能調到 Lv1，玩家等級上限設為 99 [src/game/debug.ts]
+- [x] [Review][Patch] 攤位的 −／＋ 用的是畫面上的舊等級，快速連點兩次只會算一次；改成在 apply 裡用最新的 state 計算 [src/features/debug/debug-panel.tsx]
+- [x] [Review][Patch] 讀檔失敗時匯入會被拒絕，但顯示的是「遊戲還在讀檔」，訊息不對；改成顯示讀檔失敗的狀態 [src/services/save-transfer.ts]
+- [x] [Review][Defer] 除錯程式碼仍然會被打包進正式版：只是不會執行，沒有像架構文件寫的那樣「整段排除」[src/app/debug.tsx] — deferred, 要在 S7.7 正式建置之前，改用建置時就決定的環境變數（例如 EXPO_PUBLIC_*），讓 Metro 把這段程式碼刪掉

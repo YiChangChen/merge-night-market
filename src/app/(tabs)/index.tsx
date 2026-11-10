@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/shallow';
 import { Board, PieceIcon } from '@/features/board';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
-import { BALANCE, CHAINS } from '@/game/content';
+import { BALANCE, BOARD_BACKGROUND, CHAINS } from '@/game/content';
 import {
   completeOrder,
   customerForOrder,
@@ -61,6 +61,8 @@ function Hud() {
         : null
     )
   );
+  // 除錯面板快轉時，倒數也要用同一個時間
+  const timeOffsetMs = useGameStore((store) => store.timeOffsetMs);
   // 倒數只影響這裡，計時放在 Hud 裡，每秒才不會重畫整個畫面
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -68,7 +70,7 @@ function Hud() {
     return () => clearInterval(timer);
   }, []);
   if (!state) return null;
-  const untilNext = msUntilNextEnergy(state, now);
+  const untilNext = msUntilNextEnergy(state, now + timeOffsetMs);
   return (
     <View style={styles.hud}>
       <Text style={styles.hudText}>
@@ -261,13 +263,13 @@ export default function GameScreen() {
 
   const handleCompleteOrder = (id: number) => {
     setSelected(null);
-    apply((current) => completeOrder(current, id, Date.now()));
+    apply((current, now) => completeOrder(current, id, now));
   };
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <Image
-        source={require('../../../assets/images/night-market-background-direct.jpg')}
+        source={BOARD_BACKGROUND}
         contentFit="cover"
         contentPosition="bottom"
         draggable={false}

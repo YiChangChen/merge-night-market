@@ -193,6 +193,7 @@ describe('isValidSaveV2', () => {
     ['待放產生器的鏈已經在棋盤上', (s: any) => (s.pendingGenerators = ['tea'])],
     ['人龍剩餘人數大於長度', (s: any) => (s.queue.remaining = s.queue.length + 1)],
     ['教學步數超過上限', (s: any) => (s.meta.tutorialStep = 99)],
+    ['所有攤位都是鐵捲門（訂單無處可出）', (s: any) => Object.values(s.stalls).forEach((stall: any) => (stall.level = 0))],
   ])('拒絕：%s', (_name, corrupt) => {
     const save = saved();
     corrupt(save);

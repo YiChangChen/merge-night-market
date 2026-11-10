@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useOverlayStore } from '@/features/overlays';
@@ -46,6 +46,12 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   const powerOn = useOverlayStore((store) => store.neonPowerOn[chain]);
   const finishNeonPowerOn = useOverlayStore((store) => store.finishNeonPowerOn);
   const onPowerOnDone = useCallback(() => finishNeonPowerOn(chain), [chain, finishNeonPowerOn]);
+  // 演出途中攤位被關閉（除錯或匯入）時，演出元件會卸載、收不了尾；在這裡清掉，之後才不會莫名重播
+  useEffect(() => {
+    if (!closed) return;
+    if (opening !== undefined) finishShutter(chain);
+    if (powerOn !== undefined) finishNeonPowerOn(chain);
+  }, [chain, closed, finishNeonPowerOn, finishShutter, opening, powerOn]);
 
   return (
     <Pressable

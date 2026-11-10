@@ -55,10 +55,10 @@ development_status:
   1-3-spike-a-street-performance-gate: done
   1-4-spike-b-admob-test-rewarded-ad: backlog
   1-5-save-v2-and-v1-migration: done
-  1-6-stall-driven-generators-and-orders: review
-  1-7-tabs-street-screen-and-settings: review
-  1-8-debug-panel-and-save-import-export: review
-  1-9-reopen-stall: review
+  1-6-stall-driven-generators-and-orders: done
+  1-7-tabs-street-screen-and-settings: done
+  1-8-debug-panel-and-save-import-export: done
+  1-9-reopen-stall: done
   1-10-upgrade-stall-to-lv2-and-neon: done
   epic-1-retrospective: optional
 

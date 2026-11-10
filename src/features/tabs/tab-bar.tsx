@@ -1,4 +1,5 @@
-import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import { BottomTabBarHeightCallbackContext, type BottomTabBarProps } from 'expo-router/js-tabs';
+import { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { markTabPress } from './tab-timing';
@@ -12,8 +13,14 @@ const TABS: Record<string, { label: string; icon: string }> = {
 // Expo Router 58 內建的 tab bar 介面：用 emitter 送出 tabPress、navigateToTab(routeKey) 切換分頁，
 // insets 由 navigator 傳入（和原版 React Navigation 的 navigation 物件不同）。
 export function TabBar({ state, emitter, navigateToTab, insets }: BottomTabBarProps) {
+  // 自訂 tab bar 要自己回報實際高度，useBottomTabBarHeight() 才會拿到正確值（否則是 49 + 安全區的估計）；
+  // 棋盤畫面靠它計算格子大小
+  const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View
+      testID="tab-bar"
+      onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
+      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {state.routes.map((route, index) => {
         const tab = TABS[route.name];
         if (!tab) return null;

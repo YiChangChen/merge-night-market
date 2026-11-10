@@ -7,7 +7,11 @@ import type { LoadFailure } from './save';
 import { syncAll } from './time';
 import type { GameState } from './types';
 
-export type GameAction = (state: GameState) => GameState;
+/**
+ * 規則動作。now 是 store 的目前時間（含除錯面板的時間快轉偏移量），
+ * 需要時間的規則一律用它，不要在元件裡自己呼叫 Date.now()，時間才會一致。
+ */
+export type GameAction = (state: GameState, now: number) => GameState;
 
 // loading：讀檔中；ready：可以玩；failed：存檔讀取或遷移失敗，顯示錯誤畫面且絕不覆寫存檔
 export type LoadStatus =
@@ -17,7 +21,7 @@ type GameStore = {
   // ready 之前一律是 null
   state: GameState | null;
   status: LoadStatus;
-  // 流程固定：syncAll → action → 分派事件 → 清空事件
+  // 流程固定：syncAll → action → 分派事件 → 清空事件；action 的第二個參數是目前時間
   apply: (action: GameAction) => void;
   // 讀檔完成後放進 store，並先結算離線期間的時間
   hydrate: (state: GameState) => void;
@@ -25,7 +29,8 @@ type GameStore = {
   failLoad: (reason: LoadFailure) => void;
   // 重新讀檔前回到 loading
   resetLoad: () => void;
-  // —— 除錯面板（S1.8）：時間快轉，偏移量注入 syncAll 的 now；不寫入存檔 ——
+  // —— 除錯面板（S1.8）：時間快轉，偏移量加在 store 的目前時間上（apply、hydrate、HUD 倒數都用它）。
+  // 偏移量本身不存檔；但快轉期間結算出的時間戳會被存起來，App 重開後由時鐘倒退的規則重新起算 ——
   timeOffsetMs: number;
   advanceTime: (ms: number) => void;
   resetTime: () => void;
@@ -44,7 +49,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
     apply: (action) => {
       const current = get().state;
       if (!current) return;
-      const next = action(syncAll(current, currentTime()));
+      const now = currentTime();
+      const next = action(syncAll(current, now), now);
       if (next === current) return;
       const { events } = next;
       // 先更新 store（事件清空），訂閱者收到事件時讀到的就是新的 state

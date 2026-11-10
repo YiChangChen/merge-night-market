@@ -4,7 +4,7 @@ baseline_commit: 194119f
 
 # Story 1.6: 產生器與訂單改由攤位控制
 
-Status: review
+Status: done
 
 ## Story
 
@@ -84,3 +84,7 @@ So that 攤位的狀態和棋盤上的玩法是連動的。
 ## Change Log
 
 - 2026-11-09：完成 Story 1.6：產生器與訂單改由攤位控制、攤位金幣加成、order_completed 事件、期望金幣表。狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 194119f..main）
+
+- [x] [Review][Patch] 攤位等級 0 時，`stallCoinMultiplier` 會變成 ×0.9；所有攤位都關閉時，`createOrder` 退回依玩家等級解鎖的鏈，但 `expectedOrderCoins` 卻回傳 0，兩邊不一致。倍率改成以 Lv1 為下限；存檔驗證要求至少有一攤開著，讓這個退回路徑實際上不可能發生 [src/game/engine.ts]

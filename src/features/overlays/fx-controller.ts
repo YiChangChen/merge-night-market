@@ -10,8 +10,9 @@ export function startFxController(): () => void {
   return gameEvents.subscribe((event) => {
     switch (event.type) {
       case 'stall_reopened':
-        // 夜市街上的鐵捲門拉起（FR10）
+        // 夜市街上的鐵捲門拉起（FR10），霓虹的第一段同時通電（FR14）
         useOverlayStore.getState().playShutter(event.stall);
+        useOverlayStore.getState().playNeonPowerOn(event.stall);
         break;
       case 'stall_upgraded':
         // 招牌通電：新亮起的那一段霓虹閃幾下再亮起（FR14）

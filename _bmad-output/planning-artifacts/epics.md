@@ -593,7 +593,7 @@ So that 我一眼看得懂剛剛那一拖發生了什麼事。
 
 **Acceptance Criteria:**
 
-**Given** `board.tsx` 落子時改呼叫 `apply(s => applyDrop(s, from, to, Date.now()))`
+**Given** `board.tsx` 落子時改呼叫 `apply((s, now) => applyDrop(s, from, to, now))`（E2 retro 2026-11-10：時間一律由 `apply` 傳入，不在元件裡呼叫 `Date.now()`）
 **When** 判定結果是 reject
 **Then** 被拖的品項播放搖頭動畫後彈回原格（UX-DR6），不消耗任何東西
 **And** 發明菜在格子裡顯示圖示，右下角標示份數（×2、×3）；發明菜不能和品項合成

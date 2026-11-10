@@ -39,3 +39,7 @@
   summary: 重開攤位的完整流程沒有實機測試
   evidence: 需要玩家 Lv3 加上 300 金幣；可以等開發版或 preview 建置能用除錯面板時再測，或在實際遊玩時順便確認
   status: 已解決（2026-11-10）：用 Expo Go 開除錯面板，在 iPhone 上走完重開與升級流程（E1 retro A1）
+## Deferred from: Epic 2 retrospective (2026-11-10)
+- source_plan: _bmad-output/implementation-artifacts/epic-2-retro-2026-11-10.md
+  summary: syncEnergy 在體力滿時每次呼叫都會更新 energyUpdatedAt 並回傳新 state；只要每秒 tick 的條件放寬，就會變成每秒存檔
+  evidence: E2 審查時因此改了 needsTick。根本解法是體力滿時不更新 energyUpdatedAt，改在體力從滿變成不滿時（例如 tapGenerator 扣體力）設定起點；牽涉 E1 的體力回復規則，要另外補測試

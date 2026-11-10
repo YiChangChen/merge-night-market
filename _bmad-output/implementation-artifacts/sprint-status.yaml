@@ -63,12 +63,12 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2：排隊人龍與完售
-  epic-2: in-progress
+  epic-2: done
   2-1-queue-wave-rules: done
   2-2-board-queue-meter: done
   2-3-street-queue-avatars: done
   2-4-sellout-show: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   # Epic 3：老闆發明
   epic-3: backlog

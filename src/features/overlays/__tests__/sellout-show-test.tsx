@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { StallView } from '@/features/street';
+import { shouldPlayFlash } from '@/features/street/neon-sign';
 import { createGame, type GameState } from '@/game/engine';
 import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
@@ -55,6 +56,10 @@ describe('完售演出（S2.4、FR19、UX-DR4）', () => {
     expect(screen.getByText('⭐ +12')).toBeTruthy();
     // 加倍按鈕只留位置，E6 之前不顯示
     expect(screen.queryByText(/看廣告/)).toBeNull();
+    // 讀螢幕軟體聽得到獎勵
+    expect(
+      screen.getByLabelText('完售！第 1 波，獲得金幣 60、體力 10、經驗 12。點一下繼續')
+    ).toBeTruthy();
   });
 
   it('lastSellout 不是這一波時不顯示獎勵數字', async () => {
@@ -63,6 +68,19 @@ describe('完售演出（S2.4、FR19、UX-DR4）', () => {
 
     expect(screen.getByText('完售！')).toBeTruthy();
     expect(screen.queryByTestId('sellout-reward')).toBeNull();
+  });
+
+  it('演出途中 lastSellout 被清除（冷卻到期）時，獎勵仍然顯示', async () => {
+    useOverlayStore.getState().playSellout(1);
+    await render(<OverlayHost />);
+
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && { ...store.state, lastSellout: null },
+      }));
+    });
+
+    expect(screen.getByText('🪙 +60')).toBeTruthy();
   });
 
   it('點一下跳過；遊戲狀態不變', async () => {
@@ -112,6 +130,28 @@ describe('完售演出（S2.4、FR19、UX-DR4）', () => {
     });
     expect(useOverlayStore.getState().stallPanel).toBeNull();
     spy.mockRestore();
+  });
+
+  it.each([
+    [
+      '新的序號、夜市街在前景、攤位開著：播',
+      { flash: 5, played: undefined, animate: true, level: 1 },
+      true,
+    ],
+    ['同一個序號已經播過：不重播', { flash: 5, played: 5, animate: true, level: 2 }, false],
+    [
+      '夜市街失焦：先不播（切回來時補播）',
+      { flash: 5, played: undefined, animate: false, level: 1 },
+      false,
+    ],
+    ['鐵捲門攤位不閃', { flash: 5, played: undefined, animate: true, level: 0 }, false],
+    [
+      '跳過演出後序號消失：不播，也不會中斷',
+      { flash: undefined, played: 5, animate: true, level: 1 },
+      false,
+    ],
+  ] as const)('招牌閃爍判斷：%s', (_name, input, expected) => {
+    expect(shouldPlayFlash(input)).toBe(expected);
   });
 
   it('夜市街的招牌收到完售序號', async () => {

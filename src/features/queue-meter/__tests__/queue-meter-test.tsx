@@ -55,10 +55,11 @@ describe('QueueMeter（S2.2）', () => {
   it('剩最後 3 人才進入閃爍狀態', async () => {
     await render(<QueueMeter />);
     await setQueue({ remaining: 4 });
-    expect(screen.getByTestId('queue-meter').props.accessibilityState).toEqual({ busy: false });
+    expect(screen.queryByTestId('queue-meter-final-stretch')).toBeNull();
 
     await setQueue({ remaining: 3 });
-    expect(screen.getByTestId('queue-meter').props.accessibilityState).toEqual({ busy: true });
+    expect(screen.getByTestId('queue-meter-final-stretch')).toBeTruthy();
+    expect(screen.getByLabelText('今晚客流 9/12，剩最後 3 位')).toBeTruthy();
   });
 
   it('冷卻中顯示「完售！下一波 m:ss」並每秒倒數（含除錯快轉）', async () => {

@@ -4,7 +4,7 @@ baseline_commit: b16292b
 
 # Story 2.1: 人龍波次規則
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -27,7 +27,7 @@ so that 我在棋盤上的每個動作都有一個看得見的十分鐘級目標
 5. `syncQueue(state, now)`：`now ≥ cooldownEndsAt` 時開新一波，`wave + 1`，`length = remaining = queueCapacity`，清除 `lastSellout`。
 6. ACTIVE 期間重開或升級攤位，`growActiveWave` 讓 length 與 remaining 同時 + Δ（上限 20）；COOLDOWN 期間不變（FR18）。
 7. 時鐘倒退時，`cooldownEndsAt − now` 會被截到 3 分鐘以內，冷卻不會被拉長。
-8. 規則層提供純函式 `needsTick(state, now)`，store 的 1 秒 tick 只在它回傳 true 時運作。本 story 的條件是「體力 < 100」或「冷卻中」。回到前景時立刻 `syncAll`（已有，保留）。
+8. 規則層提供純函式 `needsTick(state, now)`，store 的 1 秒 tick 只在它回傳 true 時運作。本 story 的條件是「體力 < 100」或「冷卻中」。回到前景時立刻 `syncAll`（已有，保留）。（code review 2026-11-10 修訂：「冷卻中」改為「冷卻到期，或時鐘倒退需要截短」，避免冷卻期間每秒存檔；架構文件已同步。）
 9. `queue-test.ts` 補上 `needsTick` 的測試：體力滿且人龍進行中時回傳 false。
 10. `queue-test.ts` 涵蓋以下情境：一般消化、剛好完售、冷卻中出單、冷卻結束、波中升級、冷卻中升級、上限 20、時鐘倒退。
 
@@ -189,3 +189,12 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-10：實作人龍波次規則（NP-2）、`needsTick`、除錯面板的人龍狀態；狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 b16292b..7ae4012）
+
+- [x] [Review][Patch] 冷卻中且體力滿時，每秒 tick 都會產生新 state 並觸發存檔（syncEnergy 在體力滿時會更新 energyUpdatedAt）；needsTick 改成只在體力未滿或冷卻已經到期時回傳 true [src/game/time.ts:16]
+- [x] [Review][Patch] （補跑 edge+auditor）上一輪 needsTick 修正的副作用：時鐘倒退或除錯「歸零」後，冷卻的 3 分鐘截短只在 apply 時發生，玩家閒置時冷卻會被拉長（違反 AC7）。needsTick 在 cooldownEndsAt − now > 3 分鐘時也回傳 true；resetTime 後立刻結算一次 [src/game/time.ts、src/game/store.ts]
+- [x] [Review][Patch] （補跑 auditor）AC8 與架構文件〈Time & Day Rollover〉的 needsTick 條件還寫「冷卻中」，要同步成「冷卻到期或需要截短」，S4.2、S6.1 才不會照舊文字擴充 [_bmad-output/game-architecture.md]
+- [x] [Review][Patch] （補跑 edge）存檔驗證：冷卻中的 remaining 必須是 0；length 不得超過 queueMax + bonus，避免匯入的存檔放大完售獎勵 [src/game/save/validate.ts]
+- [x] [Review][Patch] （補跑 edge+auditor）除錯面板調整攤位等級時沒有呼叫 growActiveWave，用除錯面板驗證「波中升級」會誤判，也讓之後的真實升級一次加太多 [src/game/debug.ts]
+- [x] [Review][Patch] （補跑 auditor）除錯面板的人龍區塊標題「S2.2 計量條完成前，只能在這裡看」已過時 [src/features/debug/debug-panel.tsx]

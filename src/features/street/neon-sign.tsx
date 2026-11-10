@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -90,6 +90,24 @@ function NeonSegment({ source, lit, animate, delay, poweringOn }: NeonSegmentPro
   );
 }
 
+/**
+ * 完售閃爍要不要播（S2.4）：有新的序號、還沒播過、夜市街在前景、攤位開著。
+ * 抽成純函式方便測試（Reanimated 的動畫過程在 jest 看不到）。
+ */
+export function shouldPlayFlash({
+  flash,
+  played,
+  animate,
+  level,
+}: {
+  flash: number | undefined;
+  played: number | undefined;
+  animate: boolean;
+  level: number;
+}): boolean {
+  return flash !== undefined && flash !== played && animate && level > 0;
+}
+
 type NeonSignProps = {
   name: string;
   /** 攤位名稱亮起時的顏色 */
@@ -116,20 +134,18 @@ export function NeonSign({
   onPowerOnDone,
   flash,
 }: NeonSignProps) {
-  // 完售：全街已開攤位的招牌一起閃爍（FR19、UX-DR4）
+  // 完售：全街已開攤位的招牌一起閃爍（FR19、UX-DR4）。每個序號只播一次；
+  // 完售通常發生在棋盤上，所以演出期間切到夜市街時補播；點一下跳過不會中斷閃爍。
   const flashOpacity = useSharedValue(1);
+  const playedFlash = useRef<number | undefined>(undefined);
   useEffect(() => {
-    if (flash === undefined || !animate || level === 0) return;
+    if (!shouldPlayFlash({ flash, played: playedFlash.current, animate, level })) return;
+    playedFlash.current = flash;
     const blink = () =>
       withSequence(withTiming(0.2, { duration: 90 }), withTiming(1, { duration: 110 }));
     flashOpacity.set(withSequence(blink(), blink(), blink()));
-    return () => {
-      cancelAnimation(flashOpacity);
-      flashOpacity.set(1);
-    };
-    // 只在新的完售序號出現時閃；等級或焦點改變不重播
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flash]);
+  }, [animate, flash, flashOpacity, level]);
+  useEffect(() => () => cancelAnimation(flashOpacity), [flashOpacity]);
   const flashStyle = useAnimatedStyle(() => ({ opacity: flashOpacity.get() }));
 
   // 用 JS 計時收尾，不必從 worklet 回呼

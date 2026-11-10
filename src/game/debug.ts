@@ -2,6 +2,7 @@
 // 和一般規則一樣是純函式：不合法的輸入直接回傳原 state。
 import { type ChainId, STALLS } from './content';
 import { ensureGenerator } from './engine';
+import { growActiveWave } from './queue';
 import type { GameState, StallLevel } from './types';
 
 const isAmount = (value: number) => Number.isFinite(value) && value > 0;
@@ -39,12 +40,15 @@ export function debugQueueLastCustomer(state: GameState): GameState {
   return { ...state, queue: { ...queue, remaining: 1 } };
 }
 
-/** 直接設定攤位等級；從鐵捲門調高時補上該鏈的產生器，訂單才不會出現做不出來的品項。 */
+/**
+ * 直接設定攤位等級；從鐵捲門調高時補上該鏈的產生器，訂單才不會出現做不出來的品項。
+ * 和真的重開、升級一樣，人龍進行中時這一波跟著加長（調低不會變短）。
+ */
 export function debugSetStallLevel(state: GameState, chain: ChainId, level: StallLevel): GameState {
   if (![0, 1, 2, 3].includes(level) || level < debugMinStallLevel(chain)) return state;
   const next: GameState = {
     ...state,
     stalls: { ...state.stalls, [chain]: { ...state.stalls[chain], level } },
   };
-  return level >= 1 ? ensureGenerator(next, chain) : next;
+  return growActiveWave(level >= 1 ? ensureGenerator(next, chain) : next);
 }

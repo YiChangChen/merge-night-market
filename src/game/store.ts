@@ -82,6 +82,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     resetTime: () => {
       set({ timeOffsetMs: 0 });
+      // 和 advanceTime 一樣立刻結算：快轉期間進入的冷卻會依真實時間截短，不必等到玩家下一個動作
+      get().apply((state) => state);
     },
   };
 });

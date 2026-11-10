@@ -3,7 +3,7 @@ import { memo, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
-  FadeIn,
+  FadeInRight,
   FadeOutLeft,
   LinearTransition,
   useAnimatedStyle,
@@ -25,7 +25,9 @@ const MAX_AVATARS = 5;
 const AVATAR_SIZE = 22;
 const LEAVE_MS = 260;
 const SHIFT_MS = 220;
-// 一般狀態不脈動；最後 3 人時快速閃爍（UX-DR2）
+// 人龍進行中時背景緩慢脈動；最後 3 人時加快並變亮（UX-DR2「閃爍並加快脈動節奏」）
+const NORMAL_PULSE_MS = 1400;
+const NORMAL_PULSE_OPACITY = 0.25;
 const FINAL_PULSE_MS = 280;
 
 function formatCountdown(ms: number): string {
@@ -72,17 +74,22 @@ export const QueueMeter = memo(function QueueMeter() {
   }, [bump, served]);
   const countStyle = useAnimatedStyle(() => ({ transform: [{ scale: bump.get() }] }));
 
-  // 最後 3 人：背景快速閃爍
+  // 背景脈動：一般時緩慢、最後 3 人時快速閃爍；冷卻中停止
+  const cooling = queue?.cooldownEndsAt != null;
   const glow = useSharedValue(0);
   useEffect(() => {
     cancelAnimation(glow);
-    if (!finalStretch) {
-      glow.set(withTiming(0, { duration: 150 }));
+    if (cooling) {
+      glow.set(0);
       return;
     }
-    glow.set(withRepeat(withTiming(1, { duration: FINAL_PULSE_MS }), -1, true));
+    glow.set(
+      finalStretch
+        ? withRepeat(withTiming(1, { duration: FINAL_PULSE_MS }), -1, true)
+        : withRepeat(withTiming(NORMAL_PULSE_OPACITY, { duration: NORMAL_PULSE_MS }), -1, true)
+    );
     return () => cancelAnimation(glow);
-  }, [finalStretch, glow]);
+  }, [cooling, finalStretch, glow]);
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.get() }));
 
   if (!queue) return null;
@@ -102,10 +109,13 @@ export const QueueMeter = memo(function QueueMeter() {
   return (
     <View
       testID="queue-meter"
-      accessibilityLabel={`今晚客流 ${served}/${queue.length}`}
-      accessibilityState={{ busy: finalStretch }}
+      accessibilityLabel={`今晚客流 ${served}/${queue.length}${finalStretch ? `，剩最後 ${queue.remaining} 位` : ''}`}
       style={styles.meter}>
-      <Animated.View pointerEvents="none" style={[styles.glow, glowStyle]} />
+      <Animated.View
+        testID={finalStretch ? 'queue-meter-final-stretch' : undefined}
+        pointerEvents="none"
+        style={[styles.glow, glowStyle]}
+      />
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
@@ -121,7 +131,7 @@ export const QueueMeter = memo(function QueueMeter() {
           return (
             <Animated.View
               key={`${queue.wave}-${index}`}
-              entering={FadeIn.duration(SHIFT_MS)}
+              entering={FadeInRight.duration(SHIFT_MS)}
               exiting={FadeOutLeft.duration(LEAVE_MS)}
               layout={LinearTransition.duration(SHIFT_MS)}>
               <Image

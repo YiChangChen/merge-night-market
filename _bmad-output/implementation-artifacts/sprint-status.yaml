@@ -64,10 +64,10 @@ development_status:
 
   # Epic 2：排隊人龍與完售
   epic-2: in-progress
-  2-1-queue-wave-rules: review
-  2-2-board-queue-meter: review
-  2-3-street-queue-avatars: review
-  2-4-sellout-show: review
+  2-1-queue-wave-rules: done
+  2-2-board-queue-meter: done
+  2-3-street-queue-avatars: done
+  2-4-sellout-show: done
   epic-2-retrospective: optional
 
   # Epic 3：老闆發明

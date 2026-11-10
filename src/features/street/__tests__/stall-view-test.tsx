@@ -87,6 +87,35 @@ describe('StallView', () => {
     expect(onRender.mock.calls.length).toBe(rendersAfterMount + 1);
   });
 
+  it('其他攤位改變、但這一攤的人龍不變時（冷卻中）不重繪', async () => {
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && {
+          ...store.state,
+          queue: { ...store.state.queue, remaining: 0, cooldownEndsAt: NOW + 60_000 },
+        },
+      }));
+    });
+    const onRender = jest.fn();
+    await render(
+      <Profiler id="tea" onRender={onRender}>
+        <StallView chain="tea" animate={false} />
+      </Profiler>
+    );
+    const rendersAfterMount = onRender.mock.calls.length;
+
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && {
+          ...store.state,
+          stalls: { ...store.state.stalls, fried: { level: 2, signatureDish: null } },
+        },
+      }));
+    });
+
+    expect(onRender.mock.calls.length).toBe(rendersAfterMount);
+  });
+
   it('其他攤位升級時，只有排隊人數改變的部分重繪（S2.3：人龍依等級比例分配）', async () => {
     await render(<StallView chain="tea" animate={false} />);
     expect(screen.getByLabelText('排隊 6 人')).toBeTruthy();

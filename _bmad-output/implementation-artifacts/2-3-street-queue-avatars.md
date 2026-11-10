@@ -4,7 +4,7 @@ baseline_commit: 334843d
 
 # Story 2.3: 夜市街的排隊頭像
 
-Status: review
+Status: done
 
 ## Story
 
@@ -91,3 +91,7 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-10：夜市街的排隊頭像；狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 b16292b..7ae4012）
+
+- [x] [Review][Patch] 「其他攤位改變時 StallView 不重繪」的隔離測試被拿掉，沒有替代的重繪次數測試；補一個人龍不受影響的情境（例如冷卻中升級其他攤） [src/features/street/__tests__/stall-view-test.tsx]

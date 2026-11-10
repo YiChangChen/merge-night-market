@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -78,11 +78,22 @@ type SelloutShowProps = {
  * 只讀遊戲狀態，不寫入；獎勵數字來自規則層寫入的 lastSellout。
  */
 export function SelloutShow({ wave, onDone }: SelloutShowProps) {
-  // 只顯示這一波的獎勵；冷卻已經結束（例如除錯快轉）時 lastSellout 會是 null
-  const reward = useGameStore((store) => {
-    const sellout = store.state?.lastSellout;
+  // 演出開始時記下這一波的獎勵：演出途中冷卻到期（例如除錯快轉）會清除 lastSellout，
+  // 不能讓獎勵列突然消失（code review 2026-11-10）
+  const [reward] = useState(() => {
+    const sellout = useGameStore.getState().state?.lastSellout;
     return sellout && sellout.wave === wave ? sellout : null;
   });
+
+  // 讀螢幕軟體：標籤要包含獎勵（會蓋掉子元素的文字），出現時主動唸出來，因為演出會自動結束
+  const label = reward
+    ? `完售！第 ${wave} 波，獲得金幣 ${reward.coins}、體力 ${reward.energy}、經驗 ${reward.xp}。點一下繼續`
+    : `完售！第 ${wave} 波。點一下繼續`;
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(label);
+    // 只在演出開始時唸一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // 用 JS 計時收尾，不必從 worklet 回呼（演出本身在 UI 執行緒播放）
@@ -103,7 +114,9 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
     <Pressable
       testID="sellout-show"
       accessibilityRole="button"
-      accessibilityLabel="完售！點一下繼續"
+      accessibilityLabel={label}
+      // 焦點不要跑到底下的棋盤（iOS）
+      accessibilityViewIsModal
       onPress={onDone}
       style={styles.backdrop}>
       <Fireworks />
@@ -130,7 +143,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0B1638CC',
+    // 約 45% 不透明：夜市街上完售時，底下全街招牌一起閃要看得到（獎勵面板本身不透明）
+    backgroundColor: '#0B163873',
   },
   burst: {
     position: 'absolute',

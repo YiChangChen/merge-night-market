@@ -153,6 +153,17 @@ describe('isValidSaveV2', () => {
     s.nextId += 1;
   };
 
+  it('接受完售後冷卻中的人龍，以及上限 20 的長度', () => {
+    const cooling = saved();
+    Object.assign(cooling.queue, { remaining: 0, cooldownEndsAt: NOW + 180_000 });
+    cooling.lastSellout = { wave: 1, coins: 60, energy: 10, xp: 12, doubled: false };
+    expect(isValidSaveV2(cooling)).toBe(true);
+
+    const full = saved();
+    Object.assign(full.queue, { length: 20, remaining: 20 });
+    expect(isValidSaveV2(full)).toBe(true);
+  });
+
   it('接受棋盤上新增的合法品項', () => {
     const save = saved();
     withPiece(save, { kind: 'item', chain: 'sweet', level: 7 });
@@ -192,6 +203,8 @@ describe('isValidSaveV2', () => {
     ['待放產生器重複', (s: any) => (s.pendingGenerators = ['noodle', 'noodle'])],
     ['待放產生器的鏈已經在棋盤上', (s: any) => (s.pendingGenerators = ['tea'])],
     ['人龍剩餘人數大於長度', (s: any) => (s.queue.remaining = s.queue.length + 1)],
+    ['人龍長度超過上限（放大完售獎勵）', (s: any) => Object.assign(s.queue, { length: 100000, remaining: 1 })],
+    ['冷卻中還有人排隊', (s: any) => (s.queue.cooldownEndsAt = 2_000_000)],
     ['教學步數超過上限', (s: any) => (s.meta.tutorialStep = 99)],
     ['所有攤位都是鐵捲門（訂單無處可出）', (s: any) => Object.values(s.stalls).forEach((stall: any) => (stall.level = 0))],
   ])('拒絕：%s', (_name, corrupt) => {

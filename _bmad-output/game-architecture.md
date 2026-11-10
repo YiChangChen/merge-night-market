@@ -345,7 +345,7 @@ src/app/
 - `time.ts` 提供以下函式：
   - `dateKeyUTC8(now)`
   - `syncAll(state, now)`：依序執行 syncEnergy、syncQueue、syncOrders（線索單到期）、syncDaily（換日歸零）
-  - `needsTick(state, now)`：store 的 1 秒 tick 只在它回傳 true 時運作。條件是：體力 < `maxEnergy(state, now)`、人龍冷卻中，或存在線索單。新增任何倒數計時，都必須同步擴充這個函式。
+  - `needsTick(state, now)`：store 的 1 秒 tick 只在它回傳 true 時運作。條件是：體力 < `maxEnergy(state, now)`、人龍冷卻**到期**（`now ≥ cooldownEndsAt`）或時鐘倒退讓剩餘冷卻超過 3 分鐘（需要截短），或存在線索單。冷卻倒數期間不必每秒結算（畫面自己計時）；體力滿時 `syncEnergy` 每次都會產生新 state，整段冷卻都 tick 會變成每秒存檔（E2 code review 2026-11-10）。新增任何倒數計時，都必須同步擴充這個函式，並遵守「只在需要改變 state 時回傳 true」。
 - 所有倒數一律存成絕對時間戳 `endsAt`。
 - 時鐘倒退的處理：
   - `now < 上次紀錄時間`：只重設起點，不發獎勵、不歸零計數。

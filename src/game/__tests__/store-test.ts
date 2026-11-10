@@ -159,6 +159,21 @@ describe('時間快轉（除錯面板）', () => {
     expect(useGameStore.getState().timeOffsetMs).toBe(0);
   });
 
+  it('resetTime 立刻結算：快轉期間進入的冷卻依真實時間截到 3 分鐘以內', () => {
+    const base = freshGame();
+    useGameStore.getState().hydrate(base);
+    useGameStore.getState().advanceTime(60 * 60 * 1000);
+    // 快轉 1 小時後完售：冷卻結束時間落在真實時間的 63 分鐘後
+    useGameStore.getState().apply((state, now) => ({
+      ...state,
+      queue: { ...state.queue, remaining: 0, cooldownEndsAt: now + BALANCE.queueCooldownMs },
+    }));
+
+    useGameStore.getState().resetTime();
+
+    expect(useGameStore.getState().state?.queue.cooldownEndsAt).toBe(NOW + BALANCE.queueCooldownMs);
+  });
+
   it('快轉量不合法時不變', () => {
     useGameStore.getState().advanceTime(-1000);
     useGameStore.getState().advanceTime(Number.NaN);
@@ -169,7 +184,11 @@ describe('時間快轉（除錯面板）', () => {
 describe('apply 傳入目前時間（code review 2026-11-10）', () => {
   it('action 的第二個參數是含快轉偏移量的時間', () => {
     const now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
-    useGameStore.setState({ state: createGame(NOW, 1), status: { kind: 'ready' }, timeOffsetMs: 5000 });
+    useGameStore.setState({
+      state: createGame(NOW, 1),
+      status: { kind: 'ready' },
+      timeOffsetMs: 5000,
+    });
     let seen: number | undefined;
 
     useGameStore.getState().apply((state, current) => {

@@ -4,7 +4,7 @@ baseline_commit: 022d0c0
 
 # Story 2.2: 棋盤頂端的客流計量條
 
-Status: review
+Status: done
 
 ## Story
 
@@ -119,3 +119,9 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-10：棋盤頂端的客流計量條；狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 b16292b..7ae4012）
+
+- [x] [Review][Patch] 用 accessibilityState.busy 標記「最後 3 人」，讀螢幕軟體會唸成「忙碌中」；改用不影響無障礙的標記 [src/features/queue-meter/queue-meter.tsx]
+- [x] [Review][Patch] （補跑 auditor）AC3 要求最後 3 人「加快脈動」，但一般狀態沒有脈動可以加快；加上緩慢的基礎脈動 [src/features/queue-meter/queue-meter.tsx]
+- [x] [Review][Patch] （補跑 auditor）新頭像用 FadeIn 原地出現，Dev Notes 要求從右邊進場（FadeInRight） [src/features/queue-meter/queue-meter.tsx]

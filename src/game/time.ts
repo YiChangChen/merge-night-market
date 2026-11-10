@@ -11,8 +11,18 @@ export function syncAll(state: GameState, now: number): GameState {
 
 /**
  * store 的每秒 tick 只在這裡回傳 true 時才結算（game-architecture〈Time & Day Rollover〉）。
- * 新增任何倒數計時都必須同步擴充：S4.2 線索單、S6.1 開幕週體力上限（會用到 now）。
+ * 新增任何倒數計時都必須同步擴充：S4.2 線索單、S6.1 開幕週體力上限。
+ *
+ * 冷卻只在兩種時候需要結算：到期（開新一波），以及時鐘倒退讓剩餘時間超過 3 分鐘（截短，
+ * 冷卻不會被拉長）。倒數期間的畫面由計量條自己計時。
+ * 不能整段冷卻都回傳 true：體力滿時 syncEnergy 每次都會更新 energyUpdatedAt，
+ * 會變成每秒產生新 state 並觸發存檔（code review 2026-11-10）。
  */
-export function needsTick(state: GameState, _now: number): boolean {
-  return state.energy < BALANCE.maxEnergy || state.queue.cooldownEndsAt !== null;
+export function needsTick(state: GameState, now: number): boolean {
+  if (state.energy < BALANCE.maxEnergy) return true;
+  const { cooldownEndsAt } = state.queue;
+  return (
+    cooldownEndsAt !== null &&
+    (now >= cooldownEndsAt || cooldownEndsAt - now > BALANCE.queueCooldownMs)
+  );
 }

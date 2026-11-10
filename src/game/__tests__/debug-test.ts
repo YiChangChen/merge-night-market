@@ -67,6 +67,16 @@ describe('除錯用規則函式（S1.8）', () => {
     expect(valid(next)).toBe(true);
   });
 
+  it('調高攤位等級時，進行中的人龍跟著加長；調低不會變短', () => {
+    const state = createGame(NOW, 1);
+
+    const raised = debugSetStallLevel(state, 'noodle', 2);
+    expect(raised.queue).toMatchObject({ length: 16, remaining: 16 });
+
+    const lowered = debugSetStallLevel(raised, 'noodle', 0);
+    expect(lowered.queue).toMatchObject({ length: 16, remaining: 16 });
+  });
+
   it('棋盤已滿時產生器進待放佇列', () => {
     const base = createGame(NOW, 1);
     let nextId = base.nextId;

@@ -89,7 +89,11 @@ function isValidQueue(value: unknown): boolean {
     isNonNegativeInteger(value.remaining) &&
     (value.remaining as number) <= (value.length as number) &&
     isNonNegativeInteger(value.bonus) &&
-    (value.cooldownEndsAt === null || isFiniteNumber(value.cooldownEndsAt))
+    // 人龍長度有上限（queueCapacity），匯入的存檔不能放大完售獎勵（code review 2026-11-10）
+    (value.length as number) <= BALANCE.queueMax + (value.bonus as number) &&
+    // 冷卻只會在完售後開始，冷卻中不會還有人排隊
+    (value.cooldownEndsAt === null ||
+      (isFiniteNumber(value.cooldownEndsAt) && value.remaining === 0))
   );
 }
 

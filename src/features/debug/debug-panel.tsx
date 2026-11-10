@@ -180,7 +180,7 @@ export function DebugPanel() {
           />
         </View>
 
-        <Text style={styles.section}>人龍（S2.2 計量條完成前，只能在這裡看）</Text>
+        <Text style={styles.section}>人龍（調整攤位等級時，進行中的這一波會跟著加長）</Text>
         <View style={styles.row}>
           <Text testID="debug-queue" style={styles.label}>
             第 {summary.wave} 波{' '}

@@ -4,7 +4,7 @@ baseline_commit: 11438df
 
 # Story 2.4: 完售演出
 
-Status: review
+Status: done
 
 ## Story
 
@@ -37,7 +37,7 @@ so that 每一波完售都是一個值得停下來慶祝的小高潮。
   - [x] SelloutShow：顯示波次與 `lastSellout` 的獎勵；點一下呼叫 `finishSellout`；時間到自動結束；沒有加倍按鈕；不寫入遊戲 state
   - [x] Overlay Host：返回鍵關閉演出
 - [x] T6 驗證：lint、tsc、jest、iOS 打包
-- [ ] T7 **（使用者）** 實機：棋盤上完售看到演出、點一下跳過、夜市街上完售時招牌一起閃；Epic 2 完成定義走一次；用 `--no-dev --minify` 量 FPS（記入 E2 retro）
+- [x] T7 **（使用者）** 實機：棋盤上完售看到演出、點一下跳過、夜市街上完售時招牌一起閃；Epic 2 完成定義走一次；用 `--no-dev --minify` 量 FPS（記入 E2 retro）
 
 ## Dev Notes
 
@@ -82,7 +82,7 @@ Claude Opus 5.5（claude-opus-5-5）
 - Overlay Host：完售演出疊在攤位面板上面（key = token，同一波重複觸發也會重播）；返回鍵先關演出再關面板。
 - 夜市街：`StallView` 把 `sellout.token` 傳給 `NeonSign`，已開攤位的整塊招牌閃 3 下；失焦或鐵捲門時不閃，等級或焦點改變也不會重播。
 - 驗證：lint 0、tsc 0、jest 302 通過（新增 sellout-show-test 7 個）、iOS 打包成功。
-- T7 待使用者實機確認，並量 E2 的 iPhone 暫定效能。
+- T7：使用者實機確認通過（2026-11-10），包含 E2 完成定義與 iPhone 上的流暢度。
 
 ### File List
 
@@ -97,3 +97,10 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-10：完售演出；狀態改為 review。
+
+### Review Findings（code review 2026-11-10，範圍 b16292b..7ae4012）
+
+- [x] [Review][Patch] 全街招牌閃爍實際上幾乎看不到：完售只會在棋盤發生，當下夜市街失焦就不播，切回夜市街也不補播；點一下跳過還會把閃爍中斷。改成每個序號播一次：演出期間切到夜市街時補播，跳過不中斷。測試只檢查 testID，要改成驗證真的有播 [src/features/street/neon-sign.tsx]
+- [x] [Review][Patch] 完售演出的 accessibilityLabel 蓋掉了獎勵文字，讀螢幕軟體聽不到拿了多少；也沒有 accessibilityViewIsModal，焦點會跑到底下的棋盤 [src/features/overlays/sellout-show.tsx]
+- [x] [Review][Decision] （補跑 auditor）完售演出的背景約 80% 不透明，在夜市街完售時，底下的招牌閃爍幾乎看不見 — 要調淡背景讓街景透出來，還是維持現狀 → 使用者決定：調淡到約 45%（已套用）
+- [x] [Review][Patch] （補跑 edge）演出途中冷卻到期（例如除錯快轉）時 lastSellout 被清除，獎勵列會突然消失、面板跳動；改成演出開始時記下獎勵 [src/features/overlays/sellout-show.tsx]

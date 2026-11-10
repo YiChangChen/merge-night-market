@@ -229,12 +229,22 @@ describe('needsTick（store 的每秒 tick）', () => {
     expect(needsTick(withQueue({ remaining: 5 }, { energy: 40 }), NOW)).toBe(true);
   });
 
-  it('冷卻中：true', () => {
+  it('冷卻中、體力滿：還沒到期時 false（不每秒存檔），到期時 true（開新一波）', () => {
     const state = withQueue(
       { remaining: 0, cooldownEndsAt: NOW + COOLDOWN },
       { energy: BALANCE.maxEnergy + 10 }
     );
-    expect(needsTick(state, NOW)).toBe(true);
+    expect(needsTick(state, NOW)).toBe(false);
+    expect(needsTick(state, NOW + COOLDOWN - 1)).toBe(false);
+    expect(needsTick(state, NOW + COOLDOWN)).toBe(true);
+  });
+
+  it('時鐘倒退讓剩餘冷卻超過 3 分鐘：true（立刻截短，閒置時冷卻也不會被拉長）', () => {
+    const state = withQueue(
+      { remaining: 0, cooldownEndsAt: NOW + COOLDOWN },
+      { energy: BALANCE.maxEnergy }
+    );
+    expect(needsTick(state, NOW - 60 * 60 * 1000)).toBe(true);
   });
 });
 

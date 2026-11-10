@@ -1,7 +1,7 @@
 // 排隊人龍（NP-2）：ACTIVE → SOLD_OUT → COOLDOWN → 開新波。
 // 不得 import engine.ts（engine 已經 import 這裡，會循環依賴）。
 import { BALANCE, CHAIN_IDS } from './content';
-import type { GameState } from './types';
+import type { GameState, QueueState } from './types';
 
 /** 人龍長度 = min(8 + 2 × Σ已開攤位等級, 20) + 額外人潮（FR17）。新局為 12。 */
 export function queueCapacity(state: Pick<GameState, 'stalls' | 'queue'>): number {
@@ -10,6 +10,16 @@ export function queueCapacity(state: Pick<GameState, 'stalls' | 'queue'>): numbe
     Math.min(BALANCE.queueBase + BALANCE.queuePerStallLevel * levels, BALANCE.queueMax) +
     state.queue.bonus
   );
+}
+
+/** 本波已出單人數（計量條的「今晚客流 x/y」的 x）；波中加長時不會歸零。 */
+export function queueServed(queue: QueueState): number {
+  return queue.length - queue.remaining;
+}
+
+/** 人龍進行中且只剩最後 3 人（計量條閃爍，UX-DR2）。 */
+export function isQueueFinalStretch(queue: QueueState): boolean {
+  return queue.cooldownEndsAt === null && queue.remaining >= 1 && queue.remaining <= 3;
 }
 
 /**

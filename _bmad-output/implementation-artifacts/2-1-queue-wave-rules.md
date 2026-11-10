@@ -52,7 +52,7 @@ so that 我在棋盤上的每個動作都有一個看得見的十分鐘級目標
 - [x] T7 `services/game-session.ts` 的 tick 改用 `needsTick`（AC8）
 - [x] T8 除錯面板加一行人龍狀態（「第 N 波 已出單 x/length」或「已完售，冷卻中」），以及「剩最後 1 位」按鈕，讓實機用時間快轉驗證完售與冷卻。S2.2 之前，這是在手機上唯一看得到人龍的地方
 - [x] T9 驗證：`npx expo lint`、`npx tsc --noEmit`、`npx jest`；既有測試（engine、stalls、store、balance-doc、migration）全部通過
-- [ ] T10 **（使用者）** 實機：開啟除錯面板，用「+2 分」等快轉，確認完售後進入冷卻、冷卻結束後開新波
+- [x] T10 **（使用者）** 實機：開啟除錯面板，用「+2 分」等快轉，確認完售後進入冷卻、冷卻結束後開新波
 
 ## Dev Notes
 
@@ -170,7 +170,7 @@ Claude Opus 5.5（claude-opus-5-5）
 - 除錯面板：人龍狀態一行、「剩最後 1 位」（`debugQueueLastCustomer`，冷卻中不動作）。Prettier 重新排版了這個檔案裡原本超過 100 字的按鈕行，沒有行為變化。
 - 沒有改存檔形狀，`SAVE_VERSION` 維持 2。
 - 驗證：lint 0、tsc 0、jest 274 通過（新增 queue-test 21 個、debug-test 1 個、debug-panel-test 1 個）。
-- T10 待使用者在 iPhone 上驗證。
+- T10：使用者實機確認通過（2026-11-10，與 S2.2 一起測）。
 
 ### File List
 

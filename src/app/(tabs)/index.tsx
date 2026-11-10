@@ -9,6 +9,7 @@ import { useShallow } from 'zustand/shallow';
 import { Board, PieceIcon } from '@/features/board';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
+import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
 import { BALANCE, BOARD_BACKGROUND, CHAINS } from '@/game/content';
 import {
   completeOrder,
@@ -28,8 +29,10 @@ import { retryLoadGame, startOverAfterSaveFailure } from '@/services/game-sessio
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
-// 棋盤以外的 HUD、資訊列與間距總高，不含訂單
+// 棋盤以外的 HUD、資訊列與間距總高，不含訂單與客流計量條
 const NON_BOARD_HEIGHT = 106;
+// 客流計量條（S2.2）的高度加上它下方的間距（content 的 gap）
+const QUEUE_METER_SPACE = QUEUE_METER_HEIGHT + 10;
 const ORDER_GAP = 8;
 // 訂單人物圖下方的品名與獎勵標籤
 const ORDER_LABEL_HEIGHT = 42;
@@ -120,9 +123,7 @@ function Orders({
                 height={artSize.height}
               />
               <View style={[styles.orderLabel, ready && styles.orderLabelReady]}>
-                <Text
-                  style={[styles.orderName, ready && styles.orderTextReady]}
-                  numberOfLines={1}>
+                <Text style={[styles.orderName, ready && styles.orderTextReady]} numberOfLines={1}>
                   {order.requirements
                     .map(
                       (requirement) => CHAINS[requirement.chain].items[requirement.level - 1].name
@@ -226,6 +227,7 @@ export default function GameScreen() {
     insets.top -
     tabBarHeight -
     NON_BOARD_HEIGHT -
+    QUEUE_METER_SPACE -
     artSize.height -
     ORDER_LABEL_HEIGHT;
   const cellSize = Math.floor(
@@ -280,6 +282,7 @@ export default function GameScreen() {
       />
       <View style={[styles.content, { width: boardWidth }]}>
         <Hud />
+        <QueueMeter />
         <Orders artSize={artSize} onComplete={handleCompleteOrder} />
         <InfoBar selected={selected} onSell={handleSell} />
         <View style={styles.boardArea}>

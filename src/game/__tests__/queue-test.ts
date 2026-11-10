@@ -1,7 +1,13 @@
 // Story 2.1：人龍波次規則（NP-2、FR17–FR20）
 import { BALANCE, BOARD_SIZE, type ChainId } from '../content';
 import { completeOrder, createGame, type GameState, type Order, type Piece } from '../engine';
-import { growActiveWave, queueCapacity, syncQueue } from '../queue';
+import {
+  growActiveWave,
+  isQueueFinalStretch,
+  queueCapacity,
+  queueServed,
+  syncQueue,
+} from '../queue';
 import { reopenStall, upgradeStall } from '../stalls';
 import { needsTick, syncAll } from '../time';
 import type { QueueState, StallLevel } from '../types';
@@ -228,5 +234,21 @@ describe('needsTick（store 的每秒 tick）', () => {
       { energy: BALANCE.maxEnergy + 10 }
     );
     expect(needsTick(state, NOW)).toBe(true);
+  });
+});
+
+describe('計量條用的小工具（S2.2）', () => {
+  const queue = (q: Partial<QueueState>): QueueState => ({ ...withQueue({}).queue, ...q });
+
+  it('queueServed：已出單人數；波中加長時不會歸零', () => {
+    expect(queueServed(queue({ length: 12, remaining: 5 }))).toBe(7);
+    expect(queueServed(queue({ length: 14, remaining: 7 }))).toBe(7);
+  });
+
+  it('isQueueFinalStretch：只在人龍進行中、剩 1–3 人時為 true', () => {
+    expect(isQueueFinalStretch(queue({ remaining: 4 }))).toBe(false);
+    expect(isQueueFinalStretch(queue({ remaining: 3 }))).toBe(true);
+    expect(isQueueFinalStretch(queue({ remaining: 1 }))).toBe(true);
+    expect(isQueueFinalStretch(queue({ remaining: 0, cooldownEndsAt: NOW }))).toBe(false);
   });
 });

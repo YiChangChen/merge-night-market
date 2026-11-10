@@ -21,6 +21,8 @@ export const BALANCE = {
   queueBase: 8,
   queuePerStallLevel: 2,
   queueMax: 20,
+  // 發明菜賣出價 = 兩個材料的 baseCost 總和 × 1.5（GDD M4）
+  dishSellMultiplier: 1.5,
   // 完售後到下一波的冷卻（FR20）
   queueCooldownMs: 3 * 60 * 1000,
   // 完售獎勵：金幣 = 5 × 本波長度、體力 +10、XP + 本波長度（FR19）；不含攤位加成

@@ -3,13 +3,13 @@
 // 取捨（S1.5）：v2 一次定義到 E6 才會用到的欄位（queue、inventions、daily、lastSellout…），
 // 換來整個 MVP 只需要一次 v1→v2 遷移。這些欄位在對應的 Epic 實作前只放空值或初始值。
 // 只要改到存檔形狀，就必須遞增 SAVE_VERSION、新增 migrations[n]、新增 fixture（見 project-context）。
-import type { ChainId } from './content';
+import type { ChainId, RecipeId } from './content';
 import type { GameEvent } from './events';
 
 export const SAVE_VERSION = 2;
 
-// TODO(S3.1): 改成 recipes.ts 匯出的字面量聯集
-export type RecipeId = string;
+// 配方 id 是 content/recipes.ts 的字面量聯集（S3.1）；保留從這裡匯出，既有的 import 路徑不必修改
+export type { RecipeId };
 
 export type ItemPiece = { id: number; kind: 'item'; chain: ChainId; level: number };
 export type GeneratorPiece = { id: number; kind: 'generator'; chain: ChainId };

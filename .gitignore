@@ -51,3 +51,6 @@ example
 # BMAD 個人設定（安裝器產生，只屬於本機使用者）
 /_bmad/config.user.toml
 /_bmad/custom/*.user.toml
+
+# Python 快取（art-source/scripts）
+__pycache__/

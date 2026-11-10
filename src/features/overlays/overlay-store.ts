@@ -10,12 +10,16 @@ type OverlayStore = {
   shutterOpening: Partial<Record<ChainId, number>>;
   /** 正在播放招牌通電演出的攤位（同上，值是遞增序號） */
   neonPowerOn: Partial<Record<ChainId, number>>;
+  /** 正在播放的完售演出（S2.4）；token 是遞增序號，夜市街的招牌用它一起閃爍 */
+  sellout: { wave: number; token: number } | null;
   openStallPanel: (chain: ChainId) => void;
   closeStallPanel: () => void;
   playShutter: (chain: ChainId) => void;
   finishShutter: (chain: ChainId) => void;
   playNeonPowerOn: (chain: ChainId) => void;
   finishNeonPowerOn: (chain: ChainId) => void;
+  playSellout: (wave: number) => void;
+  finishSellout: () => void;
 };
 
 let sequence = 0;
@@ -24,6 +28,7 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
   stallPanel: null,
   shutterOpening: {},
   neonPowerOn: {},
+  sellout: null,
   openStallPanel: (chain) => set({ stallPanel: chain }),
   closeStallPanel: () => set({ stallPanel: null }),
   playShutter: (chain) =>
@@ -40,4 +45,6 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
       const { [chain]: _done, ...rest } = store.neonPowerOn;
       return { neonPowerOn: rest };
     }),
+  playSellout: (wave) => set({ sellout: { wave, token: ++sequence } }),
+  finishSellout: () => set({ sellout: null }),
 }));

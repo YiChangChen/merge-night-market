@@ -76,9 +76,16 @@ function NeonSegment({ source, lit, animate, delay, poweringOn }: NeonSegmentPro
   const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return (
     <Animated.View
-      testID={poweringOn ? 'neon-segment-powering-on' : lit ? 'neon-segment-lit' : 'neon-segment-off'}
+      testID={
+        poweringOn ? 'neon-segment-powering-on' : lit ? 'neon-segment-lit' : 'neon-segment-off'
+      }
       style={[styles.layer, style]}>
-      <Image source={source} contentFit="contain" cachePolicy="memory-disk" style={styles.layerImage} />
+      <Image
+        source={source}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        style={styles.layerImage}
+      />
     </Animated.View>
   );
 }
@@ -95,9 +102,36 @@ type NeonSignProps = {
   /** 招牌通電演出的序號（FxController 收到 stall_upgraded 時觸發）；undefined 代表沒有演出 */
   powerOn?: number;
   onPowerOnDone?: () => void;
+  /** 完售演出的序號（S2.4）：改變時整塊招牌快速閃 3 下；鐵捲門與失焦時不閃 */
+  flash?: number;
 };
 
-export function NeonSign({ name, color, layers, level, animate, powerOn, onPowerOnDone }: NeonSignProps) {
+export function NeonSign({
+  name,
+  color,
+  layers,
+  level,
+  animate,
+  powerOn,
+  onPowerOnDone,
+  flash,
+}: NeonSignProps) {
+  // 完售：全街已開攤位的招牌一起閃爍（FR19、UX-DR4）
+  const flashOpacity = useSharedValue(1);
+  useEffect(() => {
+    if (flash === undefined || !animate || level === 0) return;
+    const blink = () =>
+      withSequence(withTiming(0.2, { duration: 90 }), withTiming(1, { duration: 110 }));
+    flashOpacity.set(withSequence(blink(), blink(), blink()));
+    return () => {
+      cancelAnimation(flashOpacity);
+      flashOpacity.set(1);
+    };
+    // 只在新的完售序號出現時閃；等級或焦點改變不重播
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flash]);
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flashOpacity.get() }));
+
   // 用 JS 計時收尾，不必從 worklet 回呼
   useEffect(() => {
     if (powerOn === undefined || !onPowerOnDone) return;
@@ -106,7 +140,9 @@ export function NeonSign({ name, color, layers, level, animate, powerOn, onPower
   }, [powerOn, onPowerOnDone]);
 
   return (
-    <View style={styles.sign}>
+    <Animated.View
+      testID={flash !== undefined ? 'neon-sign-flash' : undefined}
+      style={[styles.sign, flashStyle]}>
       <Text style={[styles.name, level > 0 && { color, textShadowColor: color }]} numberOfLines={1}>
         {name}
       </Text>
@@ -123,7 +159,7 @@ export function NeonSign({ name, color, layers, level, animate, powerOn, onPower
           />
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

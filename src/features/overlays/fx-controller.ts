@@ -18,8 +18,12 @@ export function startFxController(): () => void {
         // 招牌通電：新亮起的那一段霓虹閃幾下再亮起（FR14）
         useOverlayStore.getState().playNeonPowerOn(event.stall);
         break;
+      case 'queue_sold_out':
+        // 完售：煙火、獎勵、全街招牌一起閃（FR19、UX-DR4）
+        useOverlayStore.getState().playSellout(event.wave);
+        break;
       default:
-        // 其他演出（完售煙火、老闆發明…）由之後的 story 加入
+        // 其他演出（老闆發明…）由之後的 story 加入
         break;
     }
   });

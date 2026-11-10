@@ -67,6 +67,8 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   const powerOn = useOverlayStore((store) => store.neonPowerOn[chain]);
   const finishNeonPowerOn = useOverlayStore((store) => store.finishNeonPowerOn);
   const onPowerOnDone = useCallback(() => finishNeonPowerOn(chain), [chain, finishNeonPowerOn]);
+  // 完售演出（S2.4）：全街已開攤位的招牌一起閃
+  const selloutToken = useOverlayStore((store) => store.sellout?.token);
   // 演出途中攤位被關閉（除錯或匯入）時，演出元件會卸載、收不了尾；在這裡清掉，之後才不會莫名重播
   useEffect(() => {
     if (!closed) return;
@@ -89,6 +91,7 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
         animate={animate}
         powerOn={powerOn}
         onPowerOnDone={onPowerOnDone}
+        flash={selloutToken}
       />
       <View style={styles.facade}>
         {nextFacade !== null ? (

@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 
 import { type ChainId, STALLS } from '@/game/content';
-import { reopenCheck, reopenStall } from '@/game/stalls';
+import { reopenCheck, reopenStall, upgradeCheck, upgradeStall } from '@/game/stalls';
 import { useGameStore } from '@/game/store';
 
 import { useOverlayStore } from './overlay-store';
@@ -23,8 +23,8 @@ function Condition({ label, current, met }: { label: string; current: string; me
 
 /**
  * 攤位面板（UX-DR3）：點夜市街的攤位開啟。
- * 鐵捲門攤位顯示重開條件，未達成的條件標成紅色；條件都滿足才能按「重開」（FR10）。
- * 升級（S1.10）之後加在這個面板。
+ * 鐵捲門攤位顯示重開條件（FR10）；已開的攤位顯示下一級的升級條件（FR12）。
+ * 未達成的條件標成紅色，條件都滿足才能按下按鈕。Lv3 需要發明菜，E3 之前一律鎖住。
  */
 export function StallPanel({ chain }: { chain: ChainId }) {
   const stall = STALLS[chain];
@@ -42,10 +42,16 @@ export function StallPanel({ chain }: { chain: ChainId }) {
   if (!snapshot) return null;
   const level = snapshot.stalls[chain].level;
   const check = reopenCheck(snapshot, chain);
+  const upgrade = upgradeCheck(snapshot, chain);
   const { level: playerLevel, coins } = snapshot;
 
+  // 按下後關閉面板，讓玩家看到夜市街上的演出（鐵捲門拉起／招牌通電）
   const onReopen = () => {
     apply((state) => reopenStall(state, chain, Date.now()));
+    close();
+  };
+  const onUpgrade = () => {
+    apply((state) => upgradeStall(state, chain, Date.now()));
     close();
   };
 
@@ -70,8 +76,31 @@ export function StallPanel({ chain }: { chain: ChainId }) {
             <Text style={styles.primaryText}>{check.ok ? `重開（🪙${check.coins}）` : '條件不足'}</Text>
           </Pressable>
         </>
+      ) : upgrade ? (
+        <>
+          <Text style={styles.section}>升級到 {LEVEL_NAMES[upgrade.targetLevel]}</Text>
+          <Text style={styles.info}>效果：這一攤的訂單金幣 +10%，霓虹招牌多亮一段</Text>
+          <Condition label={`金幣 ${upgrade.coins}`} current={`目前 ${coins}`} met={upgrade.coinsMet} />
+          {upgrade.needsDish ? (
+            <Condition label="1 份含這一攤食材的發明菜" current="即將開放" met={false} />
+          ) : null}
+          <Pressable
+            testID="upgrade-stall"
+            accessibilityRole="button"
+            disabled={!upgrade.ok}
+            onPress={onUpgrade}
+            style={({ pressed }) => [styles.primary, !upgrade.ok && styles.disabled, pressed && styles.pressed]}>
+            <Text style={styles.primaryText}>
+              {upgrade.needsDish
+                ? '需要發明菜（即將開放）'
+                : upgrade.ok
+                  ? `升級（🪙${upgrade.coins}）`
+                  : '金幣不足'}
+            </Text>
+          </Pressable>
+        </>
       ) : (
-        <Text style={styles.info}>營業中。升級功能即將開放。</Text>
+        <Text style={styles.info}>已經是最高等級的大店。</Text>
       )}
 
       <Pressable

@@ -1,8 +1,8 @@
 // Story 1.9：重開攤位（FR9、FR10、RC-1）
 import { BOARD_SIZE, CHAINS, STALLS } from '../content';
-import { completeOrder, createGame, type GameState, type Order, type Piece } from '../engine';
+import { completeOrder, createGame, type GameState, type Order, orderCoins, type Piece } from '../engine';
 import { isValidSaveV2, serializeSave } from '../save';
-import { reopenCheck, reopenStall } from '../stalls';
+import { reopenCheck, reopenStall, upgradeCheck, upgradeStall } from '../stalls';
 
 const NOW = 1_000_000;
 
@@ -110,5 +110,94 @@ describe('reopenStall', () => {
       seen = state.orders.some((order) => order.requirements.some((r) => r.chain === 'noodle'));
     }
     expect(seen).toBe(true);
+  });
+});
+
+describe('升級費用（FR12）', () => {
+  it('Lv2 只要金幣：200 / 200 / 400 / 600 / 900', () => {
+    expect([STALLS.tea, STALLS.fried, STALLS.noodle, STALLS.dumpling, STALLS.sweet].map((s) => s.upgradeCoins[2])).toEqual([
+      200, 200, 400, 600, 900,
+    ]);
+  });
+
+  it('Lv3 要金幣 600 / 600 / 1000 / 1500 / 2000 加上發明菜', () => {
+    expect([STALLS.tea, STALLS.fried, STALLS.noodle, STALLS.dumpling, STALLS.sweet].map((s) => s.upgradeCoins[3])).toEqual([
+      600, 600, 1000, 1500, 2000,
+    ]);
+  });
+});
+
+describe('upgradeCheck', () => {
+  it('Lv1 → Lv2：只看金幣', () => {
+    expect(upgradeCheck(ready({ coins: 150 }), 'tea')).toEqual({
+      targetLevel: 2,
+      coins: 200,
+      coinsMet: false,
+      needsDish: false,
+      ok: false,
+    });
+    expect(upgradeCheck(ready({ coins: 200 }), 'tea')).toMatchObject({ coinsMet: true, ok: true });
+  });
+
+  it('Lv2 → Lv3：需要發明菜，E3 之前一律鎖住（就算金幣夠）', () => {
+    const state = ready({ coins: 9999, stalls: { ...ready().stalls, tea: { level: 2, signatureDish: null } } });
+    expect(upgradeCheck(state, 'tea')).toEqual({
+      targetLevel: 3,
+      coins: 600,
+      coinsMet: true,
+      needsDish: true,
+      ok: false,
+    });
+  });
+
+  it('鐵捲門與 Lv3 沒有升級條件', () => {
+    const state = ready({ stalls: { ...ready().stalls, tea: { level: 3, signatureDish: null } } });
+    expect(upgradeCheck(state, 'tea')).toBeNull();
+    expect(upgradeCheck(state, 'noodle')).toBeNull();
+  });
+});
+
+describe('upgradeStall（Lv1 → Lv2）', () => {
+  it('金幣足夠：扣金幣、升到 Lv2、送出 stall_upgraded', () => {
+    const next = upgradeStall(ready({ coins: 250 }), 'fried', NOW);
+
+    expect(next.coins).toBe(50);
+    expect(next.stalls.fried.level).toBe(2);
+    expect(next.events).toContainEqual({ type: 'stall_upgraded', stall: 'fried', level: 2 });
+    expect(isValidSaveV2(JSON.parse(serializeSave(next)))).toBe(true);
+  });
+
+  it('金幣不足：回傳原 state', () => {
+    const state = ready({ coins: 199 });
+    expect(upgradeStall(state, 'tea', NOW)).toBe(state);
+  });
+
+  it('鐵捲門攤位不能升級（要先重開）', () => {
+    const state = ready({ level: 9, coins: 9999 });
+    expect(upgradeStall(state, 'noodle', NOW)).toBe(state);
+  });
+
+  it('Lv2 → Lv3 在 E3 之前不開放：回傳原 state', () => {
+    const state = ready({ coins: 9999, stalls: { ...ready().stalls, tea: { level: 2, signatureDish: null } } });
+    expect(upgradeStall(state, 'tea', NOW)).toBe(state);
+  });
+
+  it('升級後新訂單金幣 +10%（FR15，S1.6 的公式自動套用）', () => {
+    const upgraded = upgradeStall(ready({ coins: 200 }), 'tea', NOW);
+    expect(orderCoins([{ chain: 'tea', level: 2 }], upgraded.stalls)).toBe(11);
+  });
+});
+
+describe('Epic 1 完成定義', () => {
+  it('新局可以把手搖飲、炸物升到 Lv2；玩家升到 Lv3 後可以重開麵線攤', () => {
+    let state = ready({ coins: 400 });
+    state = upgradeStall(state, 'tea', NOW);
+    state = upgradeStall(state, 'fried', NOW);
+    expect(state.stalls.tea.level).toBe(2);
+    expect(state.stalls.fried.level).toBe(2);
+    expect(state.coins).toBe(0);
+
+    state = reopenStall({ ...state, level: 3, coins: 300 }, 'noodle', NOW);
+    expect(state.stalls.noodle.level).toBe(1);
   });
 });

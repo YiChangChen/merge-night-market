@@ -42,6 +42,10 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   const openPanel = useOverlayStore((store) => store.openStallPanel);
   const finishShutter = useOverlayStore((store) => store.finishShutter);
   const onShutterDone = useCallback(() => finishShutter(chain), [chain, finishShutter]);
+  // 升級演出（FxController 收到 stall_upgraded 後觸發）
+  const powerOn = useOverlayStore((store) => store.neonPowerOn[chain]);
+  const finishNeonPowerOn = useOverlayStore((store) => store.finishNeonPowerOn);
+  const onPowerOnDone = useCallback(() => finishNeonPowerOn(chain), [chain, finishNeonPowerOn]);
 
   return (
     <Pressable
@@ -50,7 +54,14 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
       accessibilityLabel={`${stall.name}，${appearance.label}`}
       onPress={() => openPanel(chain)}
       style={styles.stall}>
-      <NeonSign name={stall.name} color={stall.neon} level={level} animate={animate} />
+      <NeonSign
+        name={stall.name}
+        color={stall.neon}
+        level={level}
+        animate={animate}
+        powerOn={powerOn}
+        onPowerOnDone={onPowerOnDone}
+      />
       <View style={[styles.facade, { height: facadeHeight }]}>
         <View style={[styles.body, { backgroundColor: closed ? '#2B2F45' : stall.color }]}>
           {closed ? (

@@ -13,8 +13,12 @@ export function startFxController(): () => void {
         // 夜市街上的鐵捲門拉起（FR10）
         useOverlayStore.getState().playShutter(event.stall);
         break;
+      case 'stall_upgraded':
+        // 招牌通電：新亮起的那一段霓虹閃幾下再亮起（FR14）
+        useOverlayStore.getState().playNeonPowerOn(event.stall);
+        break;
       default:
-        // 其他演出（招牌通電、完售煙火、老闆發明…）由之後的 story 加入
+        // 其他演出（完售煙火、老闆發明…）由之後的 story 加入
         break;
     }
   });

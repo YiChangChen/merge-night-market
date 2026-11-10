@@ -20,6 +20,8 @@ export type StallDef = {
    * 玩家等級門檻沿用 CHAINS[c].unlockLevel（RC-1）。
    */
   reopenCoins: number | null;
+  /** 升級需要的金幣（FR12）。Lv3 另外需要 1 份含該鏈的發明菜（S3.5）。 */
+  upgradeCoins: { 2: number; 3: number };
 };
 
 export const STALLS = {
@@ -30,6 +32,7 @@ export const STALLS = {
     color: '#5B3A29',
     neon: '#00F5D4',
     reopenCoins: null,
+    upgradeCoins: { 2: 200, 3: 600 },
   },
   fried: {
     id: 'fried',
@@ -38,6 +41,7 @@ export const STALLS = {
     color: '#7A2E1F',
     neon: '#FFBE0B',
     reopenCoins: null,
+    upgradeCoins: { 2: 200, 3: 600 },
   },
   noodle: {
     id: 'noodle',
@@ -46,6 +50,7 @@ export const STALLS = {
     color: '#3D405B',
     neon: '#FF006E',
     reopenCoins: 300,
+    upgradeCoins: { 2: 400, 3: 1000 },
   },
   dumpling: {
     id: 'dumpling',
@@ -54,6 +59,7 @@ export const STALLS = {
     color: '#2F4F4F',
     neon: '#8338EC',
     reopenCoins: 600,
+    upgradeCoins: { 2: 600, 3: 1500 },
   },
   sweet: {
     id: 'sweet',
@@ -62,5 +68,6 @@ export const STALLS = {
     color: '#6D2E46',
     neon: '#FB5607',
     reopenCoins: 1000,
+    upgradeCoins: { 2: 900, 3: 2000 },
   },
 } as const satisfies Record<ChainId, StallDef>;

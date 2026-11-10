@@ -11,15 +11,19 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const SEGMENTS = 3;
+/** 招牌通電演出的長度；結束後回到一般的閃爍 */
+export const NEON_POWER_ON_MS = 900;
 
 type NeonSegmentProps = {
   color: string;
   lit: boolean;
   animate: boolean;
   delay: number;
+  /** 正在通電（升級剛完成的那一段）：先閃幾下再亮起 */
+  poweringOn: boolean;
 };
 
-function NeonSegment({ color, lit, animate, delay }: NeonSegmentProps) {
+function NeonSegment({ color, lit, animate, delay, poweringOn }: NeonSegmentProps) {
   const opacity = useSharedValue(lit ? 1 : 0.15);
 
   useEffect(() => {
@@ -27,6 +31,20 @@ function NeonSegment({ color, lit, animate, delay }: NeonSegmentProps) {
     if (!lit) {
       opacity.set(0.15);
       return;
+    }
+    if (poweringOn) {
+      // 通電：接觸不良似地閃幾下，最後穩定亮起（FR14）
+      opacity.set(0.05);
+      opacity.set(
+        withSequence(
+          withTiming(1, { duration: 80 }),
+          withTiming(0.15, { duration: 120 }),
+          withTiming(1, { duration: 80 }),
+          withTiming(0.35, { duration: 160 }),
+          withTiming(1, { duration: 200 })
+        )
+      );
+      return () => cancelAnimation(opacity);
     }
     if (!animate) {
       // 夜市街失焦時停在全亮，不在背景耗電
@@ -49,12 +67,12 @@ function NeonSegment({ color, lit, animate, delay }: NeonSegmentProps) {
       )
     );
     return () => cancelAnimation(opacity);
-  }, [animate, delay, lit, opacity]);
+  }, [animate, delay, lit, opacity, poweringOn]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return (
     <Animated.View
-      testID={lit ? 'neon-segment-lit' : 'neon-segment-off'}
+      testID={poweringOn ? 'neon-segment-powering-on' : lit ? 'neon-segment-lit' : 'neon-segment-off'}
       style={[styles.segment, { backgroundColor: color, shadowColor: color }, lit && styles.glow, style]}
     />
   );
@@ -66,10 +84,20 @@ type NeonSignProps = {
   /** 攤位等級 0–3：亮起的段數（Lv1 1/3、Lv2 2/3、Lv3 全亮，FR14） */
   level: number;
   animate: boolean;
+  /** 招牌通電演出的序號（FxController 收到 stall_upgraded 時觸發）；undefined 代表沒有演出 */
+  powerOn?: number;
+  onPowerOnDone?: () => void;
 };
 
 // TODO(content): art-manifest#22-26 正式霓虹招牌圖到位後，改成三段圖層疊加
-export function NeonSign({ name, color, level, animate }: NeonSignProps) {
+export function NeonSign({ name, color, level, animate, powerOn, onPowerOnDone }: NeonSignProps) {
+  // 用 JS 計時收尾，不必從 worklet 回呼
+  useEffect(() => {
+    if (powerOn === undefined || !onPowerOnDone) return;
+    const timer = setTimeout(onPowerOnDone, NEON_POWER_ON_MS);
+    return () => clearTimeout(timer);
+  }, [powerOn, onPowerOnDone]);
+
   return (
     <View style={styles.sign}>
       <Text style={[styles.name, level > 0 && { color, textShadowColor: color }]} numberOfLines={1}>
@@ -83,6 +111,8 @@ export function NeonSign({ name, color, level, animate }: NeonSignProps) {
             lit={index < level}
             animate={animate}
             delay={index * 220}
+            // 剛升級時，最新亮起的那一段播放通電
+            poweringOn={powerOn !== undefined && index === level - 1}
           />
         ))}
       </View>

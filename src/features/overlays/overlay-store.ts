@@ -8,10 +8,14 @@ type OverlayStore = {
   stallPanel: ChainId | null;
   /** 正在播放鐵捲門拉起動畫的攤位（值是遞增序號，同一攤連續觸發時也會重播） */
   shutterOpening: Partial<Record<ChainId, number>>;
+  /** 正在播放招牌通電演出的攤位（同上，值是遞增序號） */
+  neonPowerOn: Partial<Record<ChainId, number>>;
   openStallPanel: (chain: ChainId) => void;
   closeStallPanel: () => void;
   playShutter: (chain: ChainId) => void;
   finishShutter: (chain: ChainId) => void;
+  playNeonPowerOn: (chain: ChainId) => void;
+  finishNeonPowerOn: (chain: ChainId) => void;
 };
 
 let sequence = 0;
@@ -19,6 +23,7 @@ let sequence = 0;
 export const useOverlayStore = create<OverlayStore>()((set) => ({
   stallPanel: null,
   shutterOpening: {},
+  neonPowerOn: {},
   openStallPanel: (chain) => set({ stallPanel: chain }),
   closeStallPanel: () => set({ stallPanel: null }),
   playShutter: (chain) =>
@@ -27,5 +32,12 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
     set((store) => {
       const { [chain]: _done, ...rest } = store.shutterOpening;
       return { shutterOpening: rest };
+    }),
+  playNeonPowerOn: (chain) =>
+    set((store) => ({ neonPowerOn: { ...store.neonPowerOn, [chain]: ++sequence } })),
+  finishNeonPowerOn: (chain) =>
+    set((store) => {
+      const { [chain]: _done, ...rest } = store.neonPowerOn;
+      return { neonPowerOn: rest };
     }),
 }));

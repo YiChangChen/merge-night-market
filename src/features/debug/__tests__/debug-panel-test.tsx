@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { BALANCE } from '@/game/content';
 import { createGame } from '@/game/engine';
@@ -36,6 +36,31 @@ describe('DebugPanel（S1.8）', () => {
     expect(useGameStore.getState().state?.energy).toBe(70);
   });
 
+  it('人龍狀態：剩最後 1 位；完售後顯示冷卻中，快轉超過冷卻就開新一波（S2.1）', async () => {
+    await render(<DebugPanel />);
+    expect(screen.getByTestId('debug-queue')).toHaveTextContent('第 1 波 已出單 0/12');
+
+    await fireEvent.press(screen.getByTestId('debug-queue-last'));
+    expect(screen.getByTestId('debug-queue')).toHaveTextContent('第 1 波 已出單 11/12');
+
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && {
+          ...store.state,
+          queue: {
+            ...store.state.queue,
+            remaining: 0,
+            cooldownEndsAt: NOW + BALANCE.queueCooldownMs,
+          },
+        },
+      }));
+    });
+    expect(screen.getByTestId('debug-queue')).toHaveTextContent('第 1 波 已完售，冷卻中');
+
+    await fireEvent.press(screen.getByTestId('debug-time-10m'));
+    expect(screen.getByTestId('debug-queue')).toHaveTextContent('第 2 波 已出單 0/12');
+  });
+
   it('調整玩家等級與攤位等級', async () => {
     await render(<DebugPanel />);
 
@@ -64,7 +89,9 @@ describe('DebugPanel（S1.8）', () => {
     await fireEvent.press(screen.getByTestId('debug-time-10m'));
 
     expect(useGameStore.getState().timeOffsetMs).toBe(10 * 60 * 1000);
-    expect(useGameStore.getState().state?.energy).toBe(50 + (10 * 60 * 1000) / BALANCE.energyRegenMs);
+    expect(useGameStore.getState().state?.energy).toBe(
+      50 + (10 * 60 * 1000) / BALANCE.energyRegenMs
+    );
   });
 
   it('從空的剪貼簿匯入時顯示拒絕原因', async () => {

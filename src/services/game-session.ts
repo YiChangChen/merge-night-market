@@ -2,9 +2,9 @@
 // 只在 src/app/_layout.tsx 的啟動序列呼叫一次。
 import { AppState } from 'react-native';
 
-import { BALANCE } from '@/game/content';
 import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
+import { needsTick } from '@/game/time';
 
 import { log } from './log';
 import { type LoadResult, loadGame, saveGame, startOverAfterBackup } from './save';
@@ -72,9 +72,9 @@ export function startGameSession(): () => void {
   });
 
   const tick = setInterval(() => {
-    const { state } = useGameStore.getState();
-    // 體力滿時不必結算，避免每秒產生新 state 並觸發存檔
-    if (state && state.energy < BALANCE.maxEnergy) settle();
+    const { state, timeOffsetMs } = useGameStore.getState();
+    // 沒有倒數（體力滿、人龍進行中）時不必結算；時間加上除錯面板的快轉偏移量，與 store 一致
+    if (state && needsTick(state, Date.now() + timeOffsetMs)) settle();
   }, TICK_MS);
 
   // App 退到背景時可能來不及等 debounce，立刻存一次

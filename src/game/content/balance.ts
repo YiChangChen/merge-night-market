@@ -21,6 +21,12 @@ export const BALANCE = {
   queueBase: 8,
   queuePerStallLevel: 2,
   queueMax: 20,
+  // 完售後到下一波的冷卻（FR20）
+  queueCooldownMs: 3 * 60 * 1000,
+  // 完售獎勵：金幣 = 5 × 本波長度、體力 +10、XP + 本波長度（FR19）；不含攤位加成
+  selloutCoinsPerCustomer: 5,
+  selloutEnergy: 10,
+  selloutXpPerCustomer: 1,
   // 開幕週長度：首次啟動後 72 小時（FR36）
   openingWeekMs: 72 * 60 * 60 * 1000,
   // 新手教學的步數；meta.tutorialStep 達到這個值代表教學完成（FR40）

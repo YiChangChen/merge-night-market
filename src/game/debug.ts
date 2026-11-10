@@ -29,6 +29,16 @@ export function debugMinStallLevel(chain: ChainId): StallLevel {
   return STALLS[chain].reopenCoins === null ? 1 : 0;
 }
 
+/**
+ * 人龍只剩最後一位客人，下一張訂單就會完售（S2.1 實機驗證用）。
+ * 冷卻中不動作，避免繞過冷卻；完售獎勵仍然走 completeOrder 的正常流程。
+ */
+export function debugQueueLastCustomer(state: GameState): GameState {
+  const queue = state.queue;
+  if (queue.cooldownEndsAt !== null || queue.remaining <= 1) return state;
+  return { ...state, queue: { ...queue, remaining: 1 } };
+}
+
 /** 直接設定攤位等級；從鐵捲門調高時補上該鏈的產生器，訂單才不會出現做不出來的品項。 */
 export function debugSetStallLevel(state: GameState, chain: ChainId, level: StallLevel): GameState {
   if (![0, 1, 2, 3].includes(level) || level < debugMinStallLevel(chain)) return state;

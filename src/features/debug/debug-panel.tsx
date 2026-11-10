@@ -9,6 +9,7 @@ import {
   debugAddCoins,
   debugAddEnergy,
   debugMinStallLevel,
+  debugQueueLastCustomer,
   debugSetPlayerLevel,
   debugSetStallLevel,
 } from '@/game/debug';
@@ -36,7 +37,15 @@ function formatOffset(ms: number): string {
   return minutes >= 60 ? `+${Math.floor(minutes / 60)} 小時 ${minutes % 60} 分` : `+${minutes} 分`;
 }
 
-function DebugButton({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) {
+function DebugButton({
+  label,
+  onPress,
+  testID,
+}: {
+  label: string;
+  onPress: () => void;
+  testID?: string;
+}) {
   return (
     <Pressable
       testID={testID}
@@ -84,6 +93,10 @@ export function DebugPanel() {
       energy: store.state?.energy ?? 0,
       level: store.state?.level ?? 1,
       offset: store.timeOffsetMs,
+      wave: store.state?.queue.wave ?? 1,
+      queueLength: store.state?.queue.length ?? 0,
+      queueRemaining: store.state?.queue.remaining ?? 0,
+      cooling: store.state?.queue.cooldownEndsAt != null,
     }))
   );
   const [message, setMessage] = useState<string | null>(null);
@@ -126,13 +139,29 @@ export function DebugPanel() {
         <Text style={styles.section}>資源</Text>
         <View style={styles.row}>
           <Text style={styles.label}>金幣 {summary.coins}</Text>
-          <DebugButton testID="debug-coins-100" label="+100" onPress={() => apply((s) => debugAddCoins(s, 100))} />
-          <DebugButton testID="debug-coins-1000" label="+1000" onPress={() => apply((s) => debugAddCoins(s, 1000))} />
+          <DebugButton
+            testID="debug-coins-100"
+            label="+100"
+            onPress={() => apply((s) => debugAddCoins(s, 100))}
+          />
+          <DebugButton
+            testID="debug-coins-1000"
+            label="+1000"
+            onPress={() => apply((s) => debugAddCoins(s, 1000))}
+          />
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>體力 {summary.energy}</Text>
-          <DebugButton testID="debug-energy-20" label="+20" onPress={() => apply((s) => debugAddEnergy(s, 20))} />
-          <DebugButton testID="debug-energy-100" label="+100" onPress={() => apply((s) => debugAddEnergy(s, 100))} />
+          <DebugButton
+            testID="debug-energy-20"
+            label="+20"
+            onPress={() => apply((s) => debugAddEnergy(s, 20))}
+          />
+          <DebugButton
+            testID="debug-energy-100"
+            label="+100"
+            onPress={() => apply((s) => debugAddEnergy(s, 100))}
+          />
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>玩家等級</Text>
@@ -151,6 +180,21 @@ export function DebugPanel() {
           />
         </View>
 
+        <Text style={styles.section}>人龍（S2.2 計量條完成前，只能在這裡看）</Text>
+        <View style={styles.row}>
+          <Text testID="debug-queue" style={styles.label}>
+            第 {summary.wave} 波{' '}
+            {summary.cooling
+              ? '已完售，冷卻中'
+              : `已出單 ${summary.queueLength - summary.queueRemaining}/${summary.queueLength}`}
+          </Text>
+          <DebugButton
+            testID="debug-queue-last"
+            label="剩最後 1 位"
+            onPress={() => apply(debugQueueLastCustomer)}
+          />
+        </View>
+
         <Text style={styles.section}>攤位等級（0 = 鐵捲門）</Text>
         {CHAIN_IDS.map((chain) => (
           <StallRow key={chain} chain={chain} />
@@ -158,9 +202,21 @@ export function DebugPanel() {
 
         <Text style={styles.section}>時間快轉（目前：{formatOffset(summary.offset)}）</Text>
         <View style={styles.row}>
-          <DebugButton testID="debug-time-2m" label="+2 分" onPress={() => advanceTime(2 * MINUTE)} />
-          <DebugButton testID="debug-time-10m" label="+10 分" onPress={() => advanceTime(10 * MINUTE)} />
-          <DebugButton testID="debug-time-1h" label="+1 小時" onPress={() => advanceTime(60 * MINUTE)} />
+          <DebugButton
+            testID="debug-time-2m"
+            label="+2 分"
+            onPress={() => advanceTime(2 * MINUTE)}
+          />
+          <DebugButton
+            testID="debug-time-10m"
+            label="+10 分"
+            onPress={() => advanceTime(10 * MINUTE)}
+          />
+          <DebugButton
+            testID="debug-time-1h"
+            label="+1 小時"
+            onPress={() => advanceTime(60 * MINUTE)}
+          />
           <DebugButton testID="debug-time-reset" label="歸零" onPress={resetTime} />
         </View>
 
@@ -170,7 +226,8 @@ export function DebugPanel() {
           <DebugButton testID="debug-import" label="從剪貼簿匯入" onPress={onImport} />
         </View>
         <Text style={styles.note}>
-          匯入會先執行遷移與驗證，不合法的存檔一律拒絕，匯入時也會取消時間快轉。快轉量本身不存檔，但快轉期間結算出的時間會被存起來；App 重開或按「歸零」後，計時改回真實時間，可能少掉不到 2 分鐘的體力回復。
+          匯入會先執行遷移與驗證，不合法的存檔一律拒絕，匯入時也會取消時間快轉。快轉量本身不存檔，但快轉期間結算出的時間會被存起來；App
+          重開或按「歸零」後，計時改回真實時間，可能少掉不到 2 分鐘的體力回復。
         </Text>
       </ScrollView>
     </SafeAreaView>

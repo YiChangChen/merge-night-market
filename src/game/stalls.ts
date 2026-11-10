@@ -1,6 +1,7 @@
 // 攤位規則：重開（S1.9）、升級到 Lv2（S1.10）。Lv3 升級（需要發明菜）在 S3.5 加入。
 import { CHAINS, type ChainId, STALLS } from './content';
 import { ensureGenerator } from './engine';
+import { growActiveWave } from './queue';
 import type { GameState } from './types';
 
 export type ReopenCheck = {
@@ -29,7 +30,7 @@ export function reopenCheck(
  * 重開攤位（FR10、RC-1）：扣金幣、攤位設為 Lv1、把該鏈的產生器放上棋盤（棋盤滿時進待放佇列），
  * 並送出 stall_reopened。條件不足或已經開著時回傳原 state。
  */
-// now 目前沒有用到；S2.1 的人龍會在這裡讓進行中的這一波立刻加長（growActiveWave）
+// now 目前沒有用到；簽名統一成 (state, ..., now)
 export function reopenStall(state: GameState, chain: ChainId, _now: number): GameState {
   const check = reopenCheck(state, chain);
   if (!check?.ok) return state;
@@ -38,7 +39,8 @@ export function reopenStall(state: GameState, chain: ChainId, _now: number): Gam
     coins: state.coins - check.coins,
     stalls: { ...state.stalls, [chain]: { ...state.stalls[chain], level: 1 } },
   };
-  const withGenerator = ensureGenerator(opened, chain);
+  // 人龍進行中時，這一波立刻加長（FR18）
+  const withGenerator = growActiveWave(ensureGenerator(opened, chain));
   return {
     ...withGenerator,
     events: [...withGenerator.events, { type: 'stall_reopened', stall: chain, level: 1 }],
@@ -74,14 +76,21 @@ export function upgradeCheck(
  * 新訂單的金幣加成由 orderCoins 依攤位等級自動計算（FR15）。條件不足時回傳原 state。
  * Lv3（需要發明菜與招牌菜選擇）在 S3.5 擴充成 upgradeStall(state, stall, now, recipe)。
  */
-// now 目前沒有用到；S2.1 的人龍會在這裡讓進行中的這一波立刻加長（growActiveWave）
+// now 目前沒有用到；簽名統一成 (state, ..., now)
 export function upgradeStall(state: GameState, chain: ChainId, _now: number): GameState {
   const check = upgradeCheck(state, chain);
   if (!check?.ok) return state;
-  return {
+  // 人龍進行中時，這一波立刻加長（FR18）
+  const upgraded = growActiveWave({
     ...state,
     coins: state.coins - check.coins,
     stalls: { ...state.stalls, [chain]: { ...state.stalls[chain], level: check.targetLevel } },
-    events: [...state.events, { type: 'stall_upgraded', stall: chain, level: check.targetLevel }],
+  });
+  return {
+    ...upgraded,
+    events: [
+      ...upgraded.events,
+      { type: 'stall_upgraded', stall: chain, level: check.targetLevel },
+    ],
   };
 }

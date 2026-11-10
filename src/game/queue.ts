@@ -1,4 +1,5 @@
-// 排隊人龍（NP-2）。S1.5 先提供開新一波需要的長度公式，S2.1 會補上波次狀態機。
+// 排隊人龍（NP-2）：ACTIVE → SOLD_OUT → COOLDOWN → 開新波。
+// 不得 import engine.ts（engine 已經 import 這裡，會循環依賴）。
 import { BALANCE, CHAIN_IDS } from './content';
 import type { GameState } from './types';
 
@@ -9,4 +10,69 @@ export function queueCapacity(state: Pick<GameState, 'stalls' | 'queue'>): numbe
     Math.min(BALANCE.queueBase + BALANCE.queuePerStallLevel * levels, BALANCE.queueMax) +
     state.queue.bonus
   );
+}
+
+/**
+ * 出一單消化一位客人（completeOrder 呼叫）。冷卻中不動人龍（FR20）；
+ * 剛好清空時發放完售獎勵、寫入 lastSellout、進入冷卻，並送出 queue_sold_out（FR19）。
+ * 完售獎勵以本波最終的 length 計算（含波中升級的加長）。XP 造成的升級由呼叫端處理。
+ */
+export function advanceQueue(state: GameState, now: number): GameState {
+  const queue = state.queue;
+  if (queue.cooldownEndsAt !== null || queue.remaining <= 0) return state;
+  const remaining = queue.remaining - 1;
+  if (remaining > 0) return { ...state, queue: { ...queue, remaining } };
+
+  const coins = BALANCE.selloutCoinsPerCustomer * queue.length;
+  const energy = BALANCE.selloutEnergy;
+  const xp = BALANCE.selloutXpPerCustomer * queue.length;
+  return {
+    ...state,
+    coins: state.coins + coins,
+    // 和訂單獎勵一樣可以超過體力上限
+    energy: state.energy + energy,
+    xp: state.xp + xp,
+    queue: { ...queue, remaining: 0, cooldownEndsAt: now + BALANCE.queueCooldownMs },
+    lastSellout: { wave: queue.wave, coins, energy, xp, doubled: false },
+    events: [...state.events, { type: 'queue_sold_out', wave: queue.wave, length: queue.length }],
+  };
+}
+
+function startNextWave(state: GameState): GameState {
+  const queue = { ...state.queue, wave: state.queue.wave + 1, cooldownEndsAt: null };
+  const length = queueCapacity({ stalls: state.stalls, queue });
+  return { ...state, queue: { ...queue, length, remaining: length }, lastSellout: null };
+}
+
+/**
+ * 人龍的時間結算（syncAll 每次都會呼叫，屬於熱路徑）：沒有變化時回傳同一個參考。
+ * 冷卻結束就開新一波；離線再久也只開一波（波次要靠出單消化）。
+ * 時鐘倒退時，剩餘冷卻截到 queueCooldownMs 以內，不會被拉長。
+ */
+export function syncQueue(state: GameState, now: number): GameState {
+  const { cooldownEndsAt, remaining } = state.queue;
+  if (cooldownEndsAt === null) {
+    // remaining 為 0 卻沒在冷卻（例如手改存檔）：直接開新波，人龍不會永遠卡住
+    return remaining > 0 ? state : startNextWave(state);
+  }
+  if (now >= cooldownEndsAt) return startNextWave(state);
+  if (cooldownEndsAt - now > BALANCE.queueCooldownMs) {
+    return { ...state, queue: { ...state.queue, cooldownEndsAt: now + BALANCE.queueCooldownMs } };
+  }
+  return state;
+}
+
+/**
+ * 重開或升級攤位後呼叫：人龍進行中時，length 與 remaining 同時加長到新的容量（FR18）。
+ * 冷卻中不變，下一波開始時才用新容量。只會變長，不會變短。
+ */
+export function growActiveWave(state: GameState): GameState {
+  const queue = state.queue;
+  if (queue.cooldownEndsAt !== null) return state;
+  const delta = Math.max(0, queueCapacity(state) - queue.length);
+  if (delta === 0) return state;
+  return {
+    ...state,
+    queue: { ...queue, length: queue.length + delta, remaining: queue.remaining + delta },
+  };
 }

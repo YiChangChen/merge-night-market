@@ -3,6 +3,7 @@ import { createGame } from '../engine';
 import {
   debugAddCoins,
   debugAddEnergy,
+  debugQueueLastCustomer,
   debugSetPlayerLevel,
   debugSetStallLevel,
 } from '../debug';
@@ -18,6 +19,18 @@ describe('除錯用規則函式（S1.8）', () => {
 
     expect(debugAddCoins(state, 1000).coins).toBe(state.coins + 1000);
     expect(debugAddEnergy(state, 20).energy).toBe(state.energy + 20);
+  });
+
+  it('人龍只剩最後一位：存檔仍然合法；冷卻中或已經剩 1 位時不動作', () => {
+    const state = createGame(NOW, 1);
+    const last = debugQueueLastCustomer(state);
+
+    expect(last.queue).toMatchObject({ length: 12, remaining: 1 });
+    expect(valid(last)).toBe(true);
+    expect(debugQueueLastCustomer(last)).toBe(last);
+
+    const cooling = { ...state, queue: { ...state.queue, remaining: 0, cooldownEndsAt: NOW } };
+    expect(debugQueueLastCustomer(cooling)).toBe(cooling);
   });
 
   it('數量不合法時回傳原 state', () => {
@@ -94,7 +107,9 @@ describe('除錯函式的邊界（code review 2026-11-10）', () => {
     const state = createGame(NOW, 1);
     expect(debugSetStallLevel(state, 'tea', 0)).toBe(state);
     expect(debugSetStallLevel(state, 'fried', 0)).toBe(state);
-    expect(debugSetStallLevel(debugSetStallLevel(state, 'noodle', 1), 'noodle', 0).stalls.noodle.level).toBe(0);
+    expect(
+      debugSetStallLevel(debugSetStallLevel(state, 'noodle', 1), 'noodle', 0).stalls.noodle.level
+    ).toBe(0);
   });
 
   it('玩家等級上限 99', () => {

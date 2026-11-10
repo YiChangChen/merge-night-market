@@ -38,3 +38,4 @@
 - source_plan: _bmad-output/implementation-artifacts/1-9-reopen-stall.md
   summary: 重開攤位的完整流程沒有實機測試
   evidence: 需要玩家 Lv3 加上 300 金幣；可以等開發版或 preview 建置能用除錯面板時再測，或在實際遊玩時順便確認
+  status: 已解決（2026-11-10）：用 Expo Go 開除錯面板，在 iPhone 上走完重開與升級流程（E1 retro A1）

@@ -8,7 +8,7 @@ import {
   CUSTOMERS,
   type CustomerDef,
 } from './content';
-import { queueCapacity } from './queue';
+import { advanceQueue, queueCapacity } from './queue';
 import { nextRandom, randomInt } from './random';
 import {
   type GameState,
@@ -384,8 +384,12 @@ function applyLevelUps(state: GameState): GameState {
   return next;
 }
 
-// now 目前沒有用到；簽名先統一成 (state, ..., now)，S2.1 的人龍會用到
-export function completeOrder(state: GameState, orderId: number, _now: number): GameState {
+/**
+ * 交出訂單：扣品項、發放訂單獎勵，人龍 −1（剛好清空時完售，見 queue.ts advanceQueue），
+ * 再結算升級並補一張新訂單。事件順序固定為 order_completed → queue_sold_out，
+ * 完售演出才會接在出單之後（S2.4）。
+ */
+export function completeOrder(state: GameState, orderId: number, now: number): GameState {
   const orderIndex = state.orders.findIndex((order) => order.id === orderId);
   if (orderIndex === -1) return state;
   const order = state.orders[orderIndex];
@@ -401,7 +405,9 @@ export function completeOrder(state: GameState, orderId: number, _now: number): 
     coins: state.coins + order.coins,
     xp: state.xp + order.xp,
     energy: state.energy + order.energy,
+    events: [...state.events, { type: 'order_completed', kind: order.kind, coins: order.coins }],
   };
+  next = advanceQueue(next, now);
   next = flushPendingGenerators(next);
   next = applyLevelUps(next);
 
@@ -410,11 +416,7 @@ export function completeOrder(state: GameState, orderId: number, _now: number): 
   const orders = [...afterOrder.orders];
   orders.splice(orderIndex, 1);
   orders.push(replacement);
-  return {
-    ...afterOrder,
-    orders,
-    events: [...afterOrder.events, { type: 'order_completed', kind: order.kind, coins: order.coins }],
-  };
+  return { ...afterOrder, orders };
 }
 
 // 賣掉品項騰出空間，避免棋盤塞滿無法合成時卡死。產生器不能賣。

@@ -114,7 +114,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 ### Platform & Build Rules
 
 - 開發一律使用 `expo-dev-client` 開發版建置。
-  - 例外（2026-11-09）：使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號，所以實機驗證和效能量測暫時用 Expo Go，啟動指令固定為 `npx expo start --go --tunnel --no-dev --minify`。開發模式的路由 bundle 每個 4–7 MB，經過 tunnel 會逾時，手機上會出現 Gateway Timeout，網頁上會出現 Failed to fetch。這個模式下 `__DEV__` 是 false，所以除錯工具（含分頁切換計時）不會出現。前提是所有原生依賴都是 SDK 對應版本（`npx expo install --check` 沒有警告）。
+  - 例外（2026-11-09）：使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號，所以實機驗證和效能量測暫時用 Expo Go，啟動指令固定為 `npx expo start --go --tunnel --no-dev --minify`。開發模式的路由 bundle 每個 4–7 MB，經過 tunnel 會逾時，手機上會出現 Gateway Timeout，網頁上會出現 Failed to fetch。這個模式下 `__DEV__` 是 false，除錯工具（含分頁切換計時）預設不會出現；要在手機上用除錯面板時，在 `.env.local` 設定 `EXPO_GO_DEBUG_TOOLS=1` 再重開 dev server（E1 retro A1）。量效能時建議關掉，避免除錯工具影響數字。前提是所有原生依賴都是 SDK 對應版本（`npx expo install --check` 沒有警告）。
   - Expo Go **不會**驗證到原生設定（`expo-build-properties`、config plugin、`runtimeVersion`），也不能用 Expo Go 不支援的原生套件（例如 AdMob）。這些要等開發版或 preview 建置再驗證。
 - **新增或升級原生依賴時，必須重建開發版**（`npx eas-cli@latest build --profile development`），不能只推 OTA。`runtimeVersion` 採 fingerprint 策略。
 - 不得手動建立或修改 `ios/`、`android/`（CNG）。原生設定一律寫在 `app.config.ts` 與 config plugin。
@@ -122,7 +122,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - 廣告：
   - development 與 preview 建置一律用 `TestIds.REWARDED`。
   - 啟動順序固定為 UMP → ATT → `mobileAds().initialize()`。
-- 除錯面板與存檔匯入匯出只在 `__DEV__` 或 development/preview profile 下渲染。一律讀 `config.debugTools`（`services/config.ts`），它在執行期還會再檢查一次：只有開發模式或 preview 建置才會開啟。所以就算 OTA 更新漏設 `APP_VARIANT`，正式版也看不到除錯工具。
+- 除錯面板與存檔匯入匯出只在 `__DEV__` 或 development/preview profile 下渲染。一律讀 `config.debugTools`（`services/config.ts`），它在執行期還會再檢查一次：只有開發模式或 preview 建置才會開啟。所以就算 OTA 更新漏設 `APP_VARIANT`，正式版也看不到除錯工具。唯一例外是 `extra.expoGoDebugTools`：只有在執行期確認是 Expo Go 或 dev client（`ExecutionEnvironment.StoreClient`）時才生效，正式版的執行環境是 standalone，不會符合。
 - 只支援直式單手操作，可點擊目標至少 44 pt。
 
 ### Critical Don't-Miss Rules

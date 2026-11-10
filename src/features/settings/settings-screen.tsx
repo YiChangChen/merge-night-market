@@ -43,10 +43,15 @@ export function SettingsScreen() {
           </Text>
         </Pressable>
         {config.debugTools ? (
-          <Text testID="tab-switch-timing" style={styles.debug}>
-            分頁切換（{samples.length} 次）：中位數{' '}
-            {switchMedian === null ? '—' : `${Math.round(switchMedian)} ms`}
-          </Text>
+          <>
+            <Text testID="debug-entry-hint" style={styles.debug}>
+              除錯：長按版本號 2 秒開啟除錯面板
+            </Text>
+            <Text testID="tab-switch-timing" style={styles.debug}>
+              分頁切換（{samples.length} 次）：中位數{' '}
+              {switchMedian === null ? '—' : `${Math.round(switchMedian)} ms`}
+            </Text>
+          </>
         ) : null}
       </View>
     </SafeAreaView>

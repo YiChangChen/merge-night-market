@@ -55,6 +55,16 @@ describe('StallView', () => {
     expect(screen.queryByTestId('stall-tea-shutter')).toBeNull();
   });
 
+  it('先在背後載好下一級的外觀，Lv3 沒有下一級', async () => {
+    await render(<StallView chain="tea" animate={false} />);
+
+    await setTeaLevel(2);
+    expect(screen.getByTestId('stall-tea-preload', { includeHiddenElements: true })).toBeTruthy();
+
+    await setTeaLevel(3);
+    expect(screen.queryByTestId('stall-tea-preload', { includeHiddenElements: true })).toBeNull();
+  });
+
   it('只訂閱自己的攤位：棋盤、金幣或其他攤位改變時不重繪', async () => {
     const onRender = jest.fn();
     await render(

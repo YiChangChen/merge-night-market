@@ -13,6 +13,12 @@ const profile: BuildProfile =
 
 const isProduction = profile === 'production';
 
+/**
+ * 本機用 Expo Go 跑 `--no-dev` 時也打開除錯工具（E1 retro A1）。在 `.env.local` 設定 `EXPO_GO_DEBUG_TOOLS=1`。
+ * production 一律關閉；執行期還會再檢查是否真的在 Expo Go 裡（services/config.ts）。
+ */
+const expoGoDebugTools = !isProduction && process.env.EXPO_GO_DEBUG_TOOLS === '1';
+
 /** 正式 ad unit ID 只在 production 注入；development / preview 一律用 TestIds（S1.4、S6.2）。 */
 const adUnitIds = isProduction
   ? {
@@ -88,5 +94,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     posthogKey: process.env.POSTHOG_KEY ?? null,
     sentryDsn: process.env.SENTRY_DSN ?? null,
     debugTools: !isProduction,
+    expoGoDebugTools,
   },
 });

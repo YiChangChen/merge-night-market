@@ -1,6 +1,12 @@
 import { Image } from 'expo-image';
 import { memo, useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useOverlayStore } from '@/features/overlays';
 import { type ChainId, STALLS } from '@/game/content';
@@ -21,6 +27,11 @@ const APPEARANCE = [
 
 const FACADE_HEIGHT = 250;
 
+// 換外觀時新舊兩張圖交叉淡入，尺寸同時平滑長大，不會突然跳一下
+const FACADE_FADE_MS = 280;
+const FACADE_GROW_MS = 320;
+const FACADE_TRANSITION = { duration: FACADE_FADE_MS, effect: 'cross-dissolve' } as const;
+
 type StallViewProps = {
   chain: ChainId;
   /** 夜市街在前景時才播放循環動畫 */
@@ -36,7 +47,16 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   const stall = STALLS[chain];
   const appearance = APPEARANCE[level];
   const closed = level === 0;
-  const imageHeight = FACADE_HEIGHT * appearance.scale;
+  // 外觀用 scale 縮放（以底部為基準），不改版面尺寸，動畫只在 UI 執行緒跑
+  const scale = useSharedValue<number>(appearance.scale);
+  useEffect(() => {
+    scale.set(
+      withTiming(appearance.scale, { duration: FACADE_GROW_MS, easing: Easing.out(Easing.cubic) })
+    );
+  }, [appearance.scale, scale]);
+  const facadeStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  // 先在背後載好下一級的外觀，重開或升級時不必等圖片載入（Expo Go 經 tunnel 載圖特別慢）
+  const nextFacade = level < 3 ? stall.art.facade[level + 1] : null;
   // 重開演出（FxController 收到 stall_reopened 後觸發）
   const opening = useOverlayStore((store) => store.shutterOpening[chain]);
   const openPanel = useOverlayStore((store) => store.openStallPanel);
@@ -70,14 +90,30 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
         onPowerOnDone={onPowerOnDone}
       />
       <View style={styles.facade}>
-        <Image
-          testID={closed ? `stall-${chain}-shutter` : `stall-${chain}-facade`}
-          source={stall.art.facade[level]}
-          contentFit="contain"
-          contentPosition="bottom"
-          cachePolicy="memory-disk"
-          style={[styles.facadeImage, { height: imageHeight }]}
-        />
+        {nextFacade !== null ? (
+          <Image
+            testID={`stall-${chain}-preload`}
+            source={nextFacade}
+            contentFit="contain"
+            contentPosition="bottom"
+            cachePolicy="memory-disk"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            pointerEvents="none"
+            style={[styles.facadeImage, styles.preload]}
+          />
+        ) : null}
+        <Animated.View style={[styles.facadeFrame, facadeStyle]}>
+          <Image
+            testID={closed ? `stall-${chain}-shutter` : `stall-${chain}-facade`}
+            source={stall.art.facade[level]}
+            contentFit="contain"
+            contentPosition="bottom"
+            cachePolicy="memory-disk"
+            transition={FACADE_TRANSITION}
+            style={styles.facadeImage}
+          />
+        </Animated.View>
         {opening !== undefined && !closed ? (
           <RollingShutter
             key={opening}
@@ -118,8 +154,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
+  facadeFrame: {
+    ...StyleSheet.absoluteFill,
+    transformOrigin: 'bottom',
+  },
   facadeImage: {
     width: STALL_WIDTH,
+    height: FACADE_HEIGHT,
+  },
+  preload: {
+    position: 'absolute',
+    bottom: 0,
+    opacity: 0,
   },
   levelLabel: {
     position: 'absolute',

@@ -4,7 +4,7 @@ baseline_commit: 224c097
 
 # Story 1.10: 升級攤位到 Lv2 與招牌通電
 
-Status: review
+Status: done
 
 ## Story
 
@@ -29,9 +29,10 @@ So that 我每次回來都能讓夜市更熱鬧一點。
 - [x] T3 招牌通電演出：overlay store 的 `neonPowerOn`、FxController 處理 `stall_upgraded`、`NeonSign` 通電動畫（AC1）
 - [x] T4 攤位面板的升級區塊：Lv1→Lv2 可升級；Lv2 顯示 Lv3 條件並鎖住；Lv3 顯示已是最高等級（AC1、AC3）
 - [x] T5 驗證：lint、tsc、jest、iOS／Android 打包
-- [ ] T6 **（阻擋）** AC5：Pixel 6a 上量 NFR1–3。使用者沒有 Android 手機，已記入 deferred-work
-- [ ] T7 **（阻擋，使用者）** AC6：E1 批次 31 張美術尚未產出，`src/` 裡還有 4 處 `TODO(content)`
-- [ ] T8 AC7：E1 retro 的時程檢查點
+- [x] T6 AC5：延後處理。使用者沒有 Android 手機，Pixel 6a 的 NFR1–3 量測已記入 deferred-work，最晚在 S7.6 之前完成
+- [x] T7 AC6：E1 批次 31 張美術定稿並接上，`src/` 裡的 `TODO(content)` 已清零（2026-11-10）
+- [x] T9 **（使用者）** 實機檢查夜市街的新美術與棋盤畫面（2026-11-10 通過）
+- [x] T8 AC7：時程檢查點移到 Epic 1 retro 處理
 
 ## Dev Agent Record
 
@@ -67,7 +68,20 @@ So that 我每次回來都能讓夜市更熱鬧一點。
 - AC3：Lv2 攤位的面板顯示「升級到 Lv3 大店」、金幣條件和「1 份含這一攤食材的發明菜（即將開放）」，按鈕停用並顯示「需要發明菜（即將開放）」。規則層也驗證了金幣再多都不能升到 Lv3。
 - AC4：`stalls-test` 的「Epic 1 完成定義」用一局新遊戲把 tea、fried 升到 Lv2，再讓玩家 Lv3 加上 300 金幣重開麵線攤。
 - **AC5 沒有達成**：沒有 Pixel 6a。iPhone 上的量測已經在 S1.3 完成；Android 複驗記在 deferred-work，最晚在 S7.6 之前完成。
-- **AC6 沒有達成**：美術清單 E1 批次 31 張都還是「占位」，由使用者負責產出（S1.0）。`src/` 裡剩下 4 處 `TODO(content)`：`stall-view.tsx` 的外觀與老闆頭像、`neon-sign.tsx`、`rolling-shutter.tsx`。
+- **AC6 已達成（2026-11-10）**：
+  - **來源**：使用者產出 5 張素材表，分別是攤位與老闆（洋紅底）、補圖的 3 個攤位、5 個霓虹招牌（黑底）、夜市街背景，以及第一版的深色底素材表。
+  - **處理**：用 `art-source/scripts/process-e1-art.py` 處理，總共 41 個 WebP，約 3.1 MB。
+    - 攤位與老闆依洋紅色去背，依物件之間的空隙自動切圖，最近鄰放大 3 倍。
+    - 霓虹依亮度去背，再切成三層。
+    - 第一版深色底素材表曾經用 rembg 試著去背，但效果不好（半透明、身體被切掉），所以改請使用者重產純色底的版本。
+  - **接上程式**：
+    - `STALLS[c].art`（外觀 4 張、霓虹 3 層、老闆頭像）和 `STREET_BACKGROUND` 都在 `content/`。
+    - `StallView` 依等級顯示外觀圖，等級越高圖越大。
+    - `NeonSign` 疊三層圖，沒亮的那幾段以 12% 不透明度隱約顯示，通電演出沿用 S1.10 的寫法。
+    - `RollingShutter` 改成用鐵捲門的圖往上收。
+    - 夜市街的背景圖取代原本程式畫的燈泡串，`string-lights.tsx` 已刪除。
+  - **檢查**：`src/` 裡的 `TODO(content)` 是 0；`content-stalls-test` 新增檢查，確認 41 個檔案都存在，也都接上了；美術清單 E1 的 31 列都標為定稿。
+  - 原始素材表搬到 `art-source/`，不會被打包。
 - AC7：要在 E1 retro 時處理。
 - **測試**：`stalls-test` 增加 12 個、`stall-panel-test` 增加 5 個，共 221 個通過；lint、tsc 也通過，iOS 和 Android 打包成功。
 
@@ -84,4 +98,6 @@ So that 我每次回來都能讓夜市更熱鬧一點。
 
 ## Change Log
 
+- 2026-11-10：實機檢查通過（iPhone 16），包括夜市街新美術和修正後的棋盤訂單列。狀態改為 done。AC5 延後（deferred-work），AC7 交給 Epic 1 retro。
+- 2026-11-10：E1 美術定稿並接上（AC6），等待實機檢查。
 - 2026-11-10：完成 Story 1.10 的程式部分：升級到 Lv2、招牌通電演出、攤位面板的升級區塊。AC5（Android 量測）與 AC6（E1 美術）受阻，狀態改為 review。

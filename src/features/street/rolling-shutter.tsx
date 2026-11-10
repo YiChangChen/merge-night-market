@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -10,11 +11,17 @@ import Animated, {
 
 export const SHUTTER_ROLL_MS = 1100;
 
+type RollingShutterProps = {
+  /** 這一攤的鐵捲門外觀圖 */
+  source: number;
+  height: number;
+  onDone: () => void;
+};
+
 /**
- * 重開時的鐵捲門拉起演出（FR10）：蓋在新開的攤位上，往上收起後淡出，結束時呼叫 onDone。
- * TODO(content): art-manifest#2,6,10,14,18 鐵捲門圖到位後換成圖片
+ * 重開時的鐵捲門拉起演出（FR10）：鐵捲門圖蓋在新開的攤位上，往上收起後淡出，結束時呼叫 onDone。
  */
-export function RollingShutter({ height, onDone }: { height: number; onDone: () => void }) {
+export function RollingShutter({ source, height, onDone }: RollingShutterProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -28,28 +35,24 @@ export function RollingShutter({ height, onDone }: { height: number; onDone: () 
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: -progress.get() * height }],
-    opacity: 1 - Math.max(0, progress.get() - 0.7) / 0.3,
+    opacity: 1 - Math.max(0, progress.get() - 0.6) / 0.4,
   }));
 
   return (
-    <Animated.View testID="rolling-shutter" pointerEvents="none" style={[styles.shutter, style]}>
-      {Array.from({ length: 7 }, (_, index) => (
-        <View key={index} style={styles.slat} />
-      ))}
+    <Animated.View testID="rolling-shutter" pointerEvents="none" style={[styles.shutter, { height }, style]}>
+      <Image source={source} contentFit="contain" contentPosition="bottom" style={styles.image} />
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   shutter: {
-    ...StyleSheet.absoluteFill,
-    gap: 4,
-    padding: 6,
-    backgroundColor: '#7D8597',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  slat: {
+  image: {
     flex: 1,
-    borderRadius: 2,
-    backgroundColor: '#5C677D',
   },
 });

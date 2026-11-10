@@ -18,3 +18,26 @@ describe('STALLS 與 docs/content.md 一致', () => {
     expect(row).toContain(stall.owner.persona);
   });
 });
+
+describe('E1 美術（art-manifest #1–#31）', () => {
+  type FsExists = { existsSync(file: string): boolean };
+  const { existsSync } = jest.requireActual<FsExists>('fs');
+  const root = `${process.cwd()}/assets/images`;
+
+  it.each(CHAIN_IDS)('%s：外觀 4 張、霓虹 3 層、老闆頭像的檔案都在，而且都接上了', (chain) => {
+    const files = [
+      ...['shutter', 'lv1', 'lv2', 'lv3', 'neon-1', 'neon-2', 'neon-3'].map((name) => `stalls/${chain}/${name}.webp`),
+      `owners/${chain}.webp`,
+    ];
+    for (const file of files) expect(existsSync(`${root}/${file}`)).toBe(true);
+
+    const { art } = STALLS[chain];
+    expect(art.facade).toHaveLength(4);
+    expect(art.neon).toHaveLength(3);
+    for (const asset of [...art.facade, ...art.neon, art.owner]) expect(asset).toBeTruthy();
+  });
+
+  it('夜市街背景', () => {
+    expect(existsSync(`${root}/street/background.webp`)).toBe(true);
+  });
+});

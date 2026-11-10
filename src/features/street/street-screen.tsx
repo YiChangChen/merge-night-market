@@ -1,22 +1,30 @@
+import { Image } from 'expo-image';
 import { router, useIsFocused } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CHAIN_IDS } from '@/game/content';
+import { CHAIN_IDS, STREET_BACKGROUND } from '@/game/content';
 
 import { StallView } from './stall-view';
-import { StringLights } from './string-lights';
 
 /**
  * 夜市街：橫向捲動的 5 個攤位（FR41、UX-DR10）。渲染方案依 #4 閘門結論：純 RN + Reanimated。
  * 這個畫面本身不訂閱 store，只有各個 StallView 訂閱自己的攤位。
  */
 export function StreetScreen() {
-  // 分頁失焦時暫停所有循環動畫（霓虹、燈泡串）
+  // 分頁失焦時暫停所有循環動畫（霓虹）
   const focused = useIsFocused();
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+      {/* 夜市街背景（星空、燈泡串、遠方街景，UX-DR10）；不跟著捲動，攤位在前面滑過 */}
+      <Image
+        source={STREET_BACKGROUND}
+        contentFit="cover"
+        contentPosition="bottom"
+        cachePolicy="memory-disk"
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.header}>
         <Pressable
           testID="open-settings"
@@ -31,7 +39,6 @@ export function StreetScreen() {
         {/* 右上角保留給收藏冊入口（E5），先放同尺寸的空位讓標題置中 */}
         <View style={styles.iconButton} />
       </View>
-      <StringLights count={16} animate={focused} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -40,7 +47,6 @@ export function StreetScreen() {
           <StallView key={chain} chain={chain} animate={focused} />
         ))}
       </ScrollView>
-      <View style={styles.ground} />
     </SafeAreaView>
   );
 }
@@ -79,9 +85,5 @@ const styles = StyleSheet.create({
     gap: 20,
     paddingHorizontal: 20,
     paddingBottom: 16,
-  },
-  ground: {
-    height: 24,
-    backgroundColor: '#1A1D33',
   },
 });

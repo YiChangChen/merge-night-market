@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -10,12 +11,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const SEGMENTS = 3;
 /** 招牌通電演出的長度；結束後回到一般的閃爍 */
 export const NEON_POWER_ON_MS = 900;
 
+// 沒亮的霓虹管仍然隱約看得到，像關掉的燈管
+const OFF_OPACITY = 0.12;
+
 type NeonSegmentProps = {
-  color: string;
+  source: number;
   lit: boolean;
   animate: boolean;
   delay: number;
@@ -23,13 +26,14 @@ type NeonSegmentProps = {
   poweringOn: boolean;
 };
 
-function NeonSegment({ color, lit, animate, delay, poweringOn }: NeonSegmentProps) {
-  const opacity = useSharedValue(lit ? 1 : 0.15);
+/** 霓虹招牌的一段：三段圖層用同一張畫布，疊在一起就是完整的招牌。 */
+function NeonSegment({ source, lit, animate, delay, poweringOn }: NeonSegmentProps) {
+  const opacity = useSharedValue(lit ? 1 : OFF_OPACITY);
 
   useEffect(() => {
     cancelAnimation(opacity);
     if (!lit) {
-      opacity.set(0.15);
+      opacity.set(OFF_OPACITY);
       return;
     }
     if (poweringOn) {
@@ -73,14 +77,18 @@ function NeonSegment({ color, lit, animate, delay, poweringOn }: NeonSegmentProp
   return (
     <Animated.View
       testID={poweringOn ? 'neon-segment-powering-on' : lit ? 'neon-segment-lit' : 'neon-segment-off'}
-      style={[styles.segment, { backgroundColor: color, shadowColor: color }, lit && styles.glow, style]}
-    />
+      style={[styles.layer, style]}>
+      <Image source={source} contentFit="contain" cachePolicy="memory-disk" style={styles.layerImage} />
+    </Animated.View>
   );
 }
 
 type NeonSignProps = {
   name: string;
+  /** 攤位名稱亮起時的顏色 */
   color: string;
+  /** 三段霓虹圖層（art-manifest#22–26） */
+  layers: readonly [number, number, number];
   /** 攤位等級 0–3：亮起的段數（Lv1 1/3、Lv2 2/3、Lv3 全亮，FR14） */
   level: number;
   animate: boolean;
@@ -89,8 +97,7 @@ type NeonSignProps = {
   onPowerOnDone?: () => void;
 };
 
-// TODO(content): art-manifest#22-26 正式霓虹招牌圖到位後，改成三段圖層疊加
-export function NeonSign({ name, color, level, animate, powerOn, onPowerOnDone }: NeonSignProps) {
+export function NeonSign({ name, color, layers, level, animate, powerOn, onPowerOnDone }: NeonSignProps) {
   // 用 JS 計時收尾，不必從 worklet 回呼
   useEffect(() => {
     if (powerOn === undefined || !onPowerOnDone) return;
@@ -104,10 +111,10 @@ export function NeonSign({ name, color, level, animate, powerOn, onPowerOnDone }
         {name}
       </Text>
       <View style={styles.segments}>
-        {Array.from({ length: SEGMENTS }, (_, index) => (
+        {layers.map((source, index) => (
           <NeonSegment
             key={index}
-            color={color}
+            source={source}
             lit={index < level}
             animate={animate}
             delay={index * 220}
@@ -123,11 +130,7 @@ export function NeonSign({ name, color, level, animate, powerOn, onPowerOnDone }
 const styles = StyleSheet.create({
   sign: {
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#0B0F24',
+    gap: 2,
   },
   name: {
     color: '#5A6075',
@@ -137,18 +140,13 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
   },
   segments: {
-    flexDirection: 'row',
-    gap: 6,
+    width: 210,
+    height: 70,
   },
-  segment: {
-    width: 52,
-    height: 10,
-    borderRadius: 5,
+  layer: {
+    ...StyleSheet.absoluteFill,
   },
-  glow: {
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 6,
+  layerImage: {
+    flex: 1,
   },
 });

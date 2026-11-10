@@ -3,3 +3,4 @@ export * from './balance';
 export * from './chains';
 export * from './customers';
 export * from './stalls';
+export * from './street';

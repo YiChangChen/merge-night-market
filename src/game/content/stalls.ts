@@ -7,11 +7,21 @@ export type OwnerDef = {
   persona: string;
 };
 
+/** 攤位美術（art-manifest E1 批次，S1.10 定稿）。require 回傳的是素材 id。 */
+export type StallArt = {
+  /** 依等級的外觀：[鐵捲門, Lv1 小攤, Lv2 店面, Lv3 大店] */
+  facade: readonly [number, number, number, number];
+  /** 霓虹招牌三段圖層（同一張畫布）：Lv1 亮第 1 段、Lv2 亮 1–2 段、Lv3 全亮 */
+  neon: readonly [number, number, number];
+  /** 老闆頭像 */
+  owner: number;
+};
+
 export type StallDef = {
   id: ChainId;
   name: string;
   owner: OwnerDef;
-  /** 占位外觀用的主色；正式美術到位後改用圖片（art-manifest#2–21） */
+  /** 攤位主色（面板、頭像外框等點綴用） */
   color: string;
   /** 霓虹招牌的顏色 */
   neon: string;
@@ -22,6 +32,7 @@ export type StallDef = {
   reopenCoins: number | null;
   /** 升級需要的金幣（FR12）。Lv3 另外需要 1 份含該鏈的發明菜（S3.5）。 */
   upgradeCoins: { 2: number; 3: number };
+  art: StallArt;
 };
 
 export const STALLS = {
@@ -33,6 +44,20 @@ export const STALLS = {
     neon: '#00F5D4',
     reopenCoins: null,
     upgradeCoins: { 2: 200, 3: 600 },
+    art: {
+      facade: [
+        require('../../../assets/images/stalls/tea/shutter.webp'),
+        require('../../../assets/images/stalls/tea/lv1.webp'),
+        require('../../../assets/images/stalls/tea/lv2.webp'),
+        require('../../../assets/images/stalls/tea/lv3.webp'),
+      ],
+      neon: [
+        require('../../../assets/images/stalls/tea/neon-1.webp'),
+        require('../../../assets/images/stalls/tea/neon-2.webp'),
+        require('../../../assets/images/stalls/tea/neon-3.webp'),
+      ],
+      owner: require('../../../assets/images/owners/tea.webp'),
+    },
   },
   fried: {
     id: 'fried',
@@ -42,6 +67,20 @@ export const STALLS = {
     neon: '#FFBE0B',
     reopenCoins: null,
     upgradeCoins: { 2: 200, 3: 600 },
+    art: {
+      facade: [
+        require('../../../assets/images/stalls/fried/shutter.webp'),
+        require('../../../assets/images/stalls/fried/lv1.webp'),
+        require('../../../assets/images/stalls/fried/lv2.webp'),
+        require('../../../assets/images/stalls/fried/lv3.webp'),
+      ],
+      neon: [
+        require('../../../assets/images/stalls/fried/neon-1.webp'),
+        require('../../../assets/images/stalls/fried/neon-2.webp'),
+        require('../../../assets/images/stalls/fried/neon-3.webp'),
+      ],
+      owner: require('../../../assets/images/owners/fried.webp'),
+    },
   },
   noodle: {
     id: 'noodle',
@@ -51,6 +90,20 @@ export const STALLS = {
     neon: '#FF006E',
     reopenCoins: 300,
     upgradeCoins: { 2: 400, 3: 1000 },
+    art: {
+      facade: [
+        require('../../../assets/images/stalls/noodle/shutter.webp'),
+        require('../../../assets/images/stalls/noodle/lv1.webp'),
+        require('../../../assets/images/stalls/noodle/lv2.webp'),
+        require('../../../assets/images/stalls/noodle/lv3.webp'),
+      ],
+      neon: [
+        require('../../../assets/images/stalls/noodle/neon-1.webp'),
+        require('../../../assets/images/stalls/noodle/neon-2.webp'),
+        require('../../../assets/images/stalls/noodle/neon-3.webp'),
+      ],
+      owner: require('../../../assets/images/owners/noodle.webp'),
+    },
   },
   dumpling: {
     id: 'dumpling',
@@ -60,6 +113,20 @@ export const STALLS = {
     neon: '#8338EC',
     reopenCoins: 600,
     upgradeCoins: { 2: 600, 3: 1500 },
+    art: {
+      facade: [
+        require('../../../assets/images/stalls/dumpling/shutter.webp'),
+        require('../../../assets/images/stalls/dumpling/lv1.webp'),
+        require('../../../assets/images/stalls/dumpling/lv2.webp'),
+        require('../../../assets/images/stalls/dumpling/lv3.webp'),
+      ],
+      neon: [
+        require('../../../assets/images/stalls/dumpling/neon-1.webp'),
+        require('../../../assets/images/stalls/dumpling/neon-2.webp'),
+        require('../../../assets/images/stalls/dumpling/neon-3.webp'),
+      ],
+      owner: require('../../../assets/images/owners/dumpling.webp'),
+    },
   },
   sweet: {
     id: 'sweet',
@@ -69,5 +136,19 @@ export const STALLS = {
     neon: '#FB5607',
     reopenCoins: 1000,
     upgradeCoins: { 2: 900, 3: 2000 },
+    art: {
+      facade: [
+        require('../../../assets/images/stalls/sweet/shutter.webp'),
+        require('../../../assets/images/stalls/sweet/lv1.webp'),
+        require('../../../assets/images/stalls/sweet/lv2.webp'),
+        require('../../../assets/images/stalls/sweet/lv3.webp'),
+      ],
+      neon: [
+        require('../../../assets/images/stalls/sweet/neon-1.webp'),
+        require('../../../assets/images/stalls/sweet/neon-2.webp'),
+        require('../../../assets/images/stalls/sweet/neon-3.webp'),
+      ],
+      owner: require('../../../assets/images/owners/sweet.webp'),
+    },
   },
 } as const satisfies Record<ChainId, StallDef>;

@@ -94,7 +94,8 @@ function Orders({
   const board = useGameStore((store) => store.state?.board);
   if (!orders || !board) return null;
   return (
-    <View style={styles.orders}>
+    // 高度和棋盤版面計算時預留的一致（客人圖 + 品名標籤），不依賴子元件撐開
+    <View style={[styles.orders, { height: artSize.height + ORDER_LABEL_HEIGHT }]}>
       {orders.map((order) => {
         const ready = findOrderCells({ board }, order) !== null;
         return (
@@ -335,8 +336,8 @@ const styles = StyleSheet.create({
   orderSlot: {
     flex: 1,
   },
+  // 不要設 flex: 1：外層格子沒有固定高度，flex: 1 會讓卡片高度塌成 0（客人圖被資訊列蓋住）
   order: {
-    flex: 1,
     alignItems: 'center',
     gap: 2,
   },

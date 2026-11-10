@@ -1,13 +1,14 @@
 - source_plan: none
   summary: S1.4 Spike B：在雙平台開發版建置播放 AdMob 測試激勵廣告並走完 UMP/ATT（epics.md Story 1.4）
   evidence: 使用者選擇拆分，先做 S1.1；S1.4 依賴 S1.1 的 eas.json 與 app.config.ts，排在 S1.1 之後
+  status: E1 retro（2026-11-10）決定移到 Epic 6 開工前做；需要能做開發版建置的環境（Android 裝置或模擬器，或 Apple 付費帳號）
 - source_plan: none
   summary: S1.3 Spike A：夜市街效能閘門原型與 Pixel 6a 量測（epics.md Story 1.3）
   evidence: 使用者選擇拆分，先做 S1.1；S1.3 依賴 S1.1 的 preview profile，排在 S1.4 之後
   status: 第一階段已完成（2026-11-09，iPhone 暫定通過，純 RN）；第二階段見下一筆
 - source_plan: _bmad-output/implementation-artifacts/1-3-spike-a-street-performance-gate.md
   summary: Spike A 第二階段：在 Android 中階機上複驗夜市街效能（release build、Flashlight、adb；FPS、冷啟動、記憶體）
-  evidence: 使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號；第一階段在 iPhone 上量到 UI／JS 60 FPS、卡頓 0%、進入 72 ms，但無法代表 Pixel 6a。最晚在 S7.6 之前完成；沒通過時依序評估 Skia → Lottie → 降級。原型已在 S1.7 移除，複驗直接量測正式的夜市街畫面（Flashlight 量 FPS；分頁切換時間在設定畫面顯示，需開啟除錯工具）
+  evidence: 使用者目前只有 iPhone，沒有 Mac 和 Apple Developer 付費帳號；第一階段在 iPhone 上量到 UI／JS 60 FPS、卡頓 0%、進入 72 ms，但無法代表 Pixel 6a。最晚在 S7.6 之前完成（E1 retro 2026-11-10 確認：各 Epic 的 Pixel 6a 量測都集中到這一次，各 Epic 結束時先在 iPhone 上量暫定值）；沒通過時依序評估 Skia → Lottie → 降級。原型已在 S1.7 移除，複驗直接量測正式的夜市街畫面（Flashlight 量 FPS；分頁切換時間在設定畫面顯示，需開啟除錯工具）
 ## Deferred from: code review of Epic 1 stories 1.1–1.5 (2026-11-09)
 - source_plan: _bmad-output/implementation-artifacts/1-1-project-setup-and-lint-guardrails.md
   summary: ESLint 只強制規則層邊界；services、features、ui 的分層 import 限制還沒有 lint 規則

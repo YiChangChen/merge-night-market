@@ -1,5 +1,5 @@
 # generated: 2026-11-09
-# last_updated: 2026-11-09
+# last_updated: 2026-11-10
 # project: merge-night-market
 # project_key: NOKEY
 # tracking_system: file-system
@@ -38,7 +38,7 @@
 # Epic 1 順序依 2026-11-09 Sprint Change Proposal：1.0 可與 1.1～1.5 並行，須在 1.7 前完成。
 
 generated: 2026-11-09
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 project: merge-night-market
 project_key: NOKEY
 tracking_system: file-system
@@ -46,21 +46,21 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   # Epic 1：夜市街開張
-  epic-1: in-progress
+  epic-1: done
   1-0-content-finalization-and-art-manifest: done
   1-1-project-setup-and-lint-guardrails: done
   1-2a-layered-file-relocation: done
   1-2b-zustand-store-apply-and-game-events: done
   1-2c-log-service-and-error-boundary: done
   1-3-spike-a-street-performance-gate: done
-  1-4-spike-b-admob-test-rewarded-ad: backlog
+  1-4-spike-b-admob-test-rewarded-ad: backlog  # E1 retro：移到 Epic 6 開工前做
   1-5-save-v2-and-v1-migration: done
   1-6-stall-driven-generators-and-orders: done
   1-7-tabs-street-screen-and-settings: done
   1-8-debug-panel-and-save-import-export: done
   1-9-reopen-stall: done
   1-10-upgrade-stall-to-lv2-and-neon: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # Epic 2：排隊人龍與完售
   epic-2: backlog

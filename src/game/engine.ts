@@ -7,6 +7,7 @@ import {
   type ChainId,
   CUSTOMERS,
   type CustomerDef,
+  VIP_CUSTOMERS,
   RECIPES_BY_ID,
   type RecipeId,
 } from './content';
@@ -209,7 +210,9 @@ export function replaceOrder(state: GameState, orderId: number, now: number): Ga
 }
 
 // 客人由訂單 id 決定，不必寫進存檔，同一張訂單移動位置或讀檔後也不會換人
+// 貴客單只從 3 位貴客挑（S4.3）；一般單與線索單沿用 12 位客人
 export function customerForOrder(order: Order): CustomerDef {
+  if (order.kind === 'vip') return VIP_CUSTOMERS[order.id % VIP_CUSTOMERS.length];
   return CUSTOMERS[order.id % CUSTOMERS.length];
 }
 

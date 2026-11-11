@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
-import { CHAINS, type CustomerDef } from '@/game/content';
+import { CHAINS, type CustomerDef, RECIPES_BY_ID, type RecipeId } from '@/game/content';
 import type { Requirement } from '@/game/engine';
 
 // 客人圖的原始尺寸；最寬的人物約 295 寬，兩側留白是透明的
@@ -19,11 +19,14 @@ export function customerArtSize(slotWidth: number) {
 export function CustomerTray({
   customer,
   requirements,
+  dish,
   width,
   height,
 }: {
   customer: CustomerDef;
   requirements: Requirement[];
+  /** 貴客單：托盤上放指定的發明菜（S4.3） */
+  dish?: RecipeId;
   width: number;
   height: number;
 }) {
@@ -39,6 +42,14 @@ export function CustomerTray({
         style={{ width, height }}
       />
       <View style={[styles.food, foodPosition]}>
+        {dish ? (
+          <Image
+            source={RECIPES_BY_ID[dish].art}
+            contentFit="contain"
+            draggable={false}
+            style={{ width: foodSize * 1.2, height: foodSize * 1.2 }}
+          />
+        ) : null}
         {requirements.map((requirement, index) => (
           <Image
             key={index}

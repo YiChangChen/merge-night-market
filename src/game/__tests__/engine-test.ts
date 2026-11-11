@@ -1,4 +1,12 @@
-import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId, CUSTOMERS } from '../content';
+import {
+  BALANCE,
+  BOARD_SIZE,
+  CHAIN_IDS,
+  CHAINS,
+  type ChainId,
+  CUSTOMERS,
+  VIP_CUSTOMERS,
+} from '../content';
 import {
   canMerge,
   completeOrder,
@@ -437,5 +445,18 @@ describe('customerForOrder', () => {
       CUSTOMERS.map((_, id) => customerForOrder({ ...order([{ chain: 'tea', level: 2 }]), id }))
     );
     expect(seen.size).toBe(CUSTOMERS.length);
+  });
+
+  it('貴客單只從 3 位貴客挑，同一張單讀檔後不換人（S4.3）', () => {
+    const vip = (id: number) => ({
+      ...order([]),
+      id,
+      kind: 'vip' as const,
+      recipe: 'tea-fried' as const,
+    });
+    const names = new Set([0, 1, 2, 3, 4, 5].map((id) => customerForOrder(vip(id)).name));
+    expect([...names].sort()).toEqual(['YouTuber', '富豪', '藝人'].sort());
+    expect(customerForOrder(vip(8))).toBe(customerForOrder(JSON.parse(JSON.stringify(vip(8)))));
+    expect(VIP_CUSTOMERS).toHaveLength(3);
   });
 });

@@ -2,21 +2,21 @@ import { Image } from 'expo-image';
 import { useIsFocused } from 'expo-router';
 import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInRight, LinearTransition, ZoomOut } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/shallow';
 
 import { Board, InfoBar } from '@/features/board';
 import { SaveErrorScreen } from '@/features/errors';
-import { customerArtSize, CustomerTray } from '@/features/orders';
+import { customerArtSize, ORDER_LABEL_HEIGHT, OrderCard } from '@/features/orders';
 import { useOverlayStore } from '@/features/overlays';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
-import { BALANCE, BOARD_BACKGROUND, CHAINS, RECIPES_BY_ID } from '@/game/content';
+import { BALANCE, BOARD_BACKGROUND } from '@/game/content';
 import { applyDrop, resolveDrop } from '@/game/drop';
+import { dismissOrder } from '@/game/orders';
 import {
   completeOrder,
-  customerForOrder,
   findOrderCells,
   getSpawnBlocker,
   msUntilNextEnergy,
@@ -35,8 +35,6 @@ const NON_BOARD_HEIGHT = 106;
 // 客流計量條（S2.2）的高度加上它下方的間距（content 的 gap）
 const QUEUE_METER_SPACE = QUEUE_METER_HEIGHT + 10;
 const ORDER_GAP = 8;
-// 訂單人物圖下方的品名與獎勵標籤
-const ORDER_LABEL_HEIGHT = 42;
 const TOAST_MS = 1800;
 const ORDER_SHIFT_MS = 260;
 const ORDER_ENTER_MS = 260;
@@ -92,9 +90,11 @@ function Hud() {
 function Orders({
   artSize,
   onComplete,
+  onDismiss,
 }: {
   artSize: { width: number; height: number };
   onComplete: (id: number) => void;
+  onDismiss: (id: number) => void;
 }) {
   const orders = useGameStore((store) => store.state?.orders);
   const board = useGameStore((store) => store.state?.board);
@@ -102,55 +102,23 @@ function Orders({
   return (
     // 高度和棋盤版面計算時預留的一致（客人圖 + 品名標籤），不依賴子元件撐開
     <View style={[styles.orders, { height: artSize.height + ORDER_LABEL_HEIGHT }]}>
-      {orders.map((order) => {
-        const ready = findOrderCells({ board }, order) !== null;
-        return (
-          <Animated.View
-            key={order.id}
-            // 等其他卡片讓出位置才進場，避免疊在一起
-            entering={FadeInRight.delay(ORDER_SHIFT_MS).duration(ORDER_ENTER_MS)}
-            exiting={ZoomOut.duration(ORDER_EXIT_MS)}
-            layout={LinearTransition.duration(ORDER_SHIFT_MS)}
-            style={styles.orderSlot}>
-            <Pressable
-              testID="order"
-              disabled={!ready}
-              onPress={() => onComplete(order.id)}
-              style={styles.order}>
-              <CustomerTray
-                customer={customerForOrder(order)}
-                requirements={order.requirements}
-                width={artSize.width}
-                height={artSize.height}
-              />
-              <View style={[styles.orderLabel, ready && styles.orderLabelReady]}>
-                <Text style={[styles.orderName, ready && styles.orderTextReady]} numberOfLines={1}>
-                  {/* 貴客單顯示指定的發明菜、線索單顯示台詞（S4.1、S4.2；正式的卡片在 S4.3） */}
-                  {order.kind === 'vip' && order.recipe !== undefined
-                    ? `貴客：${RECIPES_BY_ID[order.recipe].name}`
-                    : order.kind === 'clue' && order.recipe !== undefined
-                      ? RECIPES_BY_ID[order.recipe].clue
-                      : order.requirements
-                        .map(
-                          (requirement) =>
-                            CHAINS[requirement.chain].items[requirement.level - 1].name
-                        )
-                        .join('、')}
-                </Text>
-                <Text
-                  style={[styles.orderReward, ready && styles.orderTextReady]}
-                  numberOfLines={1}>
-                  {ready
-                    ? '點我出餐！'
-                    : order.kind === 'clue'
-                      ? '線索客人'
-                      : `🪙${order.coins} ⚡${order.energy}`}
-                </Text>
-              </View>
-            </Pressable>
-          </Animated.View>
-        );
-      })}
+      {orders.map((order) => (
+        <Animated.View
+          key={order.id}
+          // 等其他卡片讓出位置才進場，避免疊在一起
+          entering={FadeInRight.delay(ORDER_SHIFT_MS).duration(ORDER_ENTER_MS)}
+          exiting={ZoomOut.duration(ORDER_EXIT_MS)}
+          layout={LinearTransition.duration(ORDER_SHIFT_MS)}
+          style={styles.orderSlot}>
+          <OrderCard
+            order={order}
+            ready={findOrderCells({ board }, order) !== null}
+            artSize={artSize}
+            onComplete={onComplete}
+            onDismiss={onDismiss}
+          />
+        </Animated.View>
+      ))}
     </View>
   );
 }
@@ -248,6 +216,11 @@ export default function GameScreen() {
     apply((current) => sellPiece(current, cell));
   };
 
+  // 請線索客人先走（RC-9）：移除後補一張新訂單，不扣人龍
+  const handleDismissOrder = (id: number) => {
+    apply((current, now) => dismissOrder(current, id, now));
+  };
+
   const handleCompleteOrder = (id: number) => {
     setSelection(null);
     apply((current, now) => completeOrder(current, id, now));
@@ -268,7 +241,7 @@ export default function GameScreen() {
       <View style={[styles.content, { width: boardWidth }]}>
         <Hud />
         <QueueMeter />
-        <Orders artSize={artSize} onComplete={handleCompleteOrder} />
+        <Orders artSize={artSize} onComplete={handleCompleteOrder} onDismiss={handleDismissOrder} />
         <InfoBar selected={selected} onSell={handleSell} />
         <View style={styles.boardArea}>
           <Board
@@ -327,36 +300,6 @@ const styles = StyleSheet.create({
   },
   orderSlot: {
     flex: 1,
-  },
-  // 不要設 flex: 1：外層格子沒有固定高度，flex: 1 會讓卡片高度塌成 0（客人圖被資訊列蓋住）
-  order: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  // 少了卡片底色，文字要有深色底才看得清楚
-  orderLabel: {
-    alignSelf: 'stretch',
-    height: ORDER_LABEL_HEIGHT - 2,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000000AA',
-  },
-  orderLabelReady: {
-    backgroundColor: '#F2C572',
-  },
-  orderName: {
-    color: '#FFF3D6',
-    fontSize: 12,
-  },
-  orderReward: {
-    color: '#FFF3D6',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  orderTextReady: {
-    color: '#4A3420',
   },
   toast: {
     position: 'absolute',

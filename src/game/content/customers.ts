@@ -16,3 +16,13 @@ export const CUSTOMERS: CustomerDef[] = [
   { name: '藝人', art: require('../../../assets/images/customers/pop-star.png') },
   { name: '外送員', art: require('../../../assets/images/customers/rider.png') },
 ];
+
+/**
+ * 貴客（S4.3、FR27）：貴客單只從這 3 位挑。沿用一般客人池裡同一張美術；
+ * 一般客人池不變，既有存檔的一般單才不會換人。
+ */
+export const VIP_CUSTOMERS: CustomerDef[] = [
+  { name: '富豪', art: require('../../../assets/images/customers/tycoon.png') },
+  { name: '藝人', art: require('../../../assets/images/customers/pop-star.png') },
+  { name: 'YouTuber', art: require('../../../assets/images/customers/streamer.png') },
+];

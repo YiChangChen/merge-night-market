@@ -53,7 +53,7 @@ development_status:
   1-2b-zustand-store-apply-and-game-events: done
   1-2c-log-service-and-error-boundary: done
   1-3-spike-a-street-performance-gate: done
-  1-4-spike-b-admob-test-rewarded-ad: backlog  # E1 retro：移到 Epic 6 開工前做
+  1-4-spike-b-admob-test-rewarded-ad: backlog  # E1 retro：移到 Epic 6 開工前做；E5 retro D1：等有建置環境再做，6.2/6.3 先用假的 AdService
   1-5-save-v2-and-v1-migration: done
   1-6-stall-driven-generators-and-orders: done
   1-7-tabs-street-screen-and-settings: done
@@ -88,11 +88,11 @@ development_status:
   epic-4-retrospective: done
 
   # Epic 5：發明菜收藏冊
-  epic-5: in-progress
+  epic-5: done
   5-1-card-data-and-star-bonus: done
   5-2-collection-screen: done
   5-3-card-shows-and-signature-stars: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   # Epic 6：開幕週與激勵廣告
   epic-6: backlog

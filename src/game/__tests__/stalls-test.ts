@@ -1,6 +1,13 @@
 // Story 1.9：重開攤位（FR9、FR10、RC-1）
-import { BOARD_SIZE, CHAINS, STALLS } from '../content';
-import { completeOrder, createGame, type GameState, type Order, orderCoins, type Piece } from '../engine';
+import { BOARD_SIZE, CHAINS, type RecipeId, STALLS } from '../content';
+import {
+  completeOrder,
+  createGame,
+  type GameState,
+  type Order,
+  orderCoins,
+  type Piece,
+} from '../engine';
 import { isValidSaveV2, serializeSave } from '../save';
 import { reopenCheck, reopenStall, upgradeCheck, upgradeStall } from '../stalls';
 
@@ -8,6 +15,27 @@ const NOW = 1_000_000;
 
 function ready(overrides: Partial<GameState> = {}): GameState {
   return { ...createGame(NOW, 1), ...overrides };
+}
+
+const dish = (id: number, recipe: RecipeId, count: 1 | 2 | 3): Piece => ({
+  id,
+  kind: 'dish',
+  recipe,
+  count,
+});
+
+/** 手搖飲 Lv2、棋盤只放指定的格子 */
+function lv2Tea(overrides: Partial<GameState>, cells: Record<number, Piece>): GameState {
+  const base = ready(overrides);
+  const board = Array<Piece | null>(BOARD_SIZE).fill(null);
+  for (const [cell, piece] of Object.entries(cells)) board[Number(cell)] = piece;
+  return {
+    ...base,
+    board,
+    nextId: 1000,
+    pendingGenerators: [],
+    stalls: { ...base.stalls, tea: { level: 2, signatureDish: null } },
+  };
 }
 
 function fullBoard(state: GameState): GameState {
@@ -106,7 +134,11 @@ describe('reopenStall', () => {
       };
       const board = Array<Piece | null>(BOARD_SIZE).fill(null);
       board[0] = { id: 80_000 + i, kind: 'item', chain: 'tea', level: 2 };
-      state = completeOrder({ ...state, board, orders: [target], nextId: 100_000 + i * 10 }, target.id, NOW);
+      state = completeOrder(
+        { ...state, board, orders: [target], nextId: 100_000 + i * 10 },
+        target.id,
+        NOW
+      );
       seen = state.orders.some((order) => order.requirements.some((r) => r.chain === 'noodle'));
     }
     expect(seen).toBe(true);
@@ -115,15 +147,19 @@ describe('reopenStall', () => {
 
 describe('升級費用（FR12）', () => {
   it('Lv2 只要金幣：200 / 200 / 400 / 600 / 900', () => {
-    expect([STALLS.tea, STALLS.fried, STALLS.noodle, STALLS.dumpling, STALLS.sweet].map((s) => s.upgradeCoins[2])).toEqual([
-      200, 200, 400, 600, 900,
-    ]);
+    expect(
+      [STALLS.tea, STALLS.fried, STALLS.noodle, STALLS.dumpling, STALLS.sweet].map(
+        (s) => s.upgradeCoins[2]
+      )
+    ).toEqual([200, 200, 400, 600, 900]);
   });
 
   it('Lv3 要金幣 600 / 600 / 1000 / 1500 / 2000 加上發明菜', () => {
-    expect([STALLS.tea, STALLS.fried, STALLS.noodle, STALLS.dumpling, STALLS.sweet].map((s) => s.upgradeCoins[3])).toEqual([
-      600, 600, 1000, 1500, 2000,
-    ]);
+    expect(
+      [STALLS.tea, STALLS.fried, STALLS.noodle, STALLS.dumpling, STALLS.sweet].map(
+        (s) => s.upgradeCoins[3]
+      )
+    ).toEqual([600, 600, 1000, 1500, 2000]);
   });
 });
 
@@ -134,20 +170,39 @@ describe('upgradeCheck', () => {
       coins: 200,
       coinsMet: false,
       needsDish: false,
+      candidates: [],
       ok: false,
     });
     expect(upgradeCheck(ready({ coins: 200 }), 'tea')).toMatchObject({ coinsMet: true, ok: true });
   });
 
-  it('Lv2 → Lv3：需要發明菜，E3 之前一律鎖住（就算金幣夠）', () => {
-    const state = ready({ coins: 9999, stalls: { ...ready().stalls, tea: { level: 2, signatureDish: null } } });
+  it('Lv2 → Lv3：棋盤上沒有含這一攤食材的發明菜時鎖住（就算金幣夠）', () => {
+    const state = lv2Tea({ coins: 9999 }, { 0: dish(1, 'fried-sweet', 1) });
     expect(upgradeCheck(state, 'tea')).toEqual({
       targetLevel: 3,
       coins: 600,
       coinsMet: true,
       needsDish: true,
+      candidates: [],
       ok: false,
     });
+  });
+
+  it('Lv2 → Lv3：列出棋盤上含這一攤食材的發明菜（不重複，依配方順序）', () => {
+    const state = lv2Tea(
+      { coins: 600 },
+      {
+        0: dish(1, 'tea-sweet', 1),
+        3: dish(2, 'tea-fried', 2),
+        5: dish(3, 'tea-sweet', 3),
+        7: dish(4, 'fried-sweet', 1),
+      }
+    );
+    expect(upgradeCheck(state, 'tea')).toMatchObject({
+      candidates: ['tea-fried', 'tea-sweet'],
+      ok: true,
+    });
+    expect(upgradeCheck({ ...state, coins: 599 }, 'tea')).toMatchObject({ ok: false });
   });
 
   it('鐵捲門與 Lv3 沒有升級條件', () => {
@@ -177,14 +232,82 @@ describe('upgradeStall（Lv1 → Lv2）', () => {
     expect(upgradeStall(state, 'noodle', NOW)).toBe(state);
   });
 
-  it('Lv2 → Lv3 在 E3 之前不開放：回傳原 state', () => {
-    const state = ready({ coins: 9999, stalls: { ...ready().stalls, tea: { level: 2, signatureDish: null } } });
-    expect(upgradeStall(state, 'tea', NOW)).toBe(state);
-  });
-
   it('升級後新訂單金幣 +10%（FR15，S1.6 的公式自動套用）', () => {
     const upgraded = upgradeStall(ready({ coins: 200 }), 'tea', NOW);
     expect(orderCoins([{ chain: 'tea', level: 2 }], upgraded.stalls)).toBe(11);
+  });
+});
+
+describe('upgradeStall（Lv2 → Lv3，FR12、FR13、RC-7、RC-8）', () => {
+  it('扣金幣、從 3 份中扣掉 1 份、升到 Lv3、設定招牌菜、送出 stall_upgraded', () => {
+    const state = lv2Tea({ coins: 700 }, { 4: dish(9, 'tea-fried', 3) });
+    const next = upgradeStall(state, 'tea', NOW, 'tea-fried');
+
+    expect(next.coins).toBe(100);
+    expect(next.board[4]).toEqual(dish(9, 'tea-fried', 2));
+    expect(next.stalls.tea).toEqual({ level: 3, signatureDish: 'tea-fried' });
+    expect(next.events).toContainEqual({ type: 'stall_upgraded', stall: 'tea', level: 3 });
+    expect(isValidSaveV2(JSON.parse(serializeSave(next)))).toBe(true);
+  });
+
+  it('扣到 0 份時清空格子，待放的產生器放上去', () => {
+    const state = {
+      ...lv2Tea({ coins: 600 }, { 4: dish(9, 'tea-fried', 1) }),
+      pendingGenerators: ['noodle' as const],
+    };
+    const next = upgradeStall(state, 'tea', NOW, 'tea-fried');
+
+    expect(next.board[4]).toBeNull();
+    // 待放的產生器放進第一個空格
+    expect(next.board.some((p) => p?.kind === 'generator' && p.chain === 'noodle')).toBe(true);
+    expect(next.pendingGenerators).toEqual([]);
+  });
+
+  it('同一道菜放在好幾格時，從第一格扣', () => {
+    const state = lv2Tea(
+      { coins: 600 },
+      { 2: dish(1, 'tea-fried', 2), 6: dish(2, 'tea-fried', 3) }
+    );
+    const next = upgradeStall(state, 'tea', NOW, 'tea-fried');
+
+    expect(next.board[2]).toEqual(dish(1, 'tea-fried', 1));
+    expect(next.board[6]).toEqual(dish(2, 'tea-fried', 3));
+  });
+
+  it('缺少發明菜、沒有指定、或指定的發明菜不含這一攤：回傳原 state', () => {
+    const noDish = lv2Tea({ coins: 9999 }, {});
+    expect(upgradeStall(noDish, 'tea', NOW, 'tea-fried')).toBe(noDish);
+
+    const withDish = lv2Tea(
+      { coins: 9999 },
+      { 0: dish(1, 'tea-fried', 1), 1: dish(2, 'fried-sweet', 1) }
+    );
+    expect(upgradeStall(withDish, 'tea', NOW)).toBe(withDish);
+    // 甜鹹地瓜雞（炸物＋甜品）不含手搖飲
+    expect(upgradeStall(withDish, 'tea', NOW, 'fried-sweet')).toBe(withDish);
+  });
+
+  it('金幣不足：回傳原 state', () => {
+    const state = lv2Tea({ coins: 599 }, { 0: dish(1, 'tea-fried', 1) });
+    expect(upgradeStall(state, 'tea', NOW, 'tea-fried')).toBe(state);
+  });
+
+  it('人龍進行中時立刻加長（NP-2）', () => {
+    const base = lv2Tea({ coins: 600 }, { 0: dish(1, 'tea-fried', 1) });
+    const state = { ...base, queue: { ...base.queue, length: 14, remaining: 5 } };
+    const next = upgradeStall(state, 'tea', NOW, 'tea-fried');
+
+    expect(next.queue).toMatchObject({ length: 16, remaining: 7 });
+  });
+
+  it('Lv3 之後沒有下一級：招牌菜不能更換', () => {
+    const base = lv2Tea(
+      { coins: 9999 },
+      { 0: dish(1, 'tea-fried', 1), 1: dish(2, 'tea-sweet', 1) }
+    );
+    const lv3 = upgradeStall(base, 'tea', NOW, 'tea-fried');
+    expect(upgradeCheck(lv3, 'tea')).toBeNull();
+    expect(upgradeStall(lv3, 'tea', NOW, 'tea-sweet')).toBe(lv3);
   });
 });
 

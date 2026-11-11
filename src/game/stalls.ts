@@ -1,6 +1,6 @@
-// 攤位規則：重開（S1.9）、升級到 Lv2（S1.10）。Lv3 升級（需要發明菜）在 S3.5 加入。
-import { CHAINS, type ChainId, STALLS } from './content';
-import { ensureGenerator } from './engine';
+// 攤位規則：重開（S1.9）、升級到 Lv2（S1.10）、升級到 Lv3 與招牌菜（S3.5）。
+import { CHAINS, type ChainId, RECIPES, type RecipeId, STALLS } from './content';
+import { ensureGenerator, flushPendingGenerators } from './engine';
 import { growActiveWave } from './queue';
 import type { GameState } from './types';
 
@@ -51,14 +51,26 @@ export type UpgradeCheck = {
   targetLevel: 2 | 3;
   coins: number;
   coinsMet: boolean;
-  /** Lv3 需要 1 份含該鏈的發明菜（FR12），E3 才開放 */
+  /** Lv3 需要 1 份含該鏈的發明菜（FR12） */
   needsDish: boolean;
+  /** 棋盤上含這一攤食材的發明菜（不重複，依配方順序）；玩家從中選一道當招牌菜（RC-7） */
+  candidates: RecipeId[];
   ok: boolean;
 };
 
+/** 棋盤上含這條鏈食材的發明菜（不重複，依 RECIPES 的順序）。 */
+export function signatureCandidates(state: Pick<GameState, 'board'>, chain: ChainId): RecipeId[] {
+  const onBoard = new Set(
+    state.board.flatMap((piece) => (piece?.kind === 'dish' ? [piece.recipe] : []))
+  );
+  return RECIPES.filter(
+    (recipe) => onBoard.has(recipe.id) && (recipe.a.chain === chain || recipe.b.chain === chain)
+  ).map((recipe) => recipe.id);
+}
+
 /** 已開攤位的下一級條件（UX-DR3）；鐵捲門（要先重開）與 Lv3（最高級）回傳 null。 */
 export function upgradeCheck(
-  state: Pick<GameState, 'coins' | 'stalls'>,
+  state: Pick<GameState, 'coins' | 'stalls' | 'board'>,
   chain: ChainId
 ): UpgradeCheck | null {
   const level = state.stalls[chain].level;
@@ -67,30 +79,63 @@ export function upgradeCheck(
   const coins = STALLS[chain].upgradeCoins[targetLevel];
   const coinsMet = state.coins >= coins;
   const needsDish = targetLevel === 3;
-  // TODO(S3.5): Lv3 改成檢查棋盤上是否有含該鏈的發明菜，並由玩家選擇招牌菜
-  return { targetLevel, coins, coinsMet, needsDish, ok: coinsMet && !needsDish };
+  const candidates = needsDish ? signatureCandidates(state, chain) : [];
+  return {
+    targetLevel,
+    coins,
+    coinsMet,
+    needsDish,
+    candidates,
+    ok: coinsMet && (!needsDish || candidates.length > 0),
+  };
+}
+
+/** 從第一個放著這道菜的格子扣 1 份；扣到 0 份時清空並放上待放的產生器（RC-8）。 */
+function takeOneDish(state: GameState, recipe: RecipeId): GameState {
+  const cell = state.board.findIndex((piece) => piece?.kind === 'dish' && piece.recipe === recipe);
+  const piece = state.board[cell];
+  if (piece?.kind !== 'dish') return state;
+  const board = [...state.board];
+  if (piece.count > 1) {
+    board[cell] = { ...piece, count: (piece.count - 1) as 1 | 2 };
+    return { ...state, board };
+  }
+  board[cell] = null;
+  return flushPendingGenerators({ ...state, board });
 }
 
 /**
- * 升級攤位到 Lv2（FR12、FR14）：扣金幣、攤位 +1 級，送出 stall_upgraded。
+ * 升級攤位（FR12、FR14）：扣金幣、攤位 +1 級，送出 stall_upgraded。
+ * - Lv1 → Lv2：只要金幣。
+ * - Lv2 → Lv3：另外要指定一道棋盤上含這一攤食材的發明菜（recipe），扣 1 份，並成為招牌菜（FR13、RC-7、RC-8）。
+ *   招牌菜只在這裡設定一次；Lv3 沒有下一級，所以確定後不能更換。
  * 新訂單的金幣加成由 orderCoins 依攤位等級自動計算（FR15）。條件不足時回傳原 state。
- * Lv3（需要發明菜與招牌菜選擇）在 S3.5 擴充成 upgradeStall(state, stall, now, recipe)。
  */
-// now 目前沒有用到；簽名統一成 (state, ..., now)
-export function upgradeStall(state: GameState, chain: ChainId, _now: number): GameState {
+export function upgradeStall(
+  state: GameState,
+  chain: ChainId,
+  _now: number,
+  recipe?: RecipeId
+): GameState {
   const check = upgradeCheck(state, chain);
   if (!check?.ok) return state;
+  if (check.needsDish && (recipe === undefined || !check.candidates.includes(recipe))) return state;
+
+  let next: GameState = { ...state, coins: state.coins - check.coins };
+  if (check.needsDish && recipe !== undefined) next = takeOneDish(next, recipe);
   // 人龍進行中時，這一波立刻加長（FR18）
-  const upgraded = growActiveWave({
-    ...state,
-    coins: state.coins - check.coins,
-    stalls: { ...state.stalls, [chain]: { ...state.stalls[chain], level: check.targetLevel } },
+  next = growActiveWave({
+    ...next,
+    stalls: {
+      ...next.stalls,
+      [chain]: {
+        level: check.targetLevel,
+        signatureDish: check.needsDish ? (recipe ?? null) : next.stalls[chain].signatureDish,
+      },
+    },
   });
   return {
-    ...upgraded,
-    events: [
-      ...upgraded.events,
-      { type: 'stall_upgraded', stall: chain, level: check.targetLevel },
-    ],
+    ...next,
+    events: [...next.events, { type: 'stall_upgraded', stall: chain, level: check.targetLevel }],
   };
 }

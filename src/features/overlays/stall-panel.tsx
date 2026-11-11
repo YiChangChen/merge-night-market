@@ -1,7 +1,9 @@
+import { Image } from 'expo-image';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 
-import { BALANCE, type ChainId, STALLS } from '@/game/content';
+import { BALANCE, type ChainId, RECIPES_BY_ID, type RecipeId, STALLS } from '@/game/content';
 import { reopenCheck, reopenStall, upgradeCheck, upgradeStall } from '@/game/stalls';
 import { useGameStore } from '@/game/store';
 
@@ -24,7 +26,7 @@ function Condition({ label, current, met }: { label: string; current: string; me
 /**
  * 攤位面板（UX-DR3）：點夜市街的攤位開啟。
  * 鐵捲門攤位顯示重開條件（FR10）；已開的攤位顯示下一級的升級條件（FR12）。
- * 未達成的條件標成紅色，條件都滿足才能按下按鈕。Lv3 需要發明菜，E3 之前一律鎖住。
+ * 未達成的條件標成紅色，條件都滿足才能按下按鈕。Lv3 要從棋盤上的發明菜選一道當招牌菜（S3.5）。
  */
 export function StallPanel({ chain }: { chain: ChainId }) {
   const stall = STALLS[chain];
@@ -35,10 +37,20 @@ export function StallPanel({ chain }: { chain: ChainId }) {
   const snapshot = useGameStore(
     useShallow((store) =>
       store.state
-        ? { level: store.state.level, coins: store.state.coins, stalls: store.state.stalls }
+        ? {
+            level: store.state.level,
+            coins: store.state.coins,
+            stalls: store.state.stalls,
+            // Lv3 的招牌菜候選要看棋盤；面板開著時不能拖曳，訂閱棋盤不影響效能
+            board: store.state.board,
+          }
         : null
     )
   );
+  // 玩家選的招牌菜（Lv2 → Lv3）
+  const [chosen, setChosen] = useState<RecipeId | null>(null);
+  // 防連點：按下後到面板關閉之間，第二次按壓不再送出（S1.10 審查的待辦）
+  const submitted = useRef(false);
   if (!snapshot) return null;
   const level = snapshot.stalls[chain].level;
   const check = reopenCheck(snapshot, chain);
@@ -47,13 +59,29 @@ export function StallPanel({ chain }: { chain: ChainId }) {
 
   // 按下後關閉面板，讓玩家看到夜市街上的演出（鐵捲門拉起／招牌通電）
   const onReopen = () => {
+    if (submitted.current) return;
+    submitted.current = true;
     apply((state, now) => reopenStall(state, chain, now));
     close();
   };
+  // 選好的招牌菜如果已經不在棋盤上（例如被賣掉），視為還沒選
+  const signature = chosen !== null && upgrade?.candidates.includes(chosen) ? chosen : null;
+  const canUpgrade = upgrade !== null && upgrade.ok && (!upgrade.needsDish || signature !== null);
   const onUpgrade = () => {
-    apply((state, now) => upgradeStall(state, chain, now));
+    if (submitted.current || !canUpgrade) return;
+    submitted.current = true;
+    apply((state, now) => upgradeStall(state, chain, now, signature ?? undefined));
     close();
   };
+  const upgradeLabel = !upgrade
+    ? ''
+    : !upgrade.coinsMet
+      ? '金幣不足'
+      : upgrade.needsDish && upgrade.candidates.length === 0
+        ? `需要含${stall.name}食材的發明菜`
+        : upgrade.needsDish && signature === null
+          ? '先選一道招牌菜'
+          : `升級（🪙${upgrade.coins}）`;
 
   return (
     <View testID="stall-panel" style={styles.panel}>
@@ -80,25 +108,60 @@ export function StallPanel({ chain }: { chain: ChainId }) {
         <>
           <Text style={styles.section}>升級到 {LEVEL_NAMES[upgrade.targetLevel]}</Text>
           <Text style={styles.info}>
-            效果：這一攤的訂單金幣 +{Math.round(BALANCE.stallOrderBonusPerLevel * 100)}%，霓虹招牌多亮一段
+            效果：這一攤的訂單金幣 +{Math.round(BALANCE.stallOrderBonusPerLevel * 100)}%，霓虹招牌
+            {upgrade.needsDish ? '全亮，並掛上招牌菜' : '多亮一段'}
           </Text>
           <Condition label={`金幣 ${upgrade.coins}`} current={`目前 ${coins}`} met={upgrade.coinsMet} />
           {upgrade.needsDish ? (
-            <Condition label="1 份含這一攤食材的發明菜" current="即將開放" met={false} />
+            <>
+              <Condition
+                label="1 份含這一攤食材的發明菜"
+                current={
+                  upgrade.candidates.length > 0
+                    ? `棋盤上有 ${upgrade.candidates.length} 道`
+                    : '棋盤上沒有'
+                }
+                met={upgrade.candidates.length > 0}
+              />
+              {upgrade.candidates.length > 0 ? (
+                <>
+                  <Text style={styles.section}>選一道招牌菜（會用掉 1 份）</Text>
+                  <View style={styles.options}>
+                    {upgrade.candidates.map((recipe) => {
+                      const selected = recipe === signature;
+                      return (
+                        <Pressable
+                          key={recipe}
+                          testID={`signature-option-${recipe}`}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                          onPress={() => setChosen(recipe)}
+                          style={[styles.option, selected && styles.optionSelected]}>
+                          <Image
+                            source={RECIPES_BY_ID[recipe].art}
+                            contentFit="contain"
+                            cachePolicy="memory-disk"
+                            style={styles.optionIcon}
+                          />
+                          <Text style={styles.optionText} numberOfLines={1}>
+                            {RECIPES_BY_ID[recipe].name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.note}>招牌菜確定後不能更換。</Text>
+                </>
+              ) : null}
+            </>
           ) : null}
           <Pressable
             testID="upgrade-stall"
             accessibilityRole="button"
-            disabled={!upgrade.ok}
+            disabled={!canUpgrade}
             onPress={onUpgrade}
-            style={({ pressed }) => [styles.primary, !upgrade.ok && styles.disabled, pressed && styles.pressed]}>
-            <Text style={styles.primaryText}>
-              {upgrade.needsDish
-                ? '需要發明菜（即將開放）'
-                : upgrade.ok
-                  ? `升級（🪙${upgrade.coins}）`
-                  : '金幣不足'}
-            </Text>
+            style={({ pressed }) => [styles.primary, !canUpgrade && styles.disabled, pressed && styles.pressed]}>
+            <Text style={styles.primaryText}>{upgradeLabel}</Text>
           </Pressable>
         </>
       ) : level === 0 ? (
@@ -172,6 +235,38 @@ const styles = StyleSheet.create({
   info: {
     color: '#C9D1E8',
     fontSize: 14,
+  },
+  options: {
+    gap: 6,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#2E3A7A',
+    backgroundColor: '#1B2250',
+  },
+  optionSelected: {
+    borderColor: '#FFD966',
+    backgroundColor: '#2A2F63',
+  },
+  optionIcon: {
+    width: 36,
+    height: 36,
+  },
+  optionText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  note: {
+    color: '#9FB3D1',
+    fontSize: 12,
   },
   primary: {
     minHeight: 48,

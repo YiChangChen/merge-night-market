@@ -1,5 +1,5 @@
 // Story 3.2：拖放解析（NP-1）。判定順序 move → merge → stack → invent → reject → swap。
-import { BOARD_SIZE, type ChainId, type RecipeId } from '../content';
+import { BOARD_SIZE, type ChainId, RECIPES, type RecipeId } from '../content';
 import { applyDrop, resolveDrop } from '../drop';
 import { createGame, type GameState, type Piece } from '../engine';
 import type { StallLevel } from '../types';
@@ -259,5 +259,21 @@ describe('applyDrop', () => {
     const state = setup({ 0: item(1, 'tea', 3) });
     expect(applyDrop(state, 0, 0, NOW)).toBe(state);
     expect(applyDrop(state, 4, 0, NOW)).toBe(state);
+  });
+});
+
+describe('Epic 3 完成定義：10 道配方都能觸發', () => {
+  it.each(RECIPES.map((recipe) => [recipe.id, recipe] as const))('%s', (_id, recipe) => {
+    const state = setup(
+      {
+        0: item(1, recipe.a.chain, recipe.a.level),
+        1: item(2, recipe.b.chain, recipe.b.level),
+      },
+      { [recipe.a.chain]: 2, [recipe.b.chain]: 2 }
+    );
+    const next = applyDrop(state, 0, 1, NOW);
+
+    expect(next.board[1]).toEqual({ id: 1000, kind: 'dish', recipe: recipe.id, count: 1 });
+    expect(next.events).toEqual([{ type: 'dish_invented', recipe: recipe.id, first: true }]);
   });
 });

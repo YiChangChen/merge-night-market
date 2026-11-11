@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useOverlayStore } from '@/features/overlays';
-import { type ChainId, STALLS } from '@/game/content';
+import { type ChainId, RECIPES_BY_ID, STALLS } from '@/game/content';
 import { useGameStore } from '@/game/store';
 
 import { NeonSign } from './neon-sign';
@@ -41,10 +41,12 @@ type StallViewProps = {
 
 /**
  * 夜市街上的一個攤位，點一下開啟攤位面板（UX-DR3）。只訂閱自己的攤位等級：拖曳棋子、出單都不會讓它重繪。
- * 由上往下：霓虹 → 外觀（重開演出疊在上面）→ 排隊頭像（S2.3）→ 老闆。招牌菜在 E3 加入。
+ * 由上往下：霓虹 → 外觀（重開演出疊在上面，Lv3 的招牌菜掛在頂端）→ 排隊頭像（S2.3）→ 老闆。
  */
 export const StallView = memo(function StallView({ chain, animate }: StallViewProps) {
   const level = useGameStore((store) => store.state?.stalls[chain].level ?? 0);
+  // 招牌菜（S3.5、FR13）：字串或 null，只有這一攤升 Lv3 時才會改變
+  const signatureDish = useGameStore((store) => store.state?.stalls[chain].signatureDish ?? null);
   const stall = STALLS[chain];
   const appearance = APPEARANCE[level];
   const closed = level === 0;
@@ -127,6 +129,20 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
           />
         ) : null}
         <Text style={styles.levelLabel}>{appearance.label}</Text>
+        {signatureDish ? (
+          // 招牌菜掛在霓虹招牌正下方；絕對定位，不改變攤位高度（星等徽章在 E5 接上）
+          <View testID={`stall-${chain}-signature`} style={styles.signature}>
+            <Image
+              source={RECIPES_BY_ID[signatureDish].art}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              style={styles.signatureIcon}
+            />
+            <Text style={styles.signatureText} numberOfLines={1}>
+              招牌：{RECIPES_BY_ID[signatureDish].name}
+            </Text>
+          </View>
+        ) : null}
       </View>
       <StallQueue chain={chain} animate={animate} />
       <View style={styles.owner}>
@@ -183,6 +199,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     backgroundColor: '#000000AA',
+  },
+  signature: {
+    position: 'absolute',
+    top: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: STALL_WIDTH - 16,
+    paddingLeft: 2,
+    paddingRight: 10,
+    paddingVertical: 2,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FFD966',
+    backgroundColor: '#11173AE6',
+  },
+  signatureIcon: {
+    width: 32,
+    height: 32,
+  },
+  signatureText: {
+    flexShrink: 1,
+    color: '#FFD966',
+    fontSize: 12,
+    fontWeight: '700',
   },
   owner: {
     flexDirection: 'row',

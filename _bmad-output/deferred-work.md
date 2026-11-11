@@ -35,6 +35,7 @@
 - source_plan: _bmad-output/implementation-artifacts/1-10-upgrade-stall-to-lv2-and-neon.md
   summary: S3.5 開放 Lv3 升級後，快速連點「升級」可能升兩級
   evidence: 目前 Lv3 需要發明菜，所以第二次判定會失敗；S3.5 要加上按下後立刻停用按鈕
+  status: 已解決（2026-11-11，S3.5）：攤位面板的重開與升級按鈕用 ref 擋住第二次按壓，測試直接計算 apply 呼叫次數
 - source_plan: _bmad-output/implementation-artifacts/1-9-reopen-stall.md
   summary: 重開攤位的完整流程沒有實機測試
   evidence: 需要玩家 Lv3 加上 300 金幣；可以等開發版或 preview 建置能用除錯面板時再測，或在實際遊玩時順便確認

@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { StallView } from '@/features/street';
-import { createGame, type GameState } from '@/game/engine';
+import { BOARD_SIZE } from '@/game/content';
+import { createGame, type GameState, type Piece } from '@/game/engine';
 import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
 
@@ -154,15 +155,16 @@ describe('升級攤位（S1.10）', () => {
     stopFx();
   });
 
-  it('Lv2 攤位：顯示 Lv3 條件，按鈕鎖住並提示需要發明菜', async () => {
+  it('Lv2 攤位、棋盤上沒有含這一攤食材的發明菜：按鈕停用並提示需要哪一攤的食材', async () => {
     setGame({ coins: 9999, ...withStall('tea', 2) });
     useOverlayStore.setState({ stallPanel: 'tea' });
     await render(<OverlayHost />);
 
     expect(screen.getByText('升級到 Lv3 大店')).toBeTruthy();
     expect(screen.getByText('1 份含這一攤食材的發明菜')).toBeTruthy();
+    expect(screen.getByText('棋盤上沒有')).toBeTruthy();
     expect(screen.getByTestId('upgrade-stall')).toBeDisabled();
-    expect(screen.getByText('需要發明菜（即將開放）')).toBeTruthy();
+    expect(screen.getByText('需要含手搖飲吧台食材的發明菜')).toBeTruthy();
   });
 
   it('Lv3 攤位：已經是最高等級', async () => {
@@ -209,6 +211,80 @@ describe('攤位面板的邊界（code review 2026-11-10）', () => {
     await render(<OverlayHost />);
 
     expect(screen.getByText(/訂單金幣 \+10%/)).toBeTruthy();
+  });
+});
+
+describe('Lv3 升級與招牌菜（S3.5、FR12、FR13、RC-7）', () => {
+  /** 手搖飲 Lv2、棋盤只放指定的發明菜 */
+  function lv2TeaWith(coins: number, cells: Record<number, Piece>) {
+    const board = Array<Piece | null>(BOARD_SIZE).fill(null);
+    for (const [cell, piece] of Object.entries(cells)) board[Number(cell)] = piece;
+    setGame({ coins, board, nextId: 1000, pendingGenerators: [], ...withStall('tea', 2) });
+    useOverlayStore.setState({ stallPanel: 'tea' });
+  }
+
+  it('列出棋盤上含這一攤食材的發明菜；選好之前按鈕停用', async () => {
+    lv2TeaWith(700, {
+      0: { id: 1, kind: 'dish', recipe: 'tea-fried', count: 2 },
+      1: { id: 2, kind: 'dish', recipe: 'tea-sweet', count: 1 },
+      2: { id: 3, kind: 'dish', recipe: 'fried-sweet', count: 1 },
+    });
+    await render(<OverlayHost />);
+
+    expect(screen.getByText('棋盤上有 2 道')).toBeTruthy();
+    expect(screen.getByTestId('signature-option-tea-fried')).toBeTruthy();
+    expect(screen.getByTestId('signature-option-tea-sweet')).toBeTruthy();
+    // 甜鹹地瓜雞不含手搖飲，不能選
+    expect(screen.queryByTestId('signature-option-fried-sweet')).toBeNull();
+    expect(screen.getByText('招牌菜確定後不能更換。')).toBeTruthy();
+    expect(screen.getByTestId('upgrade-stall')).toBeDisabled();
+    expect(screen.getByText('先選一道招牌菜')).toBeTruthy();
+  });
+
+  it('選好後升級：扣金幣與 1 份發明菜、升到 Lv3、設定招牌菜，夜市街顯示招牌菜', async () => {
+    lv2TeaWith(700, { 4: { id: 9, kind: 'dish', recipe: 'tea-fried', count: 2 } });
+    await render(
+      <>
+        <StallView chain="tea" animate={false} />
+        <OverlayHost />
+      </>
+    );
+    expect(screen.queryByTestId('stall-tea-signature')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('signature-option-tea-fried'));
+    expect(screen.getByText('升級（🪙600）')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('upgrade-stall'));
+
+    const state = useGameStore.getState().state;
+    expect(state?.coins).toBe(100);
+    expect(state?.stalls.tea).toEqual({ level: 3, signatureDish: 'tea-fried' });
+    expect(state?.board[4]).toEqual({ id: 9, kind: 'dish', recipe: 'tea-fried', count: 1 });
+    expect(screen.queryByTestId('stall-panel')).toBeNull();
+    expect(screen.getByText('招牌：紅茶鹽酥雞套餐')).toBeTruthy();
+    expect(screen.getAllByTestId('neon-segment-lit')).toHaveLength(3);
+  });
+
+  it('防連點：面板關閉前快速按兩次，只送出一次升級', async () => {
+    lv2TeaWith(2000, {
+      0: { id: 1, kind: 'dish', recipe: 'tea-fried', count: 3 },
+    });
+    // 規則層本身也會擋第二次（Lv3 沒有下一級），所以直接數 apply 被呼叫幾次
+    const original = useGameStore.getState().apply;
+    const apply = jest.fn(original);
+    useGameStore.setState({ apply });
+    await render(<OverlayHost />);
+    await fireEvent.press(screen.getByTestId('signature-option-tea-fried'));
+
+    const button = screen.getByTestId('upgrade-stall');
+    await act(async () => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(useGameStore.getState().state?.coins).toBe(1400);
+    expect(useGameStore.getState().state?.board[0]).toMatchObject({ count: 2 });
+    useGameStore.setState({ apply: original });
   });
 });
 

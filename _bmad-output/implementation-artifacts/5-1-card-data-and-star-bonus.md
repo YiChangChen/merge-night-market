@@ -4,7 +4,7 @@ baseline_commit: 7a55be9
 
 # Story 5.1: 卡牌資料與星等加成
 
-Status: review
+Status: done
 
 ## Story
 
@@ -37,7 +37,7 @@ so that 重複製作拿手菜也是一種成長。
 ### Review Findings
 
 - [x] [Review][Decision] 卡面 #45 雞排麵線的人物不符：拿湯勺的是阿珍，不是故事裡的林嬸；art-manifest 卻標成定稿，也沒有記錄這個待決事項（auditor）— 使用者決定：重產。提示詞已寫入 `docs/art-prompts-e5.md`「#45 重產」，art-manifest 改回草稿
-- [ ] [Review][Action] **（使用者）** 重產卡面 #45，交回後重跑 `process-e5-art.py`，art-manifest 改回定稿
+- [x] [Review][Action] **（使用者）** 重產卡面 #45，交回後重跑 `process-e5-art.py`，art-manifest 改回定稿
 - [x] [Review][Patch] 貴客單金幣的四捨五入受浮點誤差影響：tea-sweet 一攤 Lv2、一攤 Lv3 時，★2 得 379（應為 380），★5 得 517（應為 518）；noodle-sweet ★4 得 931（應為 932）（edge） [src/game/vip.ts:55]
 - [x] [Review][Patch] 第一次發明不應同時送出 `card_starred`：存檔若是 discovered:false 但 made>0，會兩個事件一起送；條件要加上 `!first`（edge+blind） [src/game/drop.ts:126]
 - [x] [Review][Patch] `debugAddCardMade` 接受非整數（例如 0.5）；要加 `Number.isInteger` 檢查（blind） [src/game/debug.ts]
@@ -143,3 +143,4 @@ Claude Opus 5.5（claude-opus-5-5）
 
 - 2026-11-11：S5.1 實作完成（卡牌資料、星等與加成、升星事件、E5 美術定稿），狀態改為 review。
 - 2026-11-11：E5 code review。修正貴客單金幣的浮點四捨五入（先收到小數 6 位）、首次發明不送升星事件、除錯加製作次數只收整數；卡面 #45 決定重產。
+- 2026-11-11：卡面 #45 重產完成（林嬸改對），重跑處理腳本只更新 `fried-noodle.webp`；狀態改為 done。

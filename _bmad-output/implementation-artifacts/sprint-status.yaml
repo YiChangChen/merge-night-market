@@ -89,9 +89,9 @@ development_status:
 
   # Epic 5：發明菜收藏冊
   epic-5: in-progress
-  5-1-card-data-and-star-bonus: review
+  5-1-card-data-and-star-bonus: done
   5-2-collection-screen: done
-  5-3-card-shows-and-signature-stars: review
+  5-3-card-shows-and-signature-stars: done
   epic-5-retrospective: optional
 
   # Epic 6：開幕週與激勵廣告

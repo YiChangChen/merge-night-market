@@ -1,6 +1,6 @@
 // 攤位規則：重開（S1.9）、升級到 Lv2（S1.10）、升級到 Lv3 與招牌菜（S3.5）。
 import { CHAINS, type ChainId, RECIPES, type RecipeId, STALLS } from './content';
-import { ensureGenerator, flushPendingGenerators } from './engine';
+import { consumeDish, ensureGenerator } from './engine';
 import { growActiveWave } from './queue';
 import type { GameState } from './types';
 
@@ -90,20 +90,6 @@ export function upgradeCheck(
   };
 }
 
-/** 從第一個放著這道菜的格子扣 1 份；扣到 0 份時清空並放上待放的產生器（RC-8）。 */
-function takeOneDish(state: GameState, recipe: RecipeId): GameState {
-  const cell = state.board.findIndex((piece) => piece?.kind === 'dish' && piece.recipe === recipe);
-  const piece = state.board[cell];
-  if (piece?.kind !== 'dish') return state;
-  const board = [...state.board];
-  if (piece.count > 1) {
-    board[cell] = { ...piece, count: (piece.count - 1) as 1 | 2 };
-    return { ...state, board };
-  }
-  board[cell] = null;
-  return flushPendingGenerators({ ...state, board });
-}
-
 /**
  * 升級攤位（FR12、FR14）：扣金幣、攤位 +1 級，送出 stall_upgraded。
  * - Lv1 → Lv2：只要金幣。
@@ -122,7 +108,7 @@ export function upgradeStall(
   if (check.needsDish && (recipe === undefined || !check.candidates.includes(recipe))) return state;
 
   let next: GameState = { ...state, coins: state.coins - check.coins };
-  if (check.needsDish && recipe !== undefined) next = takeOneDish(next, recipe);
+  if (check.needsDish && recipe !== undefined) next = consumeDish(next, recipe);
   // 人龍進行中時，這一波立刻加長（FR18）
   next = growActiveWave({
     ...next,

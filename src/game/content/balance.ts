@@ -17,6 +17,13 @@ export const BALANCE = {
   levelUpEnergy: 20,
   twoItemOrderMinLevel: 3,
   twoItemOrderChance: 0.4,
+  // 貴客單（FR27、FR28）：機率 = min(base + perStallLevel × (Σ攤位等級 − 2), max)
+  vipBaseChance: 0.2,
+  vipChancePerStallLevel: 0.02,
+  vipMaxChance: 0.4,
+  // 金幣 = 5 × 材料 baseCost 總和 × 兩攤加成平均 × 3 × (1 + 卡牌加成)；XP = 材料階數總和 × 2
+  vipCoinMultiplier: 3,
+  vipXpPerLevel: 2,
   // 人龍長度 = min(queueBase + queuePerStallLevel × Σ攤位等級, queueMax) + 額外人潮（FR17）
   queueBase: 8,
   queuePerStallLevel: 2,

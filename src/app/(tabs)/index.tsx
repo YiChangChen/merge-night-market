@@ -12,7 +12,7 @@ import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
 import { useOverlayStore } from '@/features/overlays';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
-import { BALANCE, BOARD_BACKGROUND, CHAINS } from '@/game/content';
+import { BALANCE, BOARD_BACKGROUND, CHAINS, RECIPES_BY_ID } from '@/game/content';
 import { applyDrop, resolveDrop } from '@/game/drop';
 import {
   completeOrder,
@@ -125,11 +125,15 @@ function Orders({
               />
               <View style={[styles.orderLabel, ready && styles.orderLabelReady]}>
                 <Text style={[styles.orderName, ready && styles.orderTextReady]} numberOfLines={1}>
-                  {order.requirements
-                    .map(
-                      (requirement) => CHAINS[requirement.chain].items[requirement.level - 1].name
-                    )
-                    .join('、')}
+                  {/* 貴客單沒有品項需求，改顯示指定的發明菜（S4.1；正式的貴客卡在 S4.3） */}
+                  {order.kind === 'vip' && order.recipe !== undefined
+                    ? `貴客：${RECIPES_BY_ID[order.recipe].name}`
+                    : order.requirements
+                        .map(
+                          (requirement) =>
+                            CHAINS[requirement.chain].items[requirement.level - 1].name
+                        )
+                        .join('、')}
                 </Text>
                 <Text
                   style={[styles.orderReward, ready && styles.orderTextReady]}

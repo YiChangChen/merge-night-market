@@ -10,7 +10,9 @@ import {
   RECIPES_BY_ID,
   type RecipeId,
 } from './content';
+import { baseCost, stallCoinMultiplier } from './pricing';
 import { advanceQueue, queueCapacity } from './queue';
+import { rollVip } from './vip';
 import { nextRandom, randomInt } from './random';
 import {
   type GameState,
@@ -45,9 +47,8 @@ export function stallsForPlayerLevel(level: number): Record<ChainId, StallState>
 }
 
 // 製作某階品項需要的基礎品項數，也是數值的基準
-export function baseCost(level: number): number {
-  return 2 ** (level - 1);
-}
+// baseCost 搬到 pricing.ts（S4.1，避免 engine ↔ vip 互相 import）；保留從這裡匯出，既有的 import 不必修改
+export { baseCost };
 
 export function xpToNextLevel(level: number): number {
   return 10 + 5 * (level - 1);
@@ -116,12 +117,6 @@ export function openStallChains(stalls: Record<ChainId, StallState>): ChainId[] 
   return CHAIN_IDS.filter((chain) => stalls[chain].level >= 1);
 }
 
-/** 攤位等級帶來的訂單金幣倍率：Lv1 ×1.0、Lv2 ×1.1、Lv3 ×1.2（FR15）。 */
-function stallCoinMultiplier(level: number): number {
-  // 鐵捲門（0）不會出現在訂單裡；以 Lv1 為下限，避免出現 ×0.9 的負加成
-  return 1 + BALANCE.stallOrderBonusPerLevel * (Math.max(level, 1) - 1);
-}
-
 /** 一般訂單金幣 = Σ 5 × baseCost × 該攤加成（FR8、FR15）。兩品項訂單分別依各自攤位的等級計算。 */
 export function orderCoins(
   requirements: readonly Requirement[],
@@ -163,7 +158,10 @@ export function expectedOrderCoins(
 }
 
 function createOrder(state: GameState): [Order, GameState] {
-  let next = state;
+  // 先擲貴客（S4.1、FR27）：已發現發明菜、場上沒有貴客或線索單時才擲
+  const [vip, afterVip] = rollVip(state);
+  if (vip) return [vip, { ...afterVip, nextId: afterVip.nextId + 1 }];
+  let next = afterVip;
   const open = openStallChains(state.stalls);
   // 存檔驗證不保證至少有一攤開著；全關時退回依玩家等級解鎖的鏈，避免抽籤落空
   const chains = open.length > 0 ? open : unlockedChains(state.level);
@@ -373,8 +371,17 @@ export function movePiece(state: GameState, from: number, to: number): GameState
   return { ...state, board };
 }
 
-// 為訂單找到要交出的格子；品項不夠時回傳 null
+// 為訂單找到要交出的格子；品項不夠時回傳 null。
+// 貴客單要的是指定的發明菜（S4.1）：回傳第一個放著那道菜的格子，交付時只扣 1 份。
 export function findOrderCells(state: Pick<GameState, 'board'>, order: Order): number[] | null {
+  if (order.kind === 'vip') {
+    const cell = state.board.findIndex(
+      (piece) => piece?.kind === 'dish' && piece.recipe === order.recipe
+    );
+    return cell === -1 ? null : [cell];
+  }
+  // 線索單不能交付（S4.2）
+  if (order.kind !== 'normal') return null;
   const used = new Set<number>();
   for (const requirement of order.requirements) {
     const cell = state.board.findIndex(
@@ -417,12 +424,20 @@ export function completeOrder(state: GameState, orderId: number, now: number): G
   const cells = findOrderCells(state, order);
   if (!cells) return state;
 
-  const board = [...state.board];
-  for (const cell of cells) board[cell] = null;
+  // 先把完成的訂單移出：補新訂單時它不能還算在場上（否則剛交的貴客單會擋住下一張貴客）
+  const orders = state.orders.filter((_, index) => index !== orderIndex);
+  let next: GameState = { ...state, orders };
+  if (order.kind === 'vip' && order.recipe !== undefined) {
+    // 貴客單從棋盤上扣 1 份指定的發明菜（RC-8）
+    next = consumeDish(next, order.recipe);
+  } else {
+    const board = [...state.board];
+    for (const cell of cells) board[cell] = null;
+    next = { ...next, board };
+  }
 
-  let next: GameState = {
-    ...state,
-    board,
+  next = {
+    ...next,
     coins: state.coins + order.coins,
     xp: state.xp + order.xp,
     energy: state.energy + order.energy,
@@ -434,10 +449,24 @@ export function completeOrder(state: GameState, orderId: number, now: number): G
 
   const [replacement, afterOrder] = createOrder(next);
   // 右邊的訂單往左遞補，新訂單排到最後
-  const orders = [...afterOrder.orders];
-  orders.splice(orderIndex, 1);
-  orders.push(replacement);
-  return { ...afterOrder, orders };
+  return { ...afterOrder, orders: [...afterOrder.orders, replacement] };
+}
+
+/**
+ * 從第一個放著這道發明菜的格子扣 1 份；扣到 0 份時清空並放上待放的產生器（RC-8）。
+ * 貴客單交付（S4.1）與 Lv3 升級（S3.5）共用。棋盤上沒有這道菜時回傳原 state。
+ */
+export function consumeDish(state: GameState, recipe: RecipeId): GameState {
+  const cell = state.board.findIndex((piece) => piece?.kind === 'dish' && piece.recipe === recipe);
+  const piece = state.board[cell];
+  if (piece?.kind !== 'dish') return state;
+  const board = [...state.board];
+  if (piece.count > 1) {
+    board[cell] = { ...piece, count: (piece.count - 1) as 1 | 2 };
+    return { ...state, board };
+  }
+  board[cell] = null;
+  return flushPendingGenerators({ ...state, board });
 }
 
 // 賣掉品項騰出空間，避免棋盤塞滿無法合成時卡死。產生器不能賣。

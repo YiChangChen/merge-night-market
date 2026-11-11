@@ -172,6 +172,12 @@ describe('isValidSaveV2', () => {
     expect(isValidSaveV2(save)).toBe(true);
   });
 
+  it('接受貴客單（S4.1）', () => {
+    const save = saved();
+    Object.assign(save.orders[0], { kind: 'vip', recipe: 'tea-fried', requirements: [] });
+    expect(isValidSaveV2(save)).toBe(true);
+  });
+
   it('接受棋盤上的發明菜（S3.2）', () => {
     const save = saved();
     withPiece(save, { kind: 'dish', recipe: 'tea-fried', count: 3 });
@@ -190,7 +196,13 @@ describe('isValidSaveV2', () => {
     ['發明菜是未知的配方', (s: any) => withPiece(s, { kind: 'dish', recipe: 'pizza-cola', count: 1 })],
     ['發明菜份數 0', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 0 })],
     ['發明菜份數超過 3', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 4 })],
-    ['貴客單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried' })],
+    // 貴客單（S4.1 起接受合法的）
+    ['貴客單帶著品項需求', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried' })],
+    ['貴客單指定未知的配方', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'pizza-cola', requirements: [] })],
+    ['同時有 2 張貴客單', (s: any) => {
+      Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried', requirements: [] });
+      Object.assign(s.orders[1], { kind: 'vip', recipe: 'tea-fried', requirements: [] });
+    }],
     ['線索單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'clue', expiresAt: 1 })],
     // 型別
     ['未知的棋子種類', (s: any) => withPiece(s, { kind: 'bomb' })],

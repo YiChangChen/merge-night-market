@@ -6,7 +6,7 @@
 //
 // 擴充時機：
 // - S3.2 起棋盤支援發明菜，isValidPiece 接受 kind: 'dish'（{ recipe, count: 1–3 }）。
-// - E4 支援貴客單與線索單時，在 isValidOrder 接受 kind: 'vip' | 'clue'（含 recipe、expiresAt）。
+// - S4.1 起接受貴客單（kind: 'vip'、recipe、需求為空）；S4.2 線索單再接受 kind: 'clue'（含 expiresAt）。
 // 這兩者都是「接受更多」，舊版 App 讀到新資料只會顯示讀檔失敗、不會覆寫，所以不需要升版。
 import {
   BALANCE,
@@ -58,26 +58,37 @@ function isValidPiece(value: unknown): boolean {
 }
 
 function isValidOrder(value: unknown): boolean {
-  return (
-    isObject(value) &&
-    isPositiveInteger(value.id) &&
-    // 'vip' | 'clue' 要到 E4 才支援
-    value.kind === 'normal' &&
-    value.recipe === undefined &&
-    value.expiresAt === undefined &&
-    Array.isArray(value.requirements) &&
-    value.requirements.length >= 1 &&
-    value.requirements.length <= 2 &&
-    value.requirements.every(
-      (requirement) =>
-        isObject(requirement) &&
-        isChain(requirement.chain) &&
-        isItemLevel(requirement.chain, requirement.level)
-    ) &&
-    isNonNegative(value.coins) &&
-    isNonNegative(value.xp) &&
-    isNonNegative(value.energy)
-  );
+  if (
+    !isObject(value) ||
+    !isPositiveInteger(value.id) ||
+    value.expiresAt !== undefined ||
+    !Array.isArray(value.requirements) ||
+    !isNonNegative(value.coins) ||
+    !isNonNegative(value.xp) ||
+    !isNonNegative(value.energy)
+  ) {
+    return false;
+  }
+  switch (value.kind) {
+    case 'normal':
+      return (
+        value.recipe === undefined &&
+        value.requirements.length >= 1 &&
+        value.requirements.length <= 2 &&
+        value.requirements.every(
+          (requirement) =>
+            isObject(requirement) &&
+            isChain(requirement.chain) &&
+            isItemLevel(requirement.chain, requirement.level)
+        )
+      );
+    case 'vip':
+      // 貴客單（S4.1）：指定一道已知的發明菜，沒有品項需求
+      return isRecipeId(value.recipe) && value.requirements.length === 0;
+    default:
+      // 線索單在 S4.2 才支援
+      return false;
+  }
 }
 
 const isSignatureOf = (value: unknown, chain: ChainId) => {
@@ -190,6 +201,8 @@ export function isValidSaveV2(value: unknown): boolean {
     !board.every(isValidPiece) ||
     !Array.isArray(orders) ||
     !orders.every(isValidOrder) ||
+    // 同一時間最多 1 張貴客或線索單（FR27）
+    orders.filter((order) => isObject(order) && order.kind !== 'normal').length > 1 ||
     !Array.isArray(pendingGenerators) ||
     !pendingGenerators.every(isChain)
   ) {

@@ -7,11 +7,11 @@ import Animated, { FadeInRight, LinearTransition, ZoomOut } from 'react-native-r
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/shallow';
 
-import { Board, PieceIcon } from '@/features/board';
+import { Board, InfoBar } from '@/features/board';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
-import { BALANCE, BOARD_BACKGROUND, CHAINS, RECIPES_BY_ID } from '@/game/content';
+import { BALANCE, BOARD_BACKGROUND, CHAINS } from '@/game/content';
 import { applyDrop, resolveDrop } from '@/game/drop';
 import {
   completeOrder,
@@ -20,7 +20,6 @@ import {
   getSpawnBlocker,
   msUntilNextEnergy,
   sellPiece,
-  sellPrice,
   tapGenerator,
   xpToNextLevel,
 } from '@/game/engine';
@@ -145,64 +144,6 @@ function Orders({
   );
 }
 
-function InfoBar({
-  selected,
-  onSell,
-}: {
-  selected: number | null;
-  onSell: (cell: number) => void;
-}) {
-  const piece = useGameStore((store) =>
-    selected !== null ? (store.state?.board[selected] ?? null) : null
-  );
-  if (!piece || selected === null) {
-    return (
-      <View style={styles.info}>
-        <Text style={styles.infoText}>點產生器出食材，拖曳相同品項合成</Text>
-      </View>
-    );
-  }
-  if (piece.kind === 'generator') {
-    return (
-      <View style={styles.info}>
-        <View style={styles.infoLabel}>
-          <PieceIcon piece={piece} size={24} />
-          <Text style={styles.infoText}>{CHAINS[piece.chain].generatorName}：再點一次出食材</Text>
-        </View>
-      </View>
-    );
-  }
-  if (piece.kind === 'dish') {
-    // 發明菜：顯示名稱與份數；賣出在 S3.4 加入
-    return (
-      <View style={styles.info}>
-        <View style={styles.infoLabel}>
-          <PieceIcon piece={piece} size={28} />
-          <Text style={styles.infoText} numberOfLines={1}>
-            {RECIPES_BY_ID[piece.recipe].name}（發明菜）×{piece.count}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-  const items = CHAINS[piece.chain].items;
-  const nextItem = items[piece.level];
-  return (
-    <View style={styles.info}>
-      <View style={styles.infoLabel}>
-        <PieceIcon piece={piece} size={28} />
-        <Text style={styles.infoText} numberOfLines={1}>
-          {items[piece.level - 1].name} Lv.{piece.level}
-          {nextItem ? ` → ${nextItem.name}` : '（最高階）'}
-        </Text>
-      </View>
-      <Pressable testID="sell" style={styles.sell} onPress={() => onSell(selected)}>
-        <Text style={styles.sellText}>賣出 🪙{sellPrice(piece)}</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export default function GameScreen() {
   const board = useGameStore((store) => store.state?.board);
   const loadFailure = useGameStore((store) =>
@@ -282,8 +223,9 @@ export default function GameScreen() {
   };
 
   const handleSell = (cell: number) => {
-    setSelected(null);
     apply((current) => sellPiece(current, cell));
+    // 發明菜還有剩（一次只賣 1 份）時保持選取，方便連續賣；格子空了才取消選取（RC-6）
+    if (!useGameStore.getState().state?.board[cell]) setSelected(null);
   };
 
   const handleCompleteOrder = (id: number) => {
@@ -395,38 +337,6 @@ const styles = StyleSheet.create({
   },
   orderTextReady: {
     color: '#4A3420',
-  },
-  info: {
-    minHeight: 40,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    backgroundColor: '#F5ECD8',
-  },
-  infoLabel: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  infoText: {
-    flexShrink: 1,
-    color: '#4A3420',
-    fontSize: 13,
-  },
-  sell: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#B8741A',
-  },
-  sellText: {
-    color: '#FFF3D6',
-    fontSize: 13,
-    fontWeight: '600',
   },
   toast: {
     position: 'absolute',

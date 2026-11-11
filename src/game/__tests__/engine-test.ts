@@ -13,6 +13,7 @@ import {
   msUntilNextEnergy,
   type Order,
   type Piece,
+  dishSellPrice,
   sellPiece,
   syncEnergy,
   tapGenerator,
@@ -264,6 +265,36 @@ describe('selling and a full board', () => {
     expect(sellPiece(state, 1)).toBe(state);
   });
 
+  it('賣出發明菜一次 1 份：3 → 2 → 1 → 清空，金幣累計正確（S3.4、FR24）', () => {
+    const dish: Piece = { id: 7, kind: 'dish', recipe: 'tea-fried', count: 3 };
+    const start = withBoard({ ...createGame(NOW, 1), coins: 0 }, { 0: dish });
+    const price = dishSellPrice('tea-fried');
+    expect(price).toBe(12);
+
+    const two = sellPiece(start, 0);
+    expect(two.board[0]).toEqual({ ...dish, count: 2 });
+    expect(two.coins).toBe(price);
+
+    const one = sellPiece(two, 0);
+    expect(one.board[0]).toEqual({ ...dish, count: 1 });
+    expect(one.coins).toBe(price * 2);
+
+    const empty = sellPiece(one, 0);
+    expect(empty.board[0]).toBeNull();
+    expect(empty.coins).toBe(price * 3);
+  });
+
+  it('賣完最後一份發明菜時，待放的產生器放上空出的格子', () => {
+    const dish: Piece = { id: 7, kind: 'dish', recipe: 'tea-fried', count: 1 };
+    const state = {
+      ...withBoard(createGame(NOW, 1), { 0: dish }),
+      pendingGenerators: ['noodle' as const],
+    };
+    const next = sellPiece(state, 0);
+    expect(next.pendingGenerators).toEqual([]);
+    expect(next.board.some((p) => p?.kind === 'generator' && p.chain === 'noodle')).toBe(true);
+  });
+
   it('棋盤全滿時待放的產生器依序等待，空出格子才放上去', () => {
     const base = fullBoard(createGame(NOW, 1));
     const orderCell = base.board.findIndex((piece) => piece?.kind === 'item');
@@ -312,7 +343,13 @@ describe('createGame（v2）', () => {
     expect(state.stalls.noodle.level).toBe(0);
     expect(state.stalls.dumpling.level).toBe(0);
     expect(state.stalls.sweet.level).toBe(0);
-    expect(state.queue).toEqual({ wave: 1, length: 12, remaining: 12, cooldownEndsAt: null, bonus: 0 });
+    expect(state.queue).toEqual({
+      wave: 1,
+      length: 12,
+      remaining: 12,
+      cooldownEndsAt: null,
+      bonus: 0,
+    });
     expect(state.meta).toEqual({ firstLaunchAt: NOW, tutorialStep: 0, hintedRecipes: [] });
     expect(state.orders.every((order) => order.kind === 'normal')).toBe(true);
     expect(state.events).toEqual([]);

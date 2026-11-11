@@ -1,22 +1,10 @@
 // 老闆發明（E3）：配方判定、發明菜、失敗計數、阿嬤提示。
 // 拖放的判定順序在 drop.ts（NP-1）；這裡放配方相關的純函式與發明菜工廠。
-import {
-  BALANCE,
-  type ChainId,
-  type Ingredient,
-  type Recipe,
-  RECIPES,
-  RECIPES_BY_ID,
-  type RecipeId,
-} from './content';
-import { baseCost } from './engine';
+import { type ChainId, type Ingredient, type Recipe, RECIPES, type RecipeId } from './content';
 import type { DishPiece, GameState, ItemPiece, StallState } from './types';
 
-/** 發明菜賣出價 = 兩個材料的 baseCost 總和 × 1.5（GDD M4）；衍生值，不存檔。 */
-export function dishSellPrice(recipe: RecipeId): number {
-  const { a, b } = RECIPES_BY_ID[recipe];
-  return Math.round((baseCost(a.level) + baseCost(b.level)) * BALANCE.dishSellMultiplier);
-}
+// 發明菜賣出價定義在 engine.ts（sellPiece 要用，避免互相 import）；這裡重新匯出
+export { dishSellPrice } from './engine';
 
 const matches = (ingredient: Ingredient, piece: ItemPiece) =>
   ingredient.chain === piece.chain && ingredient.level === piece.level;

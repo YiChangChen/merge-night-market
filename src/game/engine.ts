@@ -7,6 +7,8 @@ import {
   type ChainId,
   CUSTOMERS,
   type CustomerDef,
+  RECIPES_BY_ID,
+  type RecipeId,
 } from './content';
 import { advanceQueue, queueCapacity } from './queue';
 import { nextRandom, randomInt } from './random';
@@ -61,6 +63,15 @@ export function maxOrderItemLevel(playerLevel: number, chain: ChainId): number {
 
 export function sellPrice(piece: ItemPiece): number {
   return baseCost(piece.level);
+}
+
+/**
+ * 發明菜賣出價（一份）= 兩個材料的 baseCost 總和 × 1.5（GDD M4）；衍生值，不存檔。
+ * 放在 engine.ts 是為了讓 sellPiece 使用，又不和 invention.ts 互相 import。
+ */
+export function dishSellPrice(recipe: RecipeId): number {
+  const { a, b } = RECIPES_BY_ID[recipe];
+  return Math.round((baseCost(a.level) + baseCost(b.level)) * BALANCE.dishSellMultiplier);
 }
 
 function emptyCells(board: (Piece | null)[]): number[] {
@@ -430,10 +441,20 @@ export function completeOrder(state: GameState, orderId: number, now: number): G
 }
 
 // 賣掉品項騰出空間，避免棋盤塞滿無法合成時卡死。產生器不能賣。
+// 發明菜一次只賣 1 份（FR24、RC-6）：還有剩時保留 id，賣完才清空格子。
 export function sellPiece(state: GameState, cell: number): GameState {
   const piece = state.board[cell];
-  if (piece?.kind !== 'item') return state;
+  if (!piece || piece.kind === 'generator') return state;
   const board = [...state.board];
+  if (piece.kind === 'dish') {
+    const coins = state.coins + dishSellPrice(piece.recipe);
+    if (piece.count > 1) {
+      board[cell] = { ...piece, count: (piece.count - 1) as 1 | 2 };
+      return { ...state, board, coins };
+    }
+    board[cell] = null;
+    return flushPendingGenerators({ ...state, board, coins });
+  }
   board[cell] = null;
   return flushPendingGenerators({ ...state, board, coins: state.coins + sellPrice(piece) });
 }

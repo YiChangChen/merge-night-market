@@ -22,8 +22,13 @@ export function startFxController(): () => void {
         // 完售：煙火、獎勵、全街招牌一起閃（FR19、UX-DR4）
         useOverlayStore.getState().playSellout(event.wave);
         break;
+      case 'dish_invented':
+        // 第一次發明：全螢幕「老闆發明！」（FR25、UX-DR5）；已發現的配方只給小提示
+        if (event.first) useOverlayStore.getState().playInvention(event.recipe);
+        else useOverlayStore.getState().showDishMade(event.recipe);
+        break;
       default:
-        // 其他演出（老闆發明…）由之後的 story 加入
+        // 其他演出（阿嬤提示、卡牌升星…）由之後的 story 加入
         break;
     }
   });

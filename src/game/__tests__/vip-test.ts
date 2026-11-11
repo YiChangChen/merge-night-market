@@ -3,6 +3,8 @@ import { BALANCE, BOARD_SIZE, type ChainId, type RecipeId } from '../content';
 import { completeOrder, createGame, type GameState, type Order, type Piece } from '../engine';
 import { isValidSaveV2, serializeSave } from '../save';
 import type { InventionState, StallLevel } from '../types';
+import { needsTick, syncAll } from '../time';
+import { dismissOrder, syncOrders } from '../orders';
 import { hasSpecialOrder, rollVip, vipChance, vipOrder } from '../vip';
 
 const NOW = 1_000_000;
@@ -84,7 +86,7 @@ describe('rollVip', () => {
   it('尚未發現任何發明菜：不會出現貴客單，也不消耗亂數', () => {
     for (let seed = 1; seed <= 200; seed++) {
       const state = setup({ seed });
-      const [order, next] = rollVip(state);
+      const [order, next] = rollVip(state, NOW);
       expect(order).toBeNull();
       expect(next).toBe(state);
     }
@@ -96,23 +98,24 @@ describe('rollVip', () => {
     // 換 200 個 seed：只靠單一 seed 的話，可能剛好擲到「不是貴客」而誤判為通過（E3 retro A4）
     for (let seed = 1; seed <= 200; seed++) {
       const state = setup({ seed, found: ['tea-fried'], orders: [normal(4), vip] });
-      expect(rollVip(state)[0]).toBeNull();
+      expect(rollVip(state, NOW)[0]).toBeNull();
     }
   });
 
   it('固定 seed 下結果可重現；長期比例接近 vipChance', () => {
+    // 三攤都 Lv2 的三道配方都發現過：沒有線索候選，只會出現貴客單
     let state = setup({
-      found: ['tea-fried', 'fried-sweet'],
+      found: ['tea-fried', 'fried-sweet', 'tea-sweet'],
       levels: { tea: 2, fried: 2, sweet: 2 },
     });
-    const again = rollVip(state);
-    expect(rollVip(state)).toEqual(again);
+    const again = rollVip(state, NOW);
+    expect(rollVip(state, NOW)).toEqual(again);
 
     let vips = 0;
     const picked = new Set<string>();
     const rolls = 2000;
     for (let i = 0; i < rolls; i++) {
-      const [order, next] = rollVip(state);
+      const [order, next] = rollVip(state, NOW);
       state = next;
       if (order) {
         vips += 1;
@@ -123,8 +126,8 @@ describe('rollVip', () => {
     // Σ等級 = 6 → 28%
     expect(vips / rolls).toBeGreaterThan(0.24);
     expect(vips / rolls).toBeLessThan(0.32);
-    // 只會指定已發現的配方，兩道都會出現
-    expect([...picked].sort()).toEqual(['fried-sweet', 'tea-fried']);
+    // 只會指定已發現的配方，三道都會出現
+    expect([...picked].sort()).toEqual(['fried-sweet', 'tea-fried', 'tea-sweet']);
   });
 });
 
@@ -199,5 +202,173 @@ describe('createOrder 與 completeOrder', () => {
       found = next.orders.some((o) => o.kind === 'vip');
     }
     expect(found).toBe(true);
+  });
+});
+
+// —— Story 4.2：線索單（FR29、FR30、RC-9）——
+
+const CLUE_MS = BALANCE.clueDurationMs;
+const clue = (id: number, recipe: RecipeId, expiresAt: number): Order => ({
+  id,
+  kind: 'clue',
+  recipe,
+  requirements: [],
+  coins: 0,
+  xp: 0,
+  energy: 0,
+  expiresAt,
+});
+
+describe('rollVip：線索單', () => {
+  // tea、fried、sweet 都 Lv2，只發現 tea-fried：tea-sweet、fried-sweet 是線索候選
+  const withCandidates = (seed: number) =>
+    setup({ seed, found: ['tea-fried'], levels: { tea: 2, fried: 2, sweet: 2 } });
+
+  it('有候選時，貴客判定成立後約一半改為線索單：10 分鐘後離開、設定 clueSeen、只指定候選', () => {
+    let clues = 0;
+    let vips = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const [order, next] = rollVip(withCandidates(seed), NOW);
+      if (order?.kind === 'clue') {
+        clues += 1;
+        expect(order).toMatchObject({ requirements: [], coins: 0, xp: 0, energy: 0 });
+        expect(order.expiresAt).toBe(NOW + CLUE_MS);
+        expect(['tea-sweet', 'fried-sweet']).toContain(order.recipe);
+        expect(next.inventions[order.recipe as RecipeId]?.clueSeen).toBe(true);
+        expect(next.inventions[order.recipe as RecipeId]?.discovered).toBe(false);
+      } else if (order?.kind === 'vip') {
+        vips += 1;
+        expect(order.recipe).toBe('tea-fried');
+      }
+    }
+    expect(clues).toBeGreaterThan(0);
+    expect(vips).toBeGreaterThan(0);
+    // 50%：兩者數量相近
+    expect(Math.abs(clues - vips)).toBeLessThan((clues + vips) * 0.3);
+  });
+
+  it('沒有候選（相關配方都發現過、或另一攤還沒 Lv2）時不會產生線索單', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const allFound = setup({ seed, found: ['tea-fried'] });
+      expect(rollVip(allFound, NOW)[0]?.kind).not.toBe('clue');
+      const sweetLv1 = setup({
+        seed,
+        found: ['tea-fried'],
+        levels: { tea: 2, fried: 2, sweet: 1 },
+      });
+      expect(rollVip(sweetLv1, NOW)[0]?.kind).not.toBe('clue');
+    }
+  });
+
+  it('場上已有線索單時不會再出現貴客或線索（同時最多 1 張）', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const state = {
+        ...withCandidates(seed),
+        orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
+      };
+      expect(rollVip(state, NOW)[0]).toBeNull();
+    }
+  });
+});
+
+describe('線索單不能交付', () => {
+  it('completeOrder 對線索單回傳原 state，不扣人龍', () => {
+    const state = setup({ found: ['tea-fried'], orders: [clue(5, 'tea-sweet', NOW + CLUE_MS)] });
+    expect(completeOrder(state, 5, NOW)).toBe(state);
+  });
+});
+
+describe('syncOrders：線索單到期（四種時間情境，E2 retro A3）', () => {
+  const base = () =>
+    setup({
+      found: ['tea-fried'],
+      orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS), normal(3)],
+    });
+
+  it('正常：還沒到期時回傳同一個參考', () => {
+    const state = base();
+    expect(syncOrders(state, NOW + CLUE_MS - 1)).toBe(state);
+  });
+
+  it('到期（剛好等於也算）：移除線索單、補一張新訂單排在最後，不動人龍', () => {
+    const state = base();
+    const next = syncOrders(state, NOW + CLUE_MS);
+    expect(next.orders.map((o) => o.id)).toEqual([1, 3, 1000]);
+    expect(next.orders.some((o) => o.id === 2)).toBe(false);
+    expect(next.queue).toEqual(state.queue);
+    expect(next.nextId).toBe(1001);
+  });
+
+  it('時鐘倒退：剩餘時間截到 10 分鐘以內', () => {
+    const rewound = NOW - 60 * 60 * 1000;
+    const next = syncOrders(base(), rewound);
+    expect(next.orders[1].expiresAt).toBe(rewound + CLUE_MS);
+  });
+
+  it('快轉後：syncAll 一次就移除到期的線索單', () => {
+    const next = syncAll(base(), NOW + 2 * CLUE_MS);
+    expect(next.orders.some((o) => o.kind === 'clue' && o.id === 2)).toBe(false);
+    expect(next.orders).toHaveLength(3);
+  });
+});
+
+describe('needsTick：線索單（AC5 修訂）', () => {
+  const full = (expiresAt: number) =>
+    setup({
+      found: ['tea-fried'],
+      orders: [clue(2, 'tea-sweet', expiresAt)],
+    });
+
+  it('體力已滿：線索單到期時為 true（才會移除），還沒到期時為 false（不每秒存檔）', () => {
+    const state = { ...full(NOW + CLUE_MS), energy: BALANCE.maxEnergy };
+    expect(needsTick(state, NOW)).toBe(false);
+    expect(needsTick(state, NOW + CLUE_MS)).toBe(true);
+  });
+
+  it('時鐘倒退讓剩餘時間超過 10 分鐘：true（立刻截短）', () => {
+    const state = { ...full(NOW + CLUE_MS), energy: BALANCE.maxEnergy };
+    expect(needsTick(state, NOW - 60 * 60 * 1000)).toBe(true);
+  });
+});
+
+describe('dismissOrder：請客人先走（RC-9）', () => {
+  it('移除線索單、補一張新訂單，不動人龍', () => {
+    const state = setup({
+      found: ['tea-fried'],
+      orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
+    });
+    const next = dismissOrder(state, 2, NOW);
+    expect(next.orders.map((o) => o.id)).toEqual([1, 1000]);
+    expect(next.queue).toEqual(state.queue);
+  });
+
+  it('對一般單、貴客單、不存在的訂單呼叫時回傳原 state', () => {
+    const vip = vipOrder(setup(), 'tea-fried', 4);
+    const state = setup({ found: ['tea-fried'], orders: [normal(1), vip] });
+    expect(dismissOrder(state, 1, NOW)).toBe(state);
+    expect(dismissOrder(state, 4, NOW)).toBe(state);
+    expect(dismissOrder(state, 99, NOW)).toBe(state);
+  });
+});
+
+describe('存檔驗證：線索單', () => {
+  it('接受線索單；拒絕沒有到期時間或帶獎勵的線索單', () => {
+    const state = setup({
+      found: ['tea-fried'],
+      orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
+    });
+    const valid = (s: GameState) => isValidSaveV2(JSON.parse(serializeSave(s)));
+    expect(valid(state)).toBe(true);
+
+    const noExpiry = {
+      ...state,
+      orders: [normal(1), { ...clue(2, 'tea-sweet', 0), expiresAt: undefined }],
+    };
+    expect(valid(noExpiry)).toBe(false);
+    const withReward = {
+      ...state,
+      orders: [normal(1), { ...clue(2, 'tea-sweet', NOW), coins: 50 }],
+    };
+    expect(valid(withReward)).toBe(false);
   });
 });

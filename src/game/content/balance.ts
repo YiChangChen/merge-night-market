@@ -24,6 +24,9 @@ export const BALANCE = {
   // 金幣 = 5 × 材料 baseCost 總和 × 兩攤加成平均 × 3 × (1 + 卡牌加成)；XP = 材料階數總和 × 2
   vipCoinMultiplier: 3,
   vipXpPerLevel: 2,
+  // 線索單（FR29）：貴客判定成立、而且還有未發現的可發明配方時，這個機率改為線索單；10 分鐘後離開
+  clueChance: 0.5,
+  clueDurationMs: 10 * 60 * 1000,
   // 人龍長度 = min(queueBase + queuePerStallLevel × Σ攤位等級, queueMax) + 額外人潮（FR17）
   queueBase: 8,
   queuePerStallLevel: 2,

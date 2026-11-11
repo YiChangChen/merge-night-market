@@ -203,7 +203,7 @@ describe('isValidSaveV2', () => {
       Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried', requirements: [] });
       Object.assign(s.orders[1], { kind: 'vip', recipe: 'tea-fried', requirements: [] });
     }],
-    ['線索單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'clue', expiresAt: 1 })],
+    ['線索單沒有指定配方', (s: any) => Object.assign(s.orders[0], { kind: 'clue', expiresAt: 1 })],
     // 型別
     ['未知的棋子種類', (s: any) => withPiece(s, { kind: 'bomb' })],
     ['未知的鏈', (s: any) => (s.pendingGenerators = ['pizza'])],

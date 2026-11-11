@@ -125,10 +125,12 @@ function Orders({
               />
               <View style={[styles.orderLabel, ready && styles.orderLabelReady]}>
                 <Text style={[styles.orderName, ready && styles.orderTextReady]} numberOfLines={1}>
-                  {/* 貴客單沒有品項需求，改顯示指定的發明菜（S4.1；正式的貴客卡在 S4.3） */}
+                  {/* 貴客單顯示指定的發明菜、線索單顯示台詞（S4.1、S4.2；正式的卡片在 S4.3） */}
                   {order.kind === 'vip' && order.recipe !== undefined
                     ? `貴客：${RECIPES_BY_ID[order.recipe].name}`
-                    : order.requirements
+                    : order.kind === 'clue' && order.recipe !== undefined
+                      ? RECIPES_BY_ID[order.recipe].clue
+                      : order.requirements
                         .map(
                           (requirement) =>
                             CHAINS[requirement.chain].items[requirement.level - 1].name
@@ -138,7 +140,11 @@ function Orders({
                 <Text
                   style={[styles.orderReward, ready && styles.orderTextReady]}
                   numberOfLines={1}>
-                  {ready ? '點我出餐！' : `🪙${order.coins} ⚡${order.energy}`}
+                  {ready
+                    ? '點我出餐！'
+                    : order.kind === 'clue'
+                      ? '線索客人'
+                      : `🪙${order.coins} ⚡${order.energy}`}
                 </Text>
               </View>
             </Pressable>

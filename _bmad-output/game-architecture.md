@@ -345,7 +345,7 @@ src/app/
 - `time.ts` 提供以下函式：
   - `dateKeyUTC8(now)`
   - `syncAll(state, now)`：依序執行 syncEnergy、syncQueue、syncOrders（線索單到期）、syncDaily（換日歸零）
-  - `needsTick(state, now)`：store 的 1 秒 tick 只在它回傳 true 時運作。條件是：體力 < `maxEnergy(state, now)`、人龍冷卻**到期**（`now ≥ cooldownEndsAt`）或時鐘倒退讓剩餘冷卻超過 3 分鐘（需要截短），或存在線索單。冷卻倒數期間不必每秒結算（畫面自己計時）；體力滿時 `syncEnergy` 每次都會產生新 state，整段冷卻都 tick 會變成每秒存檔（E2 code review 2026-11-10）。新增任何倒數計時，都必須同步擴充這個函式，並遵守「只在需要改變 state 時回傳 true」。
+  - `needsTick(state, now)`：store 的 1 秒 tick 只在它回傳 true 時運作。條件是：體力 < `maxEnergy(state, now)`、人龍冷卻**到期**（`now ≥ cooldownEndsAt`）或時鐘倒退讓剩餘冷卻超過 3 分鐘（需要截短），或線索單**到期**／時鐘倒退需要截短（S4.2，和冷卻同一個原則；倒數由訂單卡自己計時）。冷卻倒數期間不必每秒結算（畫面自己計時）；體力滿時 `syncEnergy` 每次都會產生新 state，整段冷卻都 tick 會變成每秒存檔（E2 code review 2026-11-10）。新增任何倒數計時，都必須同步擴充這個函式，並遵守「只在需要改變 state 時回傳 true」。
 - 所有倒數一律存成絕對時間戳 `endsAt`。
 - 時鐘倒退的處理：
   - `now < 上次紀錄時間`：只重設起點，不發獎勵、不歸零計數。
@@ -402,7 +402,7 @@ src/game/content/
 | RC-6 | **發明菜一次賣 1 份**：`sellPiece` 對 dish 只扣 1 份，`count` 歸 0 時清空格子。單價為兩個材料 baseCost 總和 × 1.5 | `engine.ts` |
 | RC-7 | **Lv3 招牌菜由玩家選擇**：攤位面板列出棋盤上所有含該鏈的發明菜，玩家點選後呼叫 `upgradeStall(state, stall, now, recipe)`，從任一格扣 1 份，並設定 `signatureDish` | `stalls.ts`、`features/overlays/stall-panel` |
 | RC-8 | **貴客單與 Lv3 消耗發明菜時一律扣 1 份**（`count − 1`），扣到 0 時清空格子 | `vip.ts`、`stalls.ts` |
-| RC-9 | **線索單「請客人先走」**：`dismissOrder(state, orderId)` 只能用在 `kind: 'clue'`；移除後補一張新訂單，不扣人龍 | `vip.ts` |
+| RC-9 | **線索單「請客人先走」**：`dismissOrder(state, orderId, now)` 只能用在 `kind: 'clue'`；移除後補一張新訂單，不扣人龍 | `orders.ts`（S4.2：放在 vip.ts 會和 engine 互相 import） |
 
 ### Architecture Decision Records
 

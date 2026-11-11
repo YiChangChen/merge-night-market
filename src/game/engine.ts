@@ -157,9 +157,9 @@ export function expectedOrderCoins(
   return perRequirement * expectedCount;
 }
 
-function createOrder(state: GameState): [Order, GameState] {
-  // 先擲貴客（S4.1、FR27）：已發現發明菜、場上沒有貴客或線索單時才擲
-  const [vip, afterVip] = rollVip(state);
+function createOrder(state: GameState, now: number): [Order, GameState] {
+  // 先擲貴客或線索（S4.1、S4.2）：已發現發明菜、場上沒有貴客或線索單時才擲
+  const [vip, afterVip] = rollVip(state, now);
   if (vip) return [vip, { ...afterVip, nextId: afterVip.nextId + 1 }];
   let next = afterVip;
   const open = openStallChains(state.stalls);
@@ -197,6 +197,17 @@ function createOrder(state: GameState): [Order, GameState] {
   return [order, { ...next, nextId: next.nextId + 1 }];
 }
 
+/**
+ * 移出一張訂單並補一張新的，新的排在最後（右邊的往左遞補）。不動人龍。
+ * 線索單到期（syncOrders）與請客人先走（dismissOrder）共用；不存在時回傳原 state。
+ */
+export function replaceOrder(state: GameState, orderId: number, now: number): GameState {
+  if (!state.orders.some((order) => order.id === orderId)) return state;
+  const remaining = { ...state, orders: state.orders.filter((order) => order.id !== orderId) };
+  const [replacement, next] = createOrder(remaining, now);
+  return { ...next, orders: [...next.orders, replacement] };
+}
+
 // 客人由訂單 id 決定，不必寫進存檔，同一張訂單移動位置或讀檔後也不會換人
 export function customerForOrder(order: Order): CustomerDef {
   return CUSTOMERS[order.id % CUSTOMERS.length];
@@ -230,7 +241,7 @@ export function createGame(now: number, seed: number): GameState {
     state = placeGenerator(state, chain);
   }
   for (let i = 0; i < BALANCE.orderSlots; i++) {
-    const [order, next] = createOrder(state);
+    const [order, next] = createOrder(state, now);
     state = { ...next, orders: [...next.orders, order] };
   }
   return state;
@@ -447,7 +458,7 @@ export function completeOrder(state: GameState, orderId: number, now: number): G
   next = flushPendingGenerators(next);
   next = applyLevelUps(next);
 
-  const [replacement, afterOrder] = createOrder(next);
+  const [replacement, afterOrder] = createOrder(next, now);
   // 右邊的訂單往左遞補，新訂單排到最後
   return { ...afterOrder, orders: [...afterOrder.orders, replacement] };
 }

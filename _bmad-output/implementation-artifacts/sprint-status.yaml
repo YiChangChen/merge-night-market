@@ -82,7 +82,7 @@ development_status:
   # Epic 4：貴客上門與阿嬤指點
   epic-4: in-progress
   4-1-vip-order-rules: review
-  4-2-clue-orders-and-dismiss: backlog
+  4-2-clue-orders-and-dismiss: review
   4-3-vip-and-clue-order-cards: backlog
   4-4-grandma-pity-hints: backlog
   epic-4-retrospective: optional

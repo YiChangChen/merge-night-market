@@ -1,4 +1,4 @@
-// 貴客單（S4.1、FR27、FR28）與線索單（S4.2）。
+// 貴客單（S4.1、FR27、FR28）與線索單的產生（S4.2、FR29）；線索單的到期與請走在 orders.ts。
 // engine 的 createOrder 在建立新訂單時先呼叫 rollVip；這裡不 import engine，避免互相依賴。
 import { cardBonus } from './cards';
 import { BALANCE, CHAIN_IDS, type ChainId, RECIPES, RECIPES_BY_ID, type RecipeId } from './content';
@@ -58,16 +58,66 @@ export function vipOrder(
   };
 }
 
+/** 線索候選：尚未發現、兩攤都 ≥ Lv2 的配方（依 RECIPES 順序）。 */
+function clueCandidates(state: Pick<GameState, 'inventions' | 'stalls'>): RecipeId[] {
+  return RECIPES.filter(
+    (recipe) =>
+      !state.inventions[recipe.id]?.discovered &&
+      state.stalls[recipe.a.chain].level >= 2 &&
+      state.stalls[recipe.b.chain].level >= 2
+  ).map((recipe) => recipe.id);
+}
+
+/** 一張線索單（FR29）：只說一句台詞，不能完成、沒有獎勵，10 分鐘後離開。 */
+export function clueOrder(recipe: RecipeId, id: number, now: number): Order {
+  return {
+    id,
+    kind: 'clue',
+    recipe,
+    requirements: [],
+    coins: 0,
+    xp: 0,
+    energy: 0,
+    expiresAt: now + BALANCE.clueDurationMs,
+  };
+}
+
 /**
  * 建立新訂單時先擲貴客（FR27）。已發現至少 1 道發明菜、場上沒有貴客或線索單時才擲，
- * 不符合時不消耗亂數（一般訂單的亂數序列不受影響）。回傳 [貴客單或 null, 推進亂數後的 state]；
- * 貴客單的 id 是 nextId，由呼叫端遞增。
+ * 不符合時不消耗亂數（一般訂單的亂數序列不受影響）。
+ * 貴客判定成立、而且還有線索候選時，再擲一次：一半改為線索單，並記下 clueSeen（S4.2）。
+ * 回傳 [貴客／線索單或 null, 推進亂數後的 state]；訂單 id 是 nextId，由呼叫端遞增。
  */
-export function rollVip<S extends GameState>(state: S): [Order | null, S] {
+export function rollVip<S extends GameState>(state: S, now: number): [Order | null, S] {
   const discovered = discoveredRecipes(state);
   if (discovered.length === 0 || hasSpecialOrder(state.orders)) return [null, state];
   const [roll, afterRoll] = nextRandom(state);
   if (roll >= vipChance(state.stalls)) return [null, afterRoll];
+
+  const candidates = clueCandidates(afterRoll);
+  if (candidates.length > 0) {
+    const [clueRoll, afterClueRoll] = nextRandom(afterRoll);
+    if (clueRoll < BALANCE.clueChance) {
+      const [index, afterPick] = randomInt(afterClueRoll, candidates.length);
+      const recipe = candidates[index];
+      const seen = afterPick.inventions[recipe];
+      const withSeen = {
+        ...afterPick,
+        inventions: {
+          ...afterPick.inventions,
+          [recipe]: {
+            discovered: seen?.discovered ?? false,
+            made: seen?.made ?? 0,
+            failures: seen?.failures ?? 0,
+            clueSeen: true,
+          },
+        },
+      };
+      return [clueOrder(recipe, withSeen.nextId, now), withSeen];
+    }
+    const [index, afterPick] = randomInt(afterClueRoll, discovered.length);
+    return [vipOrder(afterPick, discovered[index], afterPick.nextId), afterPick];
+  }
   const [index, afterPick] = randomInt(afterRoll, discovered.length);
   return [vipOrder(afterPick, discovered[index], afterPick.nextId), afterPick];
 }

@@ -6,7 +6,7 @@
 //
 // 擴充時機：
 // - S3.2 起棋盤支援發明菜，isValidPiece 接受 kind: 'dish'（{ recipe, count: 1–3 }）。
-// - S4.1 起接受貴客單（kind: 'vip'、recipe、需求為空）；S4.2 線索單再接受 kind: 'clue'（含 expiresAt）。
+// - S4.1 起接受貴客單（kind: 'vip'、recipe、需求為空）；S4.2 起接受線索單（kind: 'clue'、expiresAt、沒有獎勵）。
 // 這兩者都是「接受更多」，舊版 App 讀到新資料只會顯示讀檔失敗、不會覆寫，所以不需要升版。
 import {
   BALANCE,
@@ -61,7 +61,6 @@ function isValidOrder(value: unknown): boolean {
   if (
     !isObject(value) ||
     !isPositiveInteger(value.id) ||
-    value.expiresAt !== undefined ||
     !Array.isArray(value.requirements) ||
     !isNonNegative(value.coins) ||
     !isNonNegative(value.xp) ||
@@ -73,6 +72,7 @@ function isValidOrder(value: unknown): boolean {
     case 'normal':
       return (
         value.recipe === undefined &&
+        value.expiresAt === undefined &&
         value.requirements.length >= 1 &&
         value.requirements.length <= 2 &&
         value.requirements.every(
@@ -84,9 +84,20 @@ function isValidOrder(value: unknown): boolean {
       );
     case 'vip':
       // 貴客單（S4.1）：指定一道已知的發明菜，沒有品項需求
-      return isRecipeId(value.recipe) && value.requirements.length === 0;
+      return (
+        isRecipeId(value.recipe) && value.requirements.length === 0 && value.expiresAt === undefined
+      );
+    case 'clue':
+      // 線索單（S4.2）：只說一句台詞，沒有需求、沒有獎勵，有離開時間
+      return (
+        isRecipeId(value.recipe) &&
+        value.requirements.length === 0 &&
+        isFiniteNumber(value.expiresAt) &&
+        value.coins === 0 &&
+        value.xp === 0 &&
+        value.energy === 0
+      );
     default:
-      // 線索單在 S4.2 才支援
       return false;
   }
 }

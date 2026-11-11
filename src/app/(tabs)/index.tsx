@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useIsFocused } from 'expo-router';
 import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -11,7 +12,7 @@ import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
 import { BALANCE, BOARD_BACKGROUND, CHAINS, RECIPES_BY_ID } from '@/game/content';
-import { applyDrop } from '@/game/drop';
+import { applyDrop, resolveDrop } from '@/game/drop';
 import {
   completeOrder,
   customerForOrder,
@@ -213,6 +214,8 @@ export default function GameScreen() {
   // 底部分頁列（含安全區）佔掉的高度；棋盤高度要扣掉它
   const tabBarHeight = useBottomTabBarHeight();
   useTabSwitchTiming('index');
+  // 分頁失焦時暫停棋盤的循環動畫（冒熱氣）
+  const focused = useIsFocused();
   const [selected, setSelected] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -266,6 +269,12 @@ export default function GameScreen() {
     apply((current) => tapGenerator(current, cell));
   };
 
+  // 放開時才查一次判定，決定播哪種動畫（不訂閱 store，拖曳時不會重繪）
+  const previewDrop = (from: number, to: number) => {
+    const state = useGameStore.getState().state;
+    return state ? (resolveDrop(state, from, to)?.kind ?? null) : null;
+  };
+
   const handleMove = (from: number, to: number) => {
     setSelected(null);
     // 落子的判定一律交給規則層（RC-4、NP-1）；時間由 apply 傳入
@@ -306,6 +315,8 @@ export default function GameScreen() {
             selected={selected}
             onTapCell={handleTapCell}
             onMove={handleMove}
+            previewDrop={previewDrop}
+            animate={focused}
           />
         </View>
         {toast ? (

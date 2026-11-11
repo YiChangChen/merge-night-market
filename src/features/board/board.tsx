@@ -3,12 +3,14 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
+  cancelAnimation,
   Easing,
   interpolate,
   type SharedValue,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withRepeat,
   withSequence,
   withSpring,
   withTiming,
@@ -25,6 +27,9 @@ import {
   type Piece,
   type Spawn,
 } from '@/game/engine';
+import type { DropResult } from '@/game/drop';
+
+import { releasePlan } from './release-plan';
 
 const NO_CELL = -1;
 const PRESS_SCALE = 0.84;
@@ -37,6 +42,11 @@ const FLIGHT_LAND_AT = 0.72;
 const MERGE_MS = 380;
 const MERGE_SPARK_COUNT = 8;
 const GLIDE_MS = 150;
+// 組錯（reject）：先在放開處左右搖頭，再滑回原格（UX-DR6）
+const SHAKE_GLIDE_MS = 440;
+const SHAKE_PORTION = 0.55;
+// 冒熱氣（UX-DR9）：整個棋盤共用一個時鐘，各格只用相位差
+const STEAM_CYCLE_MS = 1800;
 const DRAG_SCALE = 1.15;
 const COLUMNS = BALANCE.boardColumns;
 const ROWS = BALANCE.boardRows;
@@ -57,6 +67,8 @@ type Glide = {
   toX: number;
   toY: number;
   fromScale: number;
+  /** 組錯：滑回之前先搖頭 */
+  shake?: boolean;
 };
 
 type BoardProps = {
@@ -65,9 +77,16 @@ type BoardProps = {
   selected: number | null;
   onTapCell: (cell: number) => void;
   onMove: (from: number, to: number) => void;
+  /**
+   * 放開時查詢規則層的判定（resolveDrop），決定播放哪種動畫（S3.3）。
+   * 沒有提供時退回舊的判斷（只分合成與交換）。
+   */
+  previewDrop?: (from: number, to: number) => DropResult['kind'] | null;
+  /** 棋盤在前景時才播放循環動畫（冒熱氣） */
+  animate?: boolean;
 };
 
-/** 棋子的圖示：產生器、品項、發明菜（S3.2；份數徽章與冒熱氣在 S3.3 完成正式樣式） */
+/** 棋子的圖示：產生器、品項、發明菜 */
 function pieceArt(piece: Piece): number {
   if (piece.kind === 'dish') return RECIPES_BY_ID[piece.recipe].art;
   const chain = CHAINS[piece.chain];
@@ -95,10 +114,56 @@ function PieceView({ piece, size }: { piece: Piece; size: number }) {
     <>    
       <PieceIcon piece={piece} size={size} />
       {piece.kind === 'item' ? <Text style={styles.level}>{piece.level}</Text> : null}
+      {/* 發明菜的份數（FR23）：2、3 份時才顯示，底色和品項階數不同 */}
       {piece.kind === 'dish' && piece.count > 1 ? (
-        <Text style={styles.level}>×{piece.count}</Text>
+        <Text style={styles.dishCount}>×{piece.count}</Text>
       ) : null}
     </>
+  );
+}
+
+/** L4 以上的品項與發明菜會冒熱氣（UX-DR9） */
+function hasSteam(piece: Piece): boolean {
+  return piece.kind === 'dish' || (piece.kind === 'item' && piece.level >= 4);
+}
+
+function SteamWisp({
+  clock,
+  phase,
+  size,
+  left,
+}: {
+  clock: SharedValue<number>;
+  phase: number;
+  size: number;
+  left: number;
+}) {
+  const style = useAnimatedStyle(() => {
+    const p = (clock.value + phase) % 1;
+    return {
+      opacity: Math.sin(Math.PI * p) * 0.75,
+      transform: [{ translateY: -p * size * 0.32 }, { scale: 0.6 + 0.6 * p }],
+    };
+  });
+  return (
+    <Animated.View
+      style={[
+        styles.steam,
+        { left, top: size * 0.06, width: size * 0.1, height: size * 0.22 },
+        style,
+      ]}
+    />
+  );
+}
+
+/** 兩縷白煙往上飄並淡出；相位依格子錯開，整個棋盤共用同一個時鐘，只有一個動畫在跑。 */
+function Steam({ clock, cell, size }: { clock: SharedValue<number>; cell: number; size: number }) {
+  const phase = (cell * 0.137) % 1;
+  return (
+    <View pointerEvents="none" testID="steam" style={StyleSheet.absoluteFill}>
+      <SteamWisp clock={clock} phase={phase} size={size} left={size * 0.36} />
+      <SteamWisp clock={clock} phase={(phase + 0.5) % 1} size={size} left={size * 0.54} />
+    </View>
   );
 }
 
@@ -133,6 +198,8 @@ function BoardPiece({
   pressCell,
   pressScale,
   liftedCell,
+  steamClock,
+  animate,
 }: {
   piece: Piece;
   size: number;
@@ -141,6 +208,8 @@ function BoardPiece({
   pressCell: SharedValue<number>;
   pressScale: SharedValue<number>;
   liftedCell: SharedValue<number>;
+  steamClock: SharedValue<number>;
+  animate: boolean;
 }) {
   // 手指一動就要隱藏，不能等 JS，否則棋子會同時出現在格子和手指下
   const liftStyle = useAnimatedStyle(() => ({ opacity: liftedCell.value === cell ? 0 : 1 }));
@@ -160,6 +229,7 @@ function BoardPiece({
         ) : (
           <PieceView piece={piece} size={size} />
         )}
+        {animate && hasSteam(piece) ? <Steam clock={steamClock} cell={cell} size={size} /> : null}
       </Animated.View>
     </Animated.View>
   );
@@ -304,17 +374,36 @@ function PieceGlide({
   onDone: (key: number) => void;
 }) {
   const progress = useSharedValue(0);
-  const { fromX, fromY, toX, toY, fromScale, piece } = glide;
+  const { fromX, fromY, toX, toY, fromScale, piece, shake = false } = glide;
+  const duration = shake ? SHAKE_GLIDE_MS : GLIDE_MS;
+  const wobble = cellSize * 0.12;
 
   useEffect(() => {
-    progress.set(withTiming(1, { duration: GLIDE_MS, easing: Easing.out(Easing.cubic) }));
+    progress.set(
+      withTiming(1, { duration, easing: shake ? Easing.linear : Easing.out(Easing.cubic) })
+    );
     // 用計時器收尾而不是動畫 callback，確保棋子一定會顯示回棋盤上
-    const timer = setTimeout(() => onDone(glide.key), GLIDE_MS);
+    const timer = setTimeout(() => onDone(glide.key), duration);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 每次滑動只啟動一次
   }, []);
 
   const glideStyle = useAnimatedStyle(() => {
+    if (shake) {
+      // 前段在放開處左右搖頭（幅度漸小），後段才滑回原格
+      const t = progress.value;
+      const s = Math.min(t / SHAKE_PORTION, 1);
+      const m = t <= SHAKE_PORTION ? 0 : (t - SHAKE_PORTION) / (1 - SHAKE_PORTION);
+      const eased = 1 - (1 - m) ** 3;
+      const offset = t < SHAKE_PORTION ? Math.sin(s * Math.PI * 6) * wobble * (1 - s) : 0;
+      return {
+        transform: [
+          { translateX: fromX + (toX - fromX) * eased + offset },
+          { translateY: fromY + (toY - fromY) * eased },
+          { scale: fromScale + (1 - fromScale) * eased },
+        ],
+      };
+    }
     const t = progress.value;
     return {
       transform: [
@@ -365,6 +454,8 @@ type BoardCellProps = {
   pressCell: SharedValue<number>;
   pressScale: SharedValue<number>;
   liftedCell: SharedValue<number>;
+  steamClock: SharedValue<number>;
+  animate: boolean;
 };
 
 // 拖曳時每換一格都會重新渲染棋盤，只有狀態真的改變的格子才需要重畫
@@ -379,6 +470,8 @@ const BoardCell = memo(function BoardCell({
   pressCell,
   pressScale,
   liftedCell,
+  steamClock,
+  animate,
 }: BoardCellProps) {
   const row = Math.floor(cell / BALANCE.boardColumns);
   const column = cell % BALANCE.boardColumns;
@@ -412,13 +505,23 @@ const BoardCell = memo(function BoardCell({
           pressCell={pressCell}
           pressScale={pressScale}
           liftedCell={liftedCell}
+          steamClock={steamClock}
+          animate={animate}
         />
       ) : null}
     </View>
   );
 });
 
-export function Board({ board, cellSize, selected, onTapCell, onMove }: BoardProps) {
+export function Board({
+  board,
+  cellSize,
+  selected,
+  onTapCell,
+  onMove,
+  previewDrop,
+  animate = true,
+}: BoardProps) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [hoverCell, setHoverCell] = useState<number | null>(null);
   const pressedCell = useRef<number | null>(null);
@@ -439,6 +542,19 @@ export function Board({ board, cellSize, selected, onTapCell, onMove }: BoardPro
   const activated = useSharedValue(false);
   const liftedCell = useDerivedValue(() => (activated.value ? grabbedReady.value : NO_CELL));
   const [previousBoard, setPreviousBoard] = useState(board);
+  // 冒熱氣的共用時鐘：棋盤失焦時停止
+  const steamClock = useSharedValue(0);
+  useEffect(() => {
+    if (!animate) {
+      cancelAnimation(steamClock);
+      steamClock.set(0);
+      return;
+    }
+    steamClock.set(
+      withRepeat(withTiming(1, { duration: STEAM_CYCLE_MS, easing: Easing.linear }), -1)
+    );
+    return () => cancelAnimation(steamClock);
+  }, [animate, steamClock]);
 
   // 在渲染中比對，食材才不會先在目標格閃現一幀才開始飛
   if (board !== previousBoard) {
@@ -523,16 +639,22 @@ export function Board({ board, cellSize, selected, onTapCell, onMove }: BoardPro
       return;
     }
 
-    // 合成由合成特效接手，不必滑動
-    if (to !== null && target && canMerge(source, target)) {
-      onMove(from, to);
+    // 放開後播什麼動畫由規則層的判定決定（S3.3）：合成交給合成特效、組錯搖頭彈回、交換才把目標滑回來
+    const moving = to !== null && to !== from;
+    const kind = moving
+      ? (previewDrop?.(from, to) ??
+        (target && canMerge(source, target) ? 'merge' : target ? 'swap' : 'move'))
+      : null;
+    const plan = kind ? releasePlan(kind) : null;
+    if (plan?.source === 'none') {
+      onMove(from, to as number);
       return;
     }
 
-    const destination = to ?? from;
+    const destination = plan?.source === 'target' && to !== null ? to : from;
     const landing = cellOrigin(destination);
     const newGlides: Glide[] = [];
-    if (target && to !== null && to !== from) {
+    if (plan?.swapBack && target && to !== null) {
       // 被換走的棋子放在前面，畫在放下的棋子底下
       const origin = cellOrigin(to);
       const back = cellOrigin(from);
@@ -554,13 +676,15 @@ export function Board({ board, cellSize, selected, onTapCell, onMove }: BoardPro
       toX: landing.x,
       toY: landing.y,
       fromScale: DRAG_SCALE,
+      shake: plan?.shake ?? false,
     });
     const movingIds = newGlides.map((glide) => glide.piece.id);
     setGlides((current) => [
       ...current.filter((glide) => !movingIds.includes(glide.piece.id)),
       ...newGlides,
     ]);
-    if (to !== null && to !== from) onMove(from, to);
+    // 組錯也要交給規則層：state 不變，但會送出 invent_rejected（阿嬤保底）
+    if (moving) onMove(from, to as number);
   };
 
   const finishGesture = () => {
@@ -674,6 +798,8 @@ export function Board({ board, cellSize, selected, onTapCell, onMove }: BoardPro
               pressCell={pressCell}
               pressScale={pressScale}
               liftedCell={liftedCell}
+              steamClock={steamClock}
+              animate={animate}
             />
           );
         })}
@@ -782,6 +908,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     fontWeight: '700',
+  },
+  // 發明菜的份數：和品項階數同一個位置（右下角），用醒目的底色區分
+  dishCount: {
+    position: 'absolute',
+    right: 1,
+    bottom: 1,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+    overflow: 'hidden',
+    color: '#FFFFFF',
+    backgroundColor: '#C2410C',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
+  },
+  steam: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
   },
   floating: {
     position: 'absolute',

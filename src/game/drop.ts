@@ -1,7 +1,9 @@
 // 拖放解析（NP-1）：一次拖放只會產生 6 種結果之一，判定只在這裡做。
 // UI 落子一律呼叫 applyDrop（RC-4），再依事件播放動畫；動畫、阿嬤保底和埋點看到的結果才會一致。
+import { cardStars } from './cards';
 import { BOARD_SIZE, type ChainId, type RecipeId } from './content';
 import { canMerge, flushPendingGenerators, movePiece } from './engine';
+import type { GameEvent } from './events';
 import {
   canInvent,
   createDish,
@@ -117,9 +119,21 @@ export function applyDrop(state: GameState, from: number, to: number, _now: numb
       board[from] = null;
       board[to] = dish;
       const next = flushPendingGenerators({ ...recorded, board });
+      // 升星（FR34）：made 每次 +1，最多跨一個門檻；0→1 是取得 ★1，由 dish_invented 代表。
+      // 第一次發明一律不算升星（存檔就算是 discovered:false 但 made>0 也一樣；E5 code review）
+      const before = cardStars(state.inventions[result.recipe]?.made ?? 0);
+      const after = cardStars(recorded.inventions[result.recipe]?.made ?? 0);
+      const starred: GameEvent[] =
+        !first && before >= 1 && after > before
+          ? [{ type: 'card_starred', recipe: result.recipe, stars: after }]
+          : [];
       return {
         ...next,
-        events: [...next.events, { type: 'dish_invented', recipe: result.recipe, first }],
+        events: [
+          ...next.events,
+          { type: 'dish_invented', recipe: result.recipe, first },
+          ...starred,
+        ],
       };
     }
 

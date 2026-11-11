@@ -1,11 +1,11 @@
 // 除錯面板用的規則函式（S1.8）。只在 development／preview 的除錯面板呼叫，一律透過 apply。
 // 和一般規則一樣是純函式：不合法的輸入直接回傳原 state。
-import { type ChainId, STALLS } from './content';
+import { type ChainId, RECIPE_IDS, type RecipeId, STALLS } from './content';
 import { createGame, ensureGenerator } from './engine';
 import { growActiveWave } from './queue';
 import { tutorialHint } from './invention';
 import { nextRandom } from './random';
-import type { GameState, StallLevel } from './types';
+import type { GameState, InventionState, StallLevel } from './types';
 
 const isAmount = (value: number) => Number.isFinite(value) && value > 0;
 
@@ -71,4 +71,34 @@ export function debugSetStallLevel(state: GameState, chain: ChainId, level: Stal
   };
   // 調整後如果手搖飲、炸物都到 Lv2，立刻給教學提示（和真的升級一樣）
   return tutorialHint(growActiveWave(level >= 1 ? ensureGenerator(next, chain) : next));
+}
+
+/** 已發現的卡各多做 amount 份（S5.2 實機看星等與金框用）；不送升星事件，也不動棋盤。 */
+export function debugAddCardMade(state: GameState, amount: number): GameState {
+  // 製作次數是整數（E5 code review）
+  if (!isAmount(amount) || !Number.isInteger(amount)) return state;
+  const inventions = { ...state.inventions };
+  for (const [recipe, invention] of Object.entries(state.inventions) as [
+    RecipeId,
+    InventionState,
+  ][]) {
+    if (invention.discovered) inventions[recipe] = { ...invention, made: invention.made + amount };
+  }
+  return { ...state, inventions };
+}
+
+/** 未發現的配方都標成看過線索（S5.2 實機看收藏冊的線索狀態用）。 */
+export function debugRevealClues(state: GameState): GameState {
+  const inventions = { ...state.inventions };
+  for (const recipe of RECIPE_IDS) {
+    const invention = state.inventions[recipe];
+    if (invention?.discovered) continue;
+    inventions[recipe] = {
+      discovered: false,
+      made: invention?.made ?? 0,
+      failures: invention?.failures ?? 0,
+      clueSeen: true,
+    };
+  }
+  return { ...state, inventions };
 }

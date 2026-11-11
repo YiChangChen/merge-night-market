@@ -36,8 +36,16 @@ export function StreetScreen() {
           <Text style={styles.icon}>⚙️</Text>
         </Pressable>
         <Text style={styles.title}>夜市街</Text>
-        {/* 右上角保留給收藏冊入口（E5），先放同尺寸的空位讓標題置中 */}
-        <View style={styles.iconButton} />
+        {/* 收藏冊入口（FR35、UX-DR8），和左上角的設定對稱 */}
+        <Pressable
+          testID="open-collection"
+          accessibilityRole="button"
+          accessibilityLabel="收藏冊"
+          hitSlop={8}
+          onPress={() => router.push('/collection')}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+          <Text style={styles.icon}>📖</Text>
+        </Pressable>
       </View>
       <ScrollView
         horizontal

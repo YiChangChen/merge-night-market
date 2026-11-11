@@ -1,10 +1,12 @@
 import { BALANCE } from '../content';
 import { createGame } from '../engine';
 import {
+  debugAddCardMade,
   debugAddCoins,
   debugAddEnergy,
   debugNewGame,
   debugQueueLastCustomer,
+  debugRevealClues,
   debugSetPlayerLevel,
   debugSetStallLevel,
 } from '../debug';
@@ -163,5 +165,37 @@ describe('除錯：開新局（S4.4）', () => {
     expect(fresh.meta.hintedRecipes).toEqual([]);
     expect(fresh.rngSeed).not.toBe(played.rngSeed);
     expect(valid(fresh)).toBe(true);
+  });
+});
+
+describe('除錯：卡牌（S5.2）', () => {
+  const found = { discovered: true, made: 2, failures: 0, clueSeen: false };
+  const unknown = { discovered: false, made: 0, failures: 3, clueSeen: false };
+  const base = () => ({
+    ...createGame(NOW, 1),
+    inventions: { 'tea-fried': found, 'tea-noodle': unknown },
+  });
+
+  it('debugAddCardMade：只有已發現的卡增加製作次數，存檔仍然合法', () => {
+    const next = debugAddCardMade(base(), 13);
+    expect(next.inventions['tea-fried']?.made).toBe(15);
+    expect(next.inventions['tea-noodle']).toEqual(unknown);
+    expect(next.events).toEqual([]);
+    expect(valid(next)).toBe(true);
+    expect(debugAddCardMade(base(), 0)).toEqual(base());
+    expect(debugAddCardMade(base(), 0.5)).toEqual(base());
+  });
+
+  it('debugRevealClues：未發現的配方都標成看過線索，保留失敗次數；已發現的不動', () => {
+    const next = debugRevealClues(base());
+    expect(next.inventions['tea-fried']).toEqual(found);
+    expect(next.inventions['tea-noodle']).toEqual({ ...unknown, clueSeen: true });
+    expect(next.inventions['dumpling-sweet']).toEqual({
+      discovered: false,
+      made: 0,
+      failures: 0,
+      clueSeen: true,
+    });
+    expect(valid(next)).toBe(true);
   });
 });

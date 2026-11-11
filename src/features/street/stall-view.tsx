@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useOverlayStore } from '@/features/overlays';
+import { cardStars } from '@/game/cards';
 import { type ChainId, RECIPES_BY_ID, STALLS } from '@/game/content';
 import { useGameStore } from '@/game/store';
 
@@ -47,6 +48,11 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   const level = useGameStore((store) => store.state?.stalls[chain].level ?? 0);
   // 招牌菜（S3.5、FR13）：字串或 null，只有這一攤升 Lv3 時才會改變
   const signatureDish = useGameStore((store) => store.state?.stalls[chain].signatureDish ?? null);
+  // 招牌菜的星等徽章（S5.3）：selector 回傳星等數字，多做幾份但沒升星時不重繪
+  const signatureStars = useGameStore((store) => {
+    const dish = store.state?.stalls[chain].signatureDish;
+    return dish ? cardStars(store.state?.inventions[dish]?.made ?? 0) : 0;
+  });
   const stall = STALLS[chain];
   const appearance = APPEARANCE[level];
   const closed = level === 0;
@@ -131,8 +137,16 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
         <Text style={styles.levelLabel}>{appearance.label}</Text>
         {/* 招牌菜只屬於 Lv3（FR13）；存檔驗證與除錯面板也會維持這一點 */}
         {level === 3 && signatureDish ? (
-          // 招牌菜掛在霓虹招牌正下方；絕對定位，不改變攤位高度（星等徽章在 E5 接上）
-          <View testID={`stall-${chain}-signature`} style={styles.signature}>
+          // 招牌菜掛在霓虹招牌正下方，附星等徽章；絕對定位，不改變攤位高度
+          <View
+            testID={`stall-${chain}-signature`}
+            accessible
+            accessibilityLabel={
+              signatureStars > 0
+                ? `招牌菜 ${RECIPES_BY_ID[signatureDish].name}，${signatureStars} 星`
+                : `招牌菜 ${RECIPES_BY_ID[signatureDish].name}`
+            }
+            style={styles.signature}>
             <Image
               source={RECIPES_BY_ID[signatureDish].art}
               contentFit="contain"
@@ -142,6 +156,14 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
             <Text style={styles.signatureText} numberOfLines={1}>
               招牌：{RECIPES_BY_ID[signatureDish].name}
             </Text>
+            {/* 存檔不一致（招牌菜還沒有製作紀錄）時不顯示「★0」（E5 code review） */}
+            {signatureStars > 0 ? (
+              <Text
+                testID={`stall-${chain}-signature-stars`}
+                style={[styles.signatureStars, signatureStars === 5 && styles.signatureStarsGold]}>
+                ★{signatureStars}
+              </Text>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -225,6 +247,21 @@ const styles = StyleSheet.create({
     color: '#FFD966',
     fontSize: 12,
     fontWeight: '700',
+  },
+  signatureStars: {
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    color: '#11173A',
+    backgroundColor: '#FFD966',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  // ★5 和收藏冊的金框呼應
+  signatureStarsGold: {
+    backgroundColor: '#FFB800',
+    color: '#5A3200',
   },
   owner: {
     flexDirection: 'row',

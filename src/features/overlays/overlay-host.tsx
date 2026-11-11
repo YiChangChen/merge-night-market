@@ -6,11 +6,12 @@ import { GrandmaHint } from './grandma-hint';
 import { InventionShow } from './invention-show';
 import { useOverlayStore } from './overlay-store';
 import { SelloutShow } from './sellout-show';
+import { StarShow } from './star-show';
 import { StallPanel } from './stall-panel';
 
 /**
  * Overlay Host：掛在根層，面板與演出都以元件顯示，不走路由（架構〈Navigation〉）。
- * 由下往上：攤位面板 → 完售演出（S2.4）→ 首次發明演出（S3.4）→ 阿嬤提示（S4.4）→ 小提示。
+ * 由下往上：攤位面板 → 完售演出（S2.4）→ 首次發明演出（S3.4）→ 升星演出（S5.3）→ 阿嬤提示（S4.4）→ 小提示。
  */
 export function OverlayHost() {
   const stallPanel = useOverlayStore((store) => store.stallPanel);
@@ -19,11 +20,13 @@ export function OverlayHost() {
   const finishSellout = useOverlayStore((store) => store.finishSellout);
   const invention = useOverlayStore((store) => store.invention);
   const finishInvention = useOverlayStore((store) => store.finishInvention);
+  const starred = useOverlayStore((store) => store.starred);
+  const finishStarred = useOverlayStore((store) => store.finishStarred);
   const hint = useOverlayStore((store) => store.hint);
   const finishHint = useOverlayStore((store) => store.finishHint);
   const dishMade = useOverlayStore((store) => store.dishMade);
   const hideDishMade = useOverlayStore((store) => store.hideDishMade);
-  // 會擋住操作、需要返回鍵關閉的層（小提示不擋操作，不算）
+  // 會擋住操作、需要返回鍵關閉的層（小提示與升星演出不擋操作，不算）
   const blocking = stallPanel !== null || sellout !== null || invention !== null || hint !== null;
 
   // Android 返回鍵：由上往下關閉最上層；不要切換分頁或離開 App
@@ -61,6 +64,15 @@ export function OverlayHost() {
       ) : null}
       {invention ? (
         <InventionShow key={invention.token} recipe={invention.recipe} onDone={finishInvention} />
+      ) : null}
+      {/* 首次發明的全螢幕演出播放時，升星演出先等，不疊在上面（E5 code review） */}
+      {starred && !invention ? (
+        <StarShow
+          key={starred.token}
+          recipe={starred.recipe}
+          stars={starred.stars}
+          onDone={finishStarred}
+        />
       ) : null}
       {hint ? <GrandmaHint key={hint.token} recipe={hint.recipe} onDone={finishHint} /> : null}
       {dishMade ? (

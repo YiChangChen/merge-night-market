@@ -1,6 +1,16 @@
 // Story 3.1：配方與發明菜資料的完整性（FR26、FR30）。內容依 docs/content.md 第 2、3 節的定稿。
 import { webpSize } from '../../../test-utils/webp-size';
-import { CHAIN_IDS, CHAINS, RECIPE_IDS, RECIPES, RECIPES_BY_ID } from '../content';
+import {
+  CARD_FACE_INSET,
+  CARD_FRAMES,
+  CARDS,
+  CARDS_BY_RECIPE,
+  CHAIN_IDS,
+  CHAINS,
+  RECIPE_IDS,
+  RECIPES,
+  RECIPES_BY_ID,
+} from '../content';
 
 type Fs = {
   readFileSync(file: string, encoding: 'utf8'): string;
@@ -94,5 +104,56 @@ describe('發明菜圖示（art-manifest #32–#41）', () => {
     expect(recipe.art).toBeTruthy();
     const { width, height } = webpSize(`${root}/${recipe.id}.webp`);
     expect(Math.max(width, height)).toBeLessThanOrEqual(512);
+  });
+});
+
+describe('卡牌（S5.1、FR33）', () => {
+  const root = `${cwd()}/assets/images/cards`;
+  // 第 4 節（卡牌故事）的表格列：| `recipe-id` | 故事 |
+  const storySection = doc.slice(doc.indexOf('## 4. 卡牌故事'), doc.indexOf('## 5.'));
+  const storyFor = (id: string) =>
+    storySection
+      .split(/\r?\n/)
+      .find((line) => line.startsWith(`| \`${id}\``))
+      ?.split('|')[2]
+      ?.trim();
+
+  it('卡牌和配方一一對應，順序相同', () => {
+    expect(CARDS.map((card) => card.recipe)).toEqual([...RECIPE_IDS]);
+    for (const id of RECIPE_IDS) expect(CARDS_BY_RECIPE[id].recipe).toBe(id);
+  });
+
+  it.each(CARDS)('$recipe：故事與 docs/content.md 第 4 節逐字相同，負責老闆同配方', (card) => {
+    expect(card.story).toBe(storyFor(card.recipe));
+    expect(card.owner).toBe(RECIPES_BY_ID[card.recipe].owner);
+  });
+
+  it('cards/ 下是 10 張卡面加 2 種卡框，不多不少', () => {
+    const files = fs.readdirSync(root).filter((name) => name.endsWith('.webp'));
+    expect(files.map((name) => name.replace(/\.webp$/, '')).sort()).toEqual(
+      [...RECIPE_IDS, 'frame-gold', 'frame-normal'].sort()
+    );
+  });
+
+  it.each(CARDS)('$recipe：已接上卡面，3:4、長邊 ≤ 1024', (card) => {
+    expect(card.art).toBeTruthy();
+    const { width, height } = webpSize(`${root}/${card.recipe}.webp`);
+    expect(Math.max(width, height)).toBeLessThanOrEqual(1024);
+    expect(width / height).toBeCloseTo(3 / 4, 2);
+  });
+
+  it('卡面內縮比例和美術處理腳本一致（腳本負責檢查卡框蓋得住卡面邊緣）', () => {
+    const script = fs.readFileSync(`${cwd()}/art-source/scripts/process-e5-art.py`, 'utf8');
+    const match = /^FACE_INSET = \(([^)]*)\)/m.exec(script);
+    const { left, top, right, bottom } = CARD_FACE_INSET;
+    expect(match?.[1].split(',').map(Number)).toEqual([left, top, right, bottom]);
+  });
+
+  it('兩種卡框都接上，尺寸和卡面相同', () => {
+    expect(CARD_FRAMES.normal).toBeTruthy();
+    expect(CARD_FRAMES.gold).toBeTruthy();
+    const card = webpSize(`${root}/${RECIPE_IDS[0]}.webp`);
+    expect(webpSize(`${root}/frame-normal.webp`)).toEqual(card);
+    expect(webpSize(`${root}/frame-gold.webp`)).toEqual(card);
   });
 });

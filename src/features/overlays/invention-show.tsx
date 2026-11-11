@@ -13,7 +13,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { CardView } from '@/features/collection';
 import { RECIPES_BY_ID, type RecipeId, STALLS } from '@/game/content';
+import type { InventionState } from '@/game/types';
 
 /** 首次發明演出的長度；沒點跳過時自動結束 */
 export const INVENTION_SHOW_MS = 3200;
@@ -21,8 +23,13 @@ export const INVENTION_SHOW_MS = 3200;
 export const SHOW_TAP_GUARD_MS = 400;
 
 const RAY_COUNT = 12;
-const DISH_SIZE = 168;
+const DISH_SIZE = 150;
+// 光芒舞台：加了 ★1 卡牌後縮小一點，小螢幕（iPhone SE）也放得下
+const STAGE_SIZE = DISH_SIZE * 1.35;
 const AVATAR_SIZE = 56;
+const CARD_WIDTH = 112;
+// 首次發明一定是 ★1（made 1）
+const FIRST_CARD: InventionState = { discovered: true, made: 1, failures: 0, clueSeen: false };
 
 /** 發明菜背後慢慢轉動的光芒 */
 function Rays({ color }: { color: string }) {
@@ -54,7 +61,7 @@ type InventionShowProps = {
 
 /**
  * 「老闆發明！」全螢幕演出（S3.4、FR25、UX-DR5）：光芒、發明菜大圖、菜名、發明的老闆。
- * 點任何地方跳過，時間到自動結束。只讀內容資料，不寫入遊戲狀態。★1 卡牌在 E5 接上。
+ * 最後登場的是收藏冊的 ★1 卡牌（S5.3）。點任何地方跳過，時間到自動結束。只讀內容資料，不寫入遊戲狀態。
  */
 export function InventionShow({ recipe, onDone }: InventionShowProps) {
   const dish = RECIPES_BY_ID[recipe];
@@ -86,15 +93,17 @@ export function InventionShow({ recipe, onDone }: InventionShowProps) {
     if (tappable.current) onDone();
   };
 
-  // 發明菜彈出、標題稍後落下、老闆最後登場
+  // 發明菜彈出、標題稍後落下、老闆登場，最後翻出 ★1 卡牌
   const pop = useSharedValue(0);
   const title = useSharedValue(0);
   const owner = useSharedValue(0);
+  const card = useSharedValue(0);
   useEffect(() => {
     pop.set(withSequence(withSpring(1.12, { damping: 7 }), withTiming(1, { duration: 160 })));
     title.set(withDelay(200, withSpring(1, { damping: 10 })));
     owner.set(withDelay(500, withTiming(1, { duration: 300 })));
-  }, [owner, pop, title]);
+    card.set(withDelay(850, withSpring(1, { damping: 9 })));
+  }, [card, owner, pop, title]);
   const dishStyle = useAnimatedStyle(() => ({
     opacity: Math.min(1, pop.get()),
     transform: [{ scale: pop.get() }],
@@ -106,6 +115,15 @@ export function InventionShow({ recipe, onDone }: InventionShowProps) {
   const ownerStyle = useAnimatedStyle(() => ({
     opacity: owner.get(),
     transform: [{ translateY: (1 - owner.get()) * 16 }],
+  }));
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, card.get()),
+    // Android 的 3D 旋轉要先給 perspective 才不會變形（E5 code review）
+    transform: [
+      { perspective: 800 },
+      { scale: 0.5 + 0.5 * card.get() },
+      { rotateY: `${(1 - card.get()) * 90}deg` },
+    ],
   }));
 
   return (
@@ -141,8 +159,10 @@ export function InventionShow({ recipe, onDone }: InventionShowProps) {
           />
           <Text style={styles.ownerText}>{stall.owner.name}的新菜色</Text>
         </Animated.View>
-        {/* ★1 卡牌（收藏冊）在 E5 接上，先保留位置 */}
-        <View testID="invention-card-slot" style={styles.cardSlot} />
+        {/* 收藏冊的 ★1 卡牌（UX-DR5） */}
+        <Animated.View style={cardStyle}>
+          <CardView recipe={recipe} invention={FIRST_CARD} width={CARD_WIDTH} />
+        </Animated.View>
         <Text style={styles.hint}>點一下繼續</Text>
       </View>
     </Pressable>
@@ -170,8 +190,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
   },
   stage: {
-    width: DISH_SIZE * 1.6,
-    height: DISH_SIZE * 1.6,
+    width: STAGE_SIZE,
+    height: STAGE_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -183,7 +203,7 @@ const styles = StyleSheet.create({
   ray: {
     position: 'absolute',
     width: 14,
-    height: DISH_SIZE * 1.6,
+    height: STAGE_SIZE,
     borderRadius: 7,
     opacity: 0.22,
   },
@@ -216,9 +236,6 @@ const styles = StyleSheet.create({
     color: '#FFD966',
     fontSize: 16,
     fontWeight: '700',
-  },
-  cardSlot: {
-    height: 8,
   },
   hint: {
     color: '#9FB3D1',

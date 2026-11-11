@@ -52,8 +52,15 @@ export function startFxController(): () => void {
           useOverlayStore.getState().playHint(event.recipe);
         }
         break;
+      case 'card_starred':
+        // 升星演出（S5.3）：馬上開播時，同一次製作的「又做出一份」小提示由它取代；
+        // 要排隊時保留小提示，這次製作才有即時回饋（E5 code review）
+        if (!useOverlayStore.getState().starred && !useOverlayStore.getState().invention) {
+          useOverlayStore.getState().hideDishMade();
+        }
+        useOverlayStore.getState().playStarred(event.recipe, event.stars);
+        break;
       default:
-        // 其他演出（卡牌升星…）由之後的 story 加入
         break;
     }
   });

@@ -1,6 +1,7 @@
 // 遊戲內容與數值。
 export * from './balance';
 export * from './board';
+export * from './cards';
 export * from './chains';
 export * from './characters';
 export * from './customers';

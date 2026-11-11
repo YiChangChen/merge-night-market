@@ -6,11 +6,13 @@ import { useShallow } from 'zustand/shallow';
 
 import { CHAIN_IDS, type ChainId, STALLS } from '@/game/content';
 import {
+  debugAddCardMade,
   debugAddCoins,
   debugAddEnergy,
   debugMinStallLevel,
   debugNewGame,
   debugQueueLastCustomer,
+  debugRevealClues,
   debugSetPlayerLevel,
   debugSetStallLevel,
 } from '@/game/debug';
@@ -224,6 +226,25 @@ export function DebugPanel() {
             testID="debug-queue-last"
             label="剩最後 1 位"
             onPress={() => apply(debugQueueLastCustomer)}
+          />
+        </View>
+
+        <Text style={styles.section}>卡牌（已發現的卡加製作次數；不播升星演出）</Text>
+        <View style={styles.row}>
+          <DebugButton
+            testID="debug-card-made-1"
+            label="各 +1 份"
+            onPress={() => apply((s) => debugAddCardMade(s, 1))}
+          />
+          <DebugButton
+            testID="debug-card-made-5"
+            label="各 +5 份"
+            onPress={() => apply((s) => debugAddCardMade(s, 5))}
+          />
+          <DebugButton
+            testID="debug-reveal-clues"
+            label="線索全看過"
+            onPress={() => apply(debugRevealClues)}
           />
         </View>
 

@@ -52,12 +52,17 @@ export function vipOrder(
     kind: 'vip',
     recipe,
     requirements: [],
+    // 連乘會累積浮點誤差（例如 379.4999…），先收到小數 6 位再四捨五入，剛好 .5 時才會進位（E5 code review）
     coins: Math.round(
-      BALANCE.orderCoinsPerBase *
-        cost *
-        multiplier *
-        BALANCE.vipCoinMultiplier *
-        (1 + cardBonus(state, recipe))
+      Number(
+        (
+          BALANCE.orderCoinsPerBase *
+          cost *
+          multiplier *
+          BALANCE.vipCoinMultiplier *
+          (1 + cardBonus(state, recipe))
+        ).toFixed(6)
+      )
     ),
     xp: (a.level + b.level) * BALANCE.vipXpPerLevel,
     energy: Math.ceil(cost * BALANCE.orderEnergyRefund),

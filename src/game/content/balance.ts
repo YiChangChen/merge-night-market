@@ -24,6 +24,9 @@ export const BALANCE = {
   // 金幣 = 5 × 材料 baseCost 總和 × 兩攤加成平均 × 3 × (1 + 卡牌加成)；XP = 材料階數總和 × 2
   vipCoinMultiplier: 3,
   vipXpPerLevel: 2,
+  // 卡牌星等（FR34）：made 達到這些份數依序為 ★1–★5；加成以星等為 index（★0、★1 都是 0）
+  cardStarThresholds: [1, 3, 6, 10, 15],
+  cardStarBonus: [0, 0, 0.1, 0.2, 0.35, 0.5],
   // 線索單（FR29）：貴客判定成立、而且還有未發現的可發明配方時，這個機率改為線索單；10 分鐘後離開
   clueChance: 0.5,
   clueDurationMs: 10 * 60 * 1000,

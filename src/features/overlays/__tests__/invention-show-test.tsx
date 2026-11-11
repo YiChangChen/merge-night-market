@@ -46,15 +46,18 @@ describe('首次發明演出（S3.4、FR25、UX-DR5）', () => {
     expect(useOverlayStore.getState().dishMade).toMatchObject({ recipe: 'tea-fried' });
   });
 
-  it('顯示發明菜名稱、發明的老闆與名字，並保留卡牌的位置', async () => {
+  it('顯示發明菜名稱、發明的老闆與名字，以及 ★1 卡牌（UX-DR5）', async () => {
     useOverlayStore.getState().playInvention('noodle-dumpling');
     await render(<OverlayHost />);
 
     expect(screen.getByText('老闆發明！')).toBeTruthy();
-    expect(screen.getByText('麵線小籠湯')).toBeTruthy();
+    // 菜名出現兩次：大標與卡牌名牌
+    expect(screen.getAllByText('麵線小籠湯')).toHaveLength(2);
     // 麵線小籠湯的負責老闆是林嬸（noodle）
     expect(screen.getByText('林嬸的新菜色')).toBeTruthy();
-    expect(screen.getByTestId('invention-card-slot')).toBeTruthy();
+    expect(screen.getByTestId('card-noodle-dumpling')).toBeTruthy();
+    expect(screen.getByText('★☆☆☆☆')).toBeTruthy();
+    expect(screen.getByTestId('card-frame-normal-noodle-dumpling')).toBeTruthy();
     expect(screen.getByLabelText('老闆發明！林嬸做出了麵線小籠湯。點一下繼續')).toBeTruthy();
   });
 
@@ -92,11 +95,11 @@ describe('首次發明演出（S3.4、FR25、UX-DR5）', () => {
     useOverlayStore.getState().playInvention('fried-sweet');
     await render(<OverlayHost />);
 
-    expect(screen.getByText('紅茶鹽酥雞套餐')).toBeTruthy();
+    expect(screen.getAllByText('紅茶鹽酥雞套餐')).toHaveLength(2);
     await act(async () => {
       jest.advanceTimersByTime(INVENTION_SHOW_MS);
     });
-    expect(screen.getByText('甜鹹地瓜雞')).toBeTruthy();
+    expect(screen.getAllByText('甜鹹地瓜雞')).toHaveLength(2);
     await act(async () => {
       jest.advanceTimersByTime(INVENTION_SHOW_MS);
     });

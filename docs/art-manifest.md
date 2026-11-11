@@ -86,27 +86,31 @@ GDD〈素材需求〉的 54 張新美術，依交付批次列出。每張圖完�
 
 ## E5 批次：卡牌（12 張）
 
+提示詞：[art-prompts-e5.md](art-prompts-e5.md)（建議先產一般框與 #43 確認風格）。
+
+2026-11-11 定稿：原圖在 `art-source/`（`card-<recipe-id>.png`、`frame-normal.png`、`frame-gold.png`），由 `art-source/scripts/process-e5-art.py` 處理。卡框去背；卡面不鋪滿整張卡，依 `CARD_FACE_INSET`（左右 8%、上 6%、下 10%）內縮，邊緣藏在框條底下，腳本會檢查兩種卡框都蓋得住。
+
 | # | 素材 | 路徑 | 尺寸上限 | 狀態 |
 |---|---|---|---|---|
-| 43 | 卡面：紅茶鹽酥雞套餐（阿珍） | `cards/tea-fried.webp` | 1024 | 占位 |
-| 44 | 卡面：茶香蚵仔麵線（林嬸） | `cards/tea-noodle.webp` | 1024 | 占位 |
-| 45 | 卡面：雞排麵線（阿炮） | `cards/fried-noodle.webp` | 1024 | 占位 |
-| 46 | 卡面：奶茶煎餃（老王） | `cards/tea-dumpling.webp` | 1024 | 占位 |
-| 47 | 卡面：炸煎雙拼（阿炮） | `cards/fried-dumpling.webp` | 1024 | 占位 |
-| 48 | 卡面：麵線小籠湯（林嬸） | `cards/noodle-dumpling.webp` | 1024 | 占位 |
-| 49 | 卡面：珍奶雞蛋糕（阿珍） | `cards/tea-sweet.webp` | 1024 | 占位 |
-| 50 | 卡面：甜鹹地瓜雞（小葵） | `cards/fried-sweet.webp` | 1024 | 占位 |
-| 51 | 卡面：夜市甜鹹雙拼（小葵） | `cards/noodle-sweet.webp` | 1024 | 占位 |
-| 52 | 卡面：冰火小籠塔（老王） | `cards/dumpling-sweet.webp` | 1024 | 占位 |
-| 53 | 卡框：一般 | `cards/frame-normal.webp` | 1024 | 占位 |
-| 54 | 卡框：★5 金框 | `cards/frame-gold.webp` | 1024 | 占位 |
+| 43 | 卡面：紅茶鹽酥雞套餐（阿珍） | `cards/tea-fried.webp` | 1024 | 定稿 |
+| 44 | 卡面：茶香蚵仔麵線（林嬸） | `cards/tea-noodle.webp` | 1024 | 定稿 |
+| 45 | 卡面：雞排麵線（阿炮） | `cards/fried-noodle.webp` | 1024 | 草稿（人物不符：拿湯勺的是阿珍，應為林嬸；重產中，見 [E5 提示詞 #45 重產](art-prompts-e5.md#45-雞排麵線重產e5-code-review)） |
+| 46 | 卡面：奶茶煎餃（老王） | `cards/tea-dumpling.webp` | 1024 | 定稿 |
+| 47 | 卡面：炸煎雙拼（阿炮） | `cards/fried-dumpling.webp` | 1024 | 定稿 |
+| 48 | 卡面：麵線小籠湯（林嬸） | `cards/noodle-dumpling.webp` | 1024 | 定稿 |
+| 49 | 卡面：珍奶雞蛋糕（阿珍） | `cards/tea-sweet.webp` | 1024 | 定稿 |
+| 50 | 卡面：甜鹹地瓜雞（小葵） | `cards/fried-sweet.webp` | 1024 | 定稿 |
+| 51 | 卡面：夜市甜鹹雙拼（小葵） | `cards/noodle-sweet.webp` | 1024 | 定稿 |
+| 52 | 卡面：冰火小籠塔（老王） | `cards/dumpling-sweet.webp` | 1024 | 定稿 |
+| 53 | 卡框：一般 | `cards/frame-normal.webp` | 1024 | 定稿 |
+| 54 | 卡框：★5 金框 | `cards/frame-gold.webp` | 1024 | 定稿 |
 
 ## 進度
 
 | 批次 | 張數 | 定稿 | 驗收 story |
 |---|---|---|---|
 | E1 | 31 | 31 | S1.10 |
-| E3 | 10 | 0 | S3.5 |
-| E4 | 1 | 0 | S4.4 |
-| E5 | 12 | 0 | S5.3 |
-| **合計** | **54** | **31** | S7.7 |
+| E3 | 10 | 10 | S3.5 |
+| E4 | 1 | 1 | S4.4 |
+| E5 | 12 | 11 | S5.3 |
+| **合計** | **54** | **53** | S7.7 |

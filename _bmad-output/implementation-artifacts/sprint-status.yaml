@@ -1,5 +1,5 @@
 # generated: 2026-11-09
-# last_updated: 2026-11-10
+# last_updated: 2026-11-11
 # project: merge-night-market
 # project_key: NOKEY
 # tracking_system: file-system
@@ -38,7 +38,7 @@
 # Epic 1 順序依 2026-11-09 Sprint Change Proposal：1.0 可與 1.1～1.5 並行，須在 1.7 前完成。
 
 generated: 2026-11-09
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 project: merge-night-market
 project_key: NOKEY
 tracking_system: file-system
@@ -88,10 +88,10 @@ development_status:
   epic-4-retrospective: done
 
   # Epic 5：發明菜收藏冊
-  epic-5: backlog
-  5-1-card-data-and-star-bonus: backlog
-  5-2-collection-screen: backlog
-  5-3-card-shows-and-signature-stars: backlog
+  epic-5: in-progress
+  5-1-card-data-and-star-bonus: review
+  5-2-collection-screen: done
+  5-3-card-shows-and-signature-stars: review
   epic-5-retrospective: optional
 
   # Epic 6：開幕週與激勵廣告

@@ -153,3 +153,59 @@ describe('招牌菜（S3.5、code review 2026-11-11）', () => {
     expect(screen.queryByTestId('stall-tea-signature')).toBeNull();
   });
 });
+
+describe('招牌菜星等徽章（S5.3、FR13）', () => {
+  async function setTeaSignature(made: number) {
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && {
+          ...store.state,
+          stalls: { ...store.state.stalls, tea: { level: 3, signatureDish: 'tea-fried' } },
+          inventions: {
+            ...store.state.inventions,
+            'tea-fried': { discovered: true, made, failures: 0, clueSeen: false },
+          },
+        },
+      }));
+    });
+  }
+
+  it('顯示招牌菜目前的星等，升星時跟著更新', async () => {
+    await render(<StallView chain="tea" animate={false} />);
+
+    await setTeaSignature(1);
+    expect(screen.getByTestId('stall-tea-signature-stars')).toHaveTextContent('★1');
+
+    await setTeaSignature(15);
+    expect(screen.getByTestId('stall-tea-signature-stars')).toHaveTextContent('★5');
+    expect(screen.getByLabelText('招牌菜 紅茶鹽酥雞套餐，5 星')).toBeTruthy();
+  });
+
+  it('招牌菜沒有製作紀錄（存檔不一致）時不顯示 ★0', async () => {
+    await render(<StallView chain="tea" animate={false} />);
+
+    await setTeaSignature(0);
+    expect(screen.getByTestId('stall-tea-signature')).toBeTruthy();
+    expect(screen.queryByTestId('stall-tea-signature-stars')).toBeNull();
+    expect(screen.getByLabelText('招牌菜 紅茶鹽酥雞套餐')).toBeTruthy();
+  });
+
+  it('招牌菜多做一份但沒升星：攤位不重繪', async () => {
+    const onRender = jest.fn();
+    await render(
+      <Profiler id="tea" onRender={onRender}>
+        <StallView chain="tea" animate={false} />
+      </Profiler>
+    );
+    await setTeaSignature(3);
+    const rendersAtThree = onRender.mock.calls.length;
+
+    // 3 → 4 份都是 ★2
+    await setTeaSignature(4);
+    expect(onRender.mock.calls.length).toBe(rendersAtThree);
+
+    // 4 → 6 份升到 ★3，要重繪
+    await setTeaSignature(6);
+    expect(onRender.mock.calls.length).toBeGreaterThan(rendersAtThree);
+  });
+});

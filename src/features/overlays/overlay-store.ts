@@ -19,6 +19,9 @@ type OverlayStore = {
   /** 阿嬤提示（S4.4）；同一次失敗可能同時提示兩道，排隊依序顯示 */
   hint: { recipe: RecipeId; token: number } | null;
   pendingHints: RecipeId[];
+  /** 卡牌升星演出（S5.3）；同發明演出，播放中又升星就排隊 */
+  starred: { recipe: RecipeId; stars: number; token: number } | null;
+  pendingStarred: { recipe: RecipeId; stars: number }[];
   /** 已發現的配方又做出一份：棋盤上方的小提示（S3.4） */
   dishMade: { recipe: RecipeId; token: number } | null;
   openStallPanel: (chain: ChainId) => void;
@@ -35,6 +38,8 @@ type OverlayStore = {
   playHint: (recipe: RecipeId) => void;
   finishHint: () => void;
   hideDishMade: () => void;
+  playStarred: (recipe: RecipeId, stars: number) => void;
+  finishStarred: () => void;
   /** 換成另一局（除錯開新局、匯入存檔）時清掉所有面板、演出與排隊，舊進度的演出不會出現在新局 */
   reset: () => void;
 };
@@ -51,10 +56,12 @@ const INITIAL = {
   dishMade: null,
   hint: null,
   pendingHints: [],
+  starred: null,
+  pendingStarred: [],
 } as const;
 
 export const useOverlayStore = create<OverlayStore>()((set) => ({
-  reset: () => set({ ...INITIAL, pendingInventions: [], pendingHints: [] }),
+  reset: () => set({ ...INITIAL, pendingInventions: [], pendingHints: [], pendingStarred: [] }),
   stallPanel: null,
   shutterOpening: {},
   neonPowerOn: {},
@@ -64,6 +71,8 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
   dishMade: null,
   hint: null,
   pendingHints: [],
+  starred: null,
+  pendingStarred: [],
   openStallPanel: (chain) => set({ stallPanel: chain }),
   closeStallPanel: () => set({ stallPanel: null }),
   playShutter: (chain) =>
@@ -97,6 +106,19 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
     }),
   showDishMade: (recipe) => set({ dishMade: { recipe, token: ++sequence } }),
   hideDishMade: () => set({ dishMade: null }),
+  playStarred: (recipe, stars) =>
+    set((store) =>
+      store.starred
+        ? { pendingStarred: [...store.pendingStarred, { recipe, stars }] }
+        : { starred: { recipe, stars, token: ++sequence } }
+    ),
+  finishStarred: () =>
+    set((store) => {
+      const [next, ...rest] = store.pendingStarred;
+      return next
+        ? { starred: { ...next, token: ++sequence }, pendingStarred: rest }
+        : { starred: null, pendingStarred: [] };
+    }),
   playHint: (recipe) =>
     set((store) =>
       store.hint

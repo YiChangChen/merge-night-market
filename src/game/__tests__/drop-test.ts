@@ -177,13 +177,14 @@ describe('applyDrop', () => {
   it('已發現的配方再做一次：made + 1，first = false，保留失敗次數與線索紀錄', () => {
     const state = {
       ...setup({ 0: item(1, 'fried', 3), 1: item(2, 'tea', 3) }),
-      inventions: { 'tea-fried': { discovered: true, made: 2, failures: 4, clueSeen: true } },
+      // made 3→4 不跨星等門檻，只有 dish_invented（升星事件見 cards-test）
+      inventions: { 'tea-fried': { discovered: true, made: 3, failures: 4, clueSeen: true } },
     };
     const next = applyDrop(state, 0, 1, NOW);
 
     expect(next.inventions['tea-fried']).toEqual({
       discovered: true,
-      made: 3,
+      made: 4,
       failures: 4,
       clueSeen: true,
     });

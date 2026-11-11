@@ -222,7 +222,9 @@ describe('攤位成長讓人龍加長（FR18）', () => {
 
 describe('needsTick（store 的每秒 tick）', () => {
   it('體力滿且人龍進行中：false', () => {
-    expect(needsTick(withQueue({ remaining: 5 }, { energy: BALANCE.maxEnergy }), NOW)).toBe(false);
+    expect(
+      needsTick(withQueue({ remaining: 5 }, { energy: BALANCE.openingWeekMaxEnergy }), NOW)
+    ).toBe(false);
   });
 
   it('體力沒滿：true', () => {
@@ -232,7 +234,7 @@ describe('needsTick（store 的每秒 tick）', () => {
   it('冷卻中、體力滿：還沒到期時 false（不每秒存檔），到期時 true（開新一波）', () => {
     const state = withQueue(
       { remaining: 0, cooldownEndsAt: NOW + COOLDOWN },
-      { energy: BALANCE.maxEnergy + 10 }
+      { energy: BALANCE.openingWeekMaxEnergy + 10 }
     );
     expect(needsTick(state, NOW)).toBe(false);
     expect(needsTick(state, NOW + COOLDOWN - 1)).toBe(false);
@@ -242,7 +244,7 @@ describe('needsTick（store 的每秒 tick）', () => {
   it('時鐘倒退讓剩餘冷卻超過 3 分鐘：true（立刻截短，閒置時冷卻也不會被拉長）', () => {
     const state = withQueue(
       { remaining: 0, cooldownEndsAt: NOW + COOLDOWN },
-      { energy: BALANCE.maxEnergy }
+      { energy: BALANCE.openingWeekMaxEnergy }
     );
     expect(needsTick(state, NOW - 60 * 60 * 1000)).toBe(true);
   });

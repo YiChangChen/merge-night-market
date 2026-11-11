@@ -4,7 +4,9 @@ export const BALANCE = {
   boardColumns: 7,
   boardRows: 8,
   orderSlots: 3,
+  // 體力上限：開幕週（openingWeekMs）內是 openingWeekMaxEnergy，之後是 maxEnergy（FR36，見 daily.ts maxEnergy）
   maxEnergy: 100,
+  openingWeekMaxEnergy: 200,
   energyRegenMs: 2 * 60 * 1000,
   spawnEnergyCost: 1,
   // 產生器有這個機率直接產出 2 階品項
@@ -46,8 +48,14 @@ export const BALANCE = {
   selloutXpPerCustomer: 1,
   // 開幕週長度：首次啟動後 72 小時（FR36）
   openingWeekMs: 72 * 60 * 60 * 1000,
+  // 激勵廣告（FR37、FR38、NP-4）：補體力每次 +20、每日 5 次；完售加倍每日 3 次。每日以 UTC+8 午夜換日
+  adEnergy: 20,
+  adEnergyDailyLimit: 5,
+  adDoubleDailyLimit: 3,
   // 新手教學的步數；meta.tutorialStep 達到這個值代表教學完成（FR40）
   tutorialSteps: 3,
+  // 教學期間建立的一般單金幣倍率（S6.4）：Lv1 每張 25，8 張以內一定存到第一次升級的 200 金幣
+  tutorialOrderCoinMultiplier: 2.5,
 } as const;
 
 export const BOARD_SIZE = BALANCE.boardColumns * BALANCE.boardRows;

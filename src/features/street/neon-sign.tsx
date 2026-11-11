@@ -11,8 +11,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-/** 招牌通電演出的長度；結束後回到一般的閃爍 */
-export const NEON_POWER_ON_MS = 900;
+/** 招牌通電演出的長度；結束後回到一般的閃爍。升級慶祝（upgrade-burst）也播這麼久（實機回饋：原本 0.9 秒太快） */
+export const NEON_POWER_ON_MS = 2000;
 
 // 沒亮的霓虹管仍然隱約看得到，像關掉的燈管
 const OFF_OPACITY = 0.12;
@@ -45,7 +45,12 @@ function NeonSegment({ source, lit, animate, delay, poweringOn }: NeonSegmentPro
           withTiming(0.15, { duration: 120 }),
           withTiming(1, { duration: 80 }),
           withTiming(0.35, { duration: 160 }),
-          withTiming(1, { duration: 200 })
+          withTiming(1, { duration: 200 }),
+          withTiming(1, { duration: 300 }),
+          withTiming(0.3, { duration: 100 }),
+          withTiming(1, { duration: 120 }),
+          withTiming(0.6, { duration: 180 }),
+          withTiming(1, { duration: 260 })
         )
       );
       return () => cancelAnimation(opacity);

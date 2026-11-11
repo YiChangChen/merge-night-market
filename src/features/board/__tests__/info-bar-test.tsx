@@ -1,7 +1,7 @@
 // S3.4：資訊列（UX-DR12）。點選發明菜後顯示名稱、份數與賣出價。
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { BOARD_SIZE } from '@/game/content';
+import { BALANCE, BOARD_SIZE } from '@/game/content';
 import { createGame, type Piece } from '@/game/engine';
 import { useGameStore } from '@/game/store';
 
@@ -10,8 +10,15 @@ import { InfoBar } from '../info-bar';
 function setBoard(cells: Record<number, Piece>) {
   const board = Array<Piece | null>(BOARD_SIZE).fill(null);
   for (const [cell, piece] of Object.entries(cells)) board[Number(cell)] = piece;
+  const base = createGame(1_000_000, 1);
   useGameStore.setState({
-    state: { ...createGame(1_000_000, 1), board, nextId: 1000 },
+    // 教學已完成：教學期間資訊列改顯示教學說明（S6.4，見 tutorial-guide-test）
+    state: {
+      ...base,
+      board,
+      nextId: 1000,
+      meta: { ...base.meta, tutorialStep: BALANCE.tutorialSteps },
+    },
     status: { kind: 'ready' },
   });
 }

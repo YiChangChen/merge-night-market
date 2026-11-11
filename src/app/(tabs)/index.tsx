@@ -12,7 +12,10 @@ import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, ORDER_LABEL_HEIGHT, OrderCard } from '@/features/orders';
 import { useOverlayStore } from '@/features/overlays';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
+import { TutorialTarget } from '@/features/tutorial';
+import { useIdleMergePair } from '@/features/tutorial/merge-hint';
 import { BALANCE, BOARD_BACKGROUND } from '@/game/content';
+import { maxEnergy } from '@/game/daily';
 import { applyDrop, resolveDrop } from '@/game/drop';
 import { dismissOrder } from '@/game/orders';
 import {
@@ -59,6 +62,8 @@ function Hud() {
             coins: store.state.coins,
             energy: store.state.energy,
             energyUpdatedAt: store.state.energyUpdatedAt,
+            // 開幕週的體力上限（S6.1）依首次啟動時間推算
+            firstLaunchAt: store.state.meta.firstLaunchAt,
           }
         : null
     )
@@ -72,7 +77,9 @@ function Hud() {
     return () => clearInterval(timer);
   }, []);
   if (!state) return null;
-  const untilNext = msUntilNextEnergy(state, now + timeOffsetMs);
+  const energyState = { ...state, meta: { firstLaunchAt: state.firstLaunchAt } };
+  const untilNext = msUntilNextEnergy(energyState, now + timeOffsetMs);
+  const cap = maxEnergy(energyState, now + timeOffsetMs);
   return (
     <View style={styles.hud}>
       <Text style={styles.hudText}>
@@ -80,7 +87,7 @@ function Hud() {
       </Text>
       <Text style={styles.hudText}>🪙 {state.coins}</Text>
       <Text style={styles.hudText} testID="energy">
-        ⚡ {state.energy}/{BALANCE.maxEnergy}
+        ⚡ {state.energy}/{cap}
         {untilNext !== null ? ` · ${formatCountdown(untilNext)}` : ''}
       </Text>
     </View>
@@ -91,10 +98,13 @@ function Orders({
   artSize,
   onComplete,
   onDismiss,
+  active,
 }: {
   artSize: { width: number; height: number };
   onComplete: (id: number) => void;
   onDismiss: (id: number) => void;
+  /** 棋盤分頁在前景（新手引導才量測第一張訂單的位置） */
+  active: boolean;
 }) {
   const orders = useGameStore((store) => store.state?.orders);
   const board = useGameStore((store) => store.state?.board);
@@ -102,7 +112,7 @@ function Orders({
   return (
     // 高度和棋盤版面計算時預留的一致（客人圖 + 品名標籤），不依賴子元件撐開
     <View style={[styles.orders, { height: artSize.height + ORDER_LABEL_HEIGHT }]}>
-      {orders.map((order) => (
+      {orders.map((order, index) => (
         <Animated.View
           key={order.id}
           // 等其他卡片讓出位置才進場，避免疊在一起
@@ -110,13 +120,16 @@ function Orders({
           exiting={ZoomOut.duration(ORDER_EXIT_MS)}
           layout={LinearTransition.duration(ORDER_SHIFT_MS)}
           style={styles.orderSlot}>
-          <OrderCard
-            order={order}
-            ready={findOrderCells({ board }, order) !== null}
-            artSize={artSize}
-            onComplete={onComplete}
-            onDismiss={onDismiss}
-          />
+          {/* 新手引導第 2 步指向做得出來的那張訂單（S6.4） */}
+          <TutorialTarget id={`order-${index}`} active={active} style={styles.orderSlot}>
+            <OrderCard
+              order={order}
+              ready={findOrderCells({ board }, order) !== null}
+              artSize={artSize}
+              onComplete={onComplete}
+              onDismiss={onDismiss}
+            />
+          </TutorialTarget>
         </Animated.View>
       ))}
     </View>
@@ -152,6 +165,8 @@ export default function GameScreen() {
       store.hint !== null
   );
   const [toast, setToast] = useState<string | null>(null);
+  // 合成小提示（S6.4）：棋盤停著一段時間，可以合成的一對會晃動
+  const hintCells = useIdleMergePair(focused && !overlayBlocking);
 
   useEffect(() => {
     if (!toast) return;
@@ -251,18 +266,27 @@ export default function GameScreen() {
       <View style={[styles.content, { width: boardWidth }]}>
         <Hud />
         <QueueMeter />
-        <Orders artSize={artSize} onComplete={handleCompleteOrder} onDismiss={handleDismissOrder} />
+        <Orders
+          artSize={artSize}
+          onComplete={handleCompleteOrder}
+          onDismiss={handleDismissOrder}
+          active={focused}
+        />
         <InfoBar selected={selected} onSell={handleSell} />
         <View style={styles.boardArea}>
-          <Board
-            board={board}
-            cellSize={cellSize}
-            selected={selected}
-            onTapCell={handleTapCell}
-            onMove={handleMove}
-            previewDrop={previewDrop}
-            animate={focused && !overlayBlocking}
-          />
+          {/* 新手引導第 1 步與合成小提示：依棋盤外框算出格子位置（S6.4） */}
+          <TutorialTarget id="board" active={focused} always>
+            <Board
+              board={board}
+              cellSize={cellSize}
+              selected={selected}
+              onTapCell={handleTapCell}
+              onMove={handleMove}
+              previewDrop={previewDrop}
+              animate={focused && !overlayBlocking}
+              hintCells={hintCells}
+            />
+          </TutorialTarget>
         </View>
         {toast ? (
           <View pointerEvents="none" style={styles.toast}>

@@ -320,13 +320,13 @@ describe('needsTick：線索單（AC5 修訂）', () => {
     });
 
   it('體力已滿：線索單到期時為 true（才會移除），還沒到期時為 false（不每秒存檔）', () => {
-    const state = { ...full(NOW + CLUE_MS), energy: BALANCE.maxEnergy };
+    const state = { ...full(NOW + CLUE_MS), energy: BALANCE.openingWeekMaxEnergy };
     expect(needsTick(state, NOW)).toBe(false);
     expect(needsTick(state, NOW + CLUE_MS)).toBe(true);
   });
 
   it('時鐘倒退讓剩餘時間超過 10 分鐘：true（立刻截短）', () => {
-    const state = { ...full(NOW + CLUE_MS), energy: BALANCE.maxEnergy };
+    const state = { ...full(NOW + CLUE_MS), energy: BALANCE.openingWeekMaxEnergy };
     expect(needsTick(state, NOW - 60 * 60 * 1000)).toBe(true);
   });
 });
@@ -420,7 +420,7 @@ describe('E4 code review：貴客只指定做得出來的菜、線索解開後�
       found: ['tea-fried', 'tea-sweet'],
       orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
     });
-    const full = { ...state, energy: BALANCE.maxEnergy };
+    const full = { ...state, energy: BALANCE.openingWeekMaxEnergy };
     expect(needsTick(full, NOW)).toBe(true);
     const next = syncOrders(state, NOW);
     expect(next.orders.some((o) => o.id === 2)).toBe(false);

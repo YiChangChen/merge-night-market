@@ -5,10 +5,13 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
 import { useOverlayStore } from '@/features/overlays';
+import { useTutorialTarget } from '@/features/tutorial/tutorial-targets';
 import { cardStars } from '@/game/cards';
 import { type ChainId, RECIPES_BY_ID, STALLS } from '@/game/content';
 import { useGameStore } from '@/game/store';
@@ -16,6 +19,7 @@ import { useGameStore } from '@/game/store';
 import { NeonSign } from './neon-sign';
 import { RollingShutter } from './rolling-shutter';
 import { StallQueue } from './stall-queue';
+import { UpgradeBurst } from './upgrade-burst';
 
 export const STALL_WIDTH = 220;
 
@@ -29,9 +33,12 @@ const APPEARANCE = [
 
 const FACADE_HEIGHT = 250;
 
-// 換外觀時新舊兩張圖交叉淡入，尺寸同時平滑長大，不會突然跳一下
-const FACADE_FADE_MS = 280;
+// 換外觀時新舊兩張圖交叉淡入，尺寸同時平滑長大，不會突然跳一下。
+// 升級時放慢並彈一下（實機回饋：原本 0.3 秒太快，感受不到升級）
+const FACADE_FADE_MS = 600;
 const FACADE_GROW_MS = 320;
+const FACADE_UPGRADE_GROW_MS = 520;
+const FACADE_OVERSHOOT = 1.12;
 const FACADE_TRANSITION = { duration: FACADE_FADE_MS, effect: 'cross-dissolve' } as const;
 
 type StallViewProps = {
@@ -59,8 +66,20 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
   // 外觀用 scale 縮放（以底部為基準），不改版面尺寸，動畫只在 UI 執行緒跑
   const scale = useSharedValue<number>(appearance.scale);
   useEffect(() => {
+    // 變大（重開、升級）時先長過頭再彈回；變小（除錯調低等級）時直接縮
     scale.set(
-      withTiming(appearance.scale, { duration: FACADE_GROW_MS, easing: Easing.out(Easing.cubic) })
+      appearance.scale > scale.get()
+        ? withSequence(
+            withTiming(appearance.scale * FACADE_OVERSHOOT, {
+              duration: FACADE_UPGRADE_GROW_MS,
+              easing: Easing.out(Easing.cubic),
+            }),
+            withSpring(appearance.scale, { damping: 6, stiffness: 140 })
+          )
+        : withTiming(appearance.scale, {
+            duration: FACADE_GROW_MS,
+            easing: Easing.out(Easing.cubic),
+          })
     );
   }, [appearance.scale, scale]);
   const facadeStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
@@ -84,8 +103,16 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
     if (powerOn !== undefined) finishNeonPowerOn(chain);
   }, [chain, closed, finishNeonPowerOn, finishShutter, opening, powerOn]);
 
+  // 新手引導第 3 步指向開局的兩攤（S6.4）；只在夜市街在前景時量測
+  const tutorialTarget = useTutorialTarget(
+    chain === 'fried' ? 'stall-fried' : 'stall-tea',
+    animate && (chain === 'tea' || chain === 'fried')
+  );
+
   return (
     <Pressable
+      ref={tutorialTarget.ref}
+      onLayout={tutorialTarget.onLayout}
       testID={`stall-${chain}`}
       accessibilityRole="button"
       accessibilityLabel={`${stall.name}，${appearance.label}`}
@@ -133,6 +160,10 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
             height={FACADE_HEIGHT * APPEARANCE[0].scale}
             onDone={onShutterDone}
           />
+        ) : null}
+        {/* 升級慶祝：招牌通電期間播放；重開（Lv1）由鐵捲門演出負責 */}
+        {powerOn !== undefined && opening === undefined && level >= 2 ? (
+          <UpgradeBurst key={powerOn} label={appearance.label} color={stall.neon} />
         ) : null}
         <Text style={styles.levelLabel}>{appearance.label}</Text>
         {/* 招牌菜只屬於 Lv3（FR13）；存檔驗證與除錯面板也會維持這一點 */}

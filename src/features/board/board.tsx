@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -46,6 +46,9 @@ const SHAKE_GLIDE_MS = 440;
 const SHAKE_PORTION = 0.55;
 // 冒熱氣（UX-DR9）：整個棋盤共用一個時鐘，各格只用相位差
 const STEAM_CYCLE_MS = 1800;
+// 合成小提示（S6.4）：左右擺動的角度，以及每輪擺完後停多久
+const WOBBLE_DEG = 9;
+const WOBBLE_PAUSE_MS = 900;
 const DRAG_SCALE = 1.15;
 const COLUMNS = BALANCE.boardColumns;
 const ROWS = BALANCE.boardRows;
@@ -83,6 +86,8 @@ type BoardProps = {
   previewDrop?: (from: number, to: number) => DropResult | null;
   /** 棋盤在前景時才播放循環動畫（冒熱氣） */
   animate?: boolean;
+  /** 合成小提示：這幾格的棋子左右晃動（S6.4） */
+  hintCells?: readonly number[] | null;
 };
 
 /** 棋子的圖示：產生器、品項、發明菜 */
@@ -475,6 +480,8 @@ type BoardCellProps = {
   selected: boolean;
   hover: boolean;
   mergeHint: boolean;
+  /** 合成小提示：棋子左右晃動（S6.4） */
+  wobble: boolean;
   pressCell: SharedValue<number>;
   pressScale: SharedValue<number>;
   liftedCell: SharedValue<number>;
@@ -491,6 +498,7 @@ const BoardCell = memo(function BoardCell({
   selected,
   hover,
   mergeHint,
+  wobble,
   pressCell,
   pressScale,
   liftedCell,
@@ -520,22 +528,67 @@ const BoardCell = memo(function BoardCell({
         mergeHint && styles.cellMerge,
       ]}>
       {piece ? (
-        <BoardPiece
-          key={piece.id}
-          piece={piece}
-          size={cellSize}
-          cell={cell}
-          flying={flying}
-          pressCell={pressCell}
-          pressScale={pressScale}
-          liftedCell={liftedCell}
-          steamClock={steamClock}
-          animate={animate}
-        />
+        <Wobble key={piece.id} active={wobble} cell={cell} size={cellSize}>
+          <BoardPiece
+            piece={piece}
+            size={cellSize}
+            cell={cell}
+            flying={flying}
+            pressCell={pressCell}
+            pressScale={pressScale}
+            liftedCell={liftedCell}
+            steamClock={steamClock}
+            animate={animate}
+          />
+        </Wobble>
       ) : null}
     </View>
   );
 });
+
+/** 合成小提示的晃動：左右擺幾下、停一下，重複；不晃時不多包一層動畫 */
+function Wobble({
+  active,
+  cell,
+  size,
+  children,
+}: {
+  active: boolean;
+  cell: number;
+  size: number;
+  children: ReactNode;
+}) {
+  const angle = useSharedValue(0);
+  useEffect(() => {
+    if (!active) {
+      cancelAnimation(angle);
+      angle.set(0);
+      return;
+    }
+    angle.set(
+      withRepeat(
+        withSequence(
+          withTiming(-WOBBLE_DEG, { duration: 90 }),
+          withTiming(WOBBLE_DEG, { duration: 180 }),
+          withTiming(-WOBBLE_DEG, { duration: 180 }),
+          withTiming(WOBBLE_DEG, { duration: 180 }),
+          withTiming(0, { duration: 90 }),
+          withTiming(0, { duration: WOBBLE_PAUSE_MS })
+        ),
+        -1
+      )
+    );
+    return () => cancelAnimation(angle);
+  }, [active, angle]);
+  const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${angle.get()}deg` }] }));
+  return (
+    <Animated.View
+      testID={active ? `wobble-${cell}` : undefined}
+      style={[styles.cell, { width: size, height: size }, style]}>
+      {children}
+    </Animated.View>
+  );
+}
 
 export function Board({
   board,
@@ -545,6 +598,7 @@ export function Board({
   onMove,
   previewDrop,
   animate = true,
+  hintCells = null,
 }: BoardProps) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [hoverCell, setHoverCell] = useState<number | null>(null);
@@ -828,6 +882,7 @@ export function Board({
               selected={cell === selected}
               hover={hover}
               mergeHint={hover && piece !== null && canMerge(dragged, piece)}
+              wobble={hintCells?.includes(cell) ?? false}
               pressCell={pressCell}
               pressScale={pressScale}
               liftedCell={liftedCell}

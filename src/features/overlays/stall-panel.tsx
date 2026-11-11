@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 
+import { useTutorialTarget } from '@/features/tutorial/tutorial-targets';
 import { BALANCE, type ChainId, RECIPES_BY_ID, type RecipeId, STALLS } from '@/game/content';
 import { reopenCheck, reopenStall, upgradeCheck, upgradeStall } from '@/game/stalls';
 import { useGameStore } from '@/game/store';
@@ -51,6 +52,11 @@ export function StallPanel({ chain }: { chain: ChainId }) {
   const [chosen, setChosen] = useState<RecipeId | null>(null);
   // 防連點：按下後到面板關閉之間，第二次按壓不再送出（S1.10 審查的待辦）
   const submitted = useRef(false);
+  // 新手引導第 3 步指向升級按鈕（S6.4）；只有開局的兩攤
+  const { ref: upgradeTargetRef, onLayout: onUpgradeLayout } = useTutorialTarget(
+    'upgrade',
+    chain === 'tea' || chain === 'fried'
+  );
   if (!snapshot) return null;
   const level = snapshot.stalls[chain].level;
   const check = reopenCheck(snapshot, chain);
@@ -157,6 +163,8 @@ export function StallPanel({ chain }: { chain: ChainId }) {
             </>
           ) : null}
           <Pressable
+            ref={upgradeTargetRef}
+            onLayout={onUpgradeLayout}
             testID="upgrade-stall"
             accessibilityRole="button"
             disabled={!canUpgrade}

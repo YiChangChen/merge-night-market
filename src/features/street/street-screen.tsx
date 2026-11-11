@@ -3,6 +3,8 @@ import { router, useIsFocused } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TutorialLine } from '@/features/tutorial/tutorial-line';
+import { useTutorialTargets } from '@/features/tutorial/tutorial-targets';
 import { CHAIN_IDS, STREET_BACKGROUND } from '@/game/content';
 
 import { StallView } from './stall-view';
@@ -14,6 +16,7 @@ import { StallView } from './stall-view';
 export function StreetScreen() {
   // 分頁失焦時暫停所有循環動畫（霓虹）
   const focused = useIsFocused();
+  const requestRemeasure = useTutorialTargets((store) => store.requestRemeasure);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -47,7 +50,12 @@ export function StreetScreen() {
           <Text style={styles.icon}>📖</Text>
         </Pressable>
       </View>
+      {/* 新手引導第 3 步的說明（S6.4） */}
+      <TutorialLine steps={[2]} />
       <ScrollView
+        // 捲動停止後，手指重新量測攤位位置（S6.4）
+        onScrollEndDrag={requestRemeasure}
+        onMomentumScrollEnd={requestRemeasure}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.street}>

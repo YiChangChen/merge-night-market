@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { StallView } from '@/features/street';
+import { NEON_POWER_ON_MS } from '@/features/street/neon-sign';
 import { BOARD_SIZE } from '@/game/content';
 import { createGame, type GameState, type Piece } from '@/game/engine';
 import { gameEvents } from '@/game/events';
@@ -184,15 +185,37 @@ describe('升級攤位（S1.10）', () => {
     stop();
     await render(<StallView chain="tea" animate={false} />);
     expect(screen.getByTestId('neon-segment-powering-on')).toBeTruthy();
+    // 升級慶祝（實機回饋）：升級字樣與外觀名稱，和通電一起播
+    expect(screen.getByTestId('upgrade-burst')).toBeTruthy();
+    expect(screen.getByText('升級！')).toBeTruthy();
+    expect(screen.getAllByText('Lv2 店面').length).toBeGreaterThanOrEqual(2);
 
+    // 演出長度拉到 2 秒（原本 0.9 秒太快），中途還在
     await act(async () => {
-      jest.advanceTimersByTime(1000);
+      jest.advanceTimersByTime(NEON_POWER_ON_MS - 100);
+    });
+    expect(screen.getByTestId('upgrade-burst')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(100);
     });
 
     expect(useOverlayStore.getState().neonPowerOn.tea).toBeUndefined();
     expect(screen.queryByTestId('neon-segment-powering-on')).toBeNull();
+    expect(screen.queryByTestId('upgrade-burst')).toBeNull();
     expect(screen.getAllByTestId('neon-segment-lit')).toHaveLength(2);
     jest.useRealTimers();
+  });
+});
+
+describe('升級慶祝只在升級時播放', () => {
+  it('重開攤位（Lv1，鐵捲門演出）不播升級慶祝', async () => {
+    setGame(withStall('noodle', 1));
+    useOverlayStore.getState().playShutter('noodle');
+    useOverlayStore.getState().playNeonPowerOn('noodle');
+    await render(<StallView chain="noodle" animate={false} />);
+
+    expect(screen.getByTestId('neon-segment-powering-on')).toBeTruthy();
+    expect(screen.queryByTestId('upgrade-burst')).toBeNull();
   });
 });
 

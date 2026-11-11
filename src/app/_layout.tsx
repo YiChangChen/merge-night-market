@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ErrorScreen } from '@/features/errors';
 import { OverlayHost, startFxController } from '@/features/overlays';
+import { TutorialGuide } from '@/features/tutorial';
 import { startGameSession } from '@/services/game-session';
 
 // 根層錯誤防護：子路由 render 出錯時由 Expo Router 交到這裡，顯示「重新載入」而不是白屏。
@@ -39,6 +40,8 @@ export default function RootLayout() {
         <Stack.Screen name="debug" options={{ presentation: 'modal' }} />
       </Stack>
       <OverlayHost />
+      {/* 新手手指（S6.4）：在演出與面板上層，不擋觸控 */}
+      <TutorialGuide />
     </GestureHandlerRootView>
   );
 }

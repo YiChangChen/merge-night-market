@@ -11,7 +11,10 @@ import {
   RECIPES_BY_ID,
   type RecipeId,
 } from './content';
+import { dateKeyUTC8, maxEnergy } from './daily';
+import { applyLevelUps, xpToNextLevel } from './levels';
 import { baseCost, stallCoinMultiplier } from './pricing';
+import { tutorialOrderCoinMultiplier } from './tutorial';
 import { advanceQueue, queueCapacity } from './queue';
 import { rollVip } from './vip';
 import { nextRandom, randomInt } from './random';
@@ -51,9 +54,8 @@ export function stallsForPlayerLevel(level: number): Record<ChainId, StallState>
 // baseCost 搬到 pricing.ts（S4.1，避免 engine ↔ vip 互相 import）；保留從這裡匯出，既有的 import 不必修改
 export { baseCost };
 
-export function xpToNextLevel(level: number): number {
-  return 10 + 5 * (level - 1);
-}
+// xpToNextLevel 搬到 levels.ts（S6.1，daily.ts 也要結算升級）；保留從這裡匯出
+export { xpToNextLevel };
 
 export function unlockedChains(level: number): ChainId[] {
   return CHAIN_IDS.filter((id) => CHAINS[id].unlockLevel <= level);
@@ -190,8 +192,8 @@ function createOrder(state: GameState, now: number, allowSpecial = true): [Order
     id: next.nextId,
     kind: 'normal',
     requirements,
-    // 建立當下就鎖定，之後攤位升級不回溯（RC-3）
-    coins: orderCoins(requirements, state.stalls),
+    // 建立當下就鎖定，之後攤位升級不回溯（RC-3）；教學期間 ×2.5，新手才存得到第一次升級（S6.4）
+    coins: Math.round(orderCoins(requirements, state.stalls) * tutorialOrderCoinMultiplier(state)),
     xp: requirements.reduce((sum, r) => sum + r.level, 0),
     energy: Math.ceil(totalCost * BALANCE.orderEnergyRefund),
   };
@@ -226,7 +228,8 @@ export function createGame(now: number, seed: number): GameState {
     version: SAVE_VERSION,
     board: Array<Piece | null>(BOARD_SIZE).fill(null),
     orders: [],
-    energy: BALANCE.maxEnergy,
+    // 新局在開幕週內，體力從 200 開始（FR36）
+    energy: BALANCE.openingWeekMaxEnergy,
     energyUpdatedAt: now,
     coins: 0,
     level: 1,
@@ -238,7 +241,8 @@ export function createGame(now: number, seed: number): GameState {
     queue: { ...queue, length, remaining: length },
     inventions: {},
     meta: { firstLaunchAt: now, tutorialStep: 0, hintedRecipes: [] },
-    daily: { dateKey: '', adEnergyUsed: 0, adDoubleUsed: 0 },
+    // 開局就寫入當天日期（S6.1）：第一次結算不必為了換日產生新的 state
+    daily: { dateKey: dateKeyUTC8(now), adEnergyUsed: 0, adDoubleUsed: 0 },
     lastSellout: null,
     events: [],
   };
@@ -252,29 +256,32 @@ export function createGame(now: number, seed: number): GameState {
   return state;
 }
 
-// 依經過時間回復體力。獎勵可超過上限，超過時不再自然回復。
+/**
+ * 依經過時間回復體力，上限依開幕週而定（maxEnergy，S6.1）。獎勵可超過上限，超過時不再自然回復；
+ * 開幕週結束時超過 100 的體力保留，要降回 100 以下才再回復。跨過開幕週邊界的離線回復一律用 now 當下的上限。
+ */
 export function syncEnergy(state: GameState, now: number): GameState {
   // 裝置時間被調回去時重設起點，避免之後長時間不回復
   if (now < state.energyUpdatedAt) return { ...state, energyUpdatedAt: now };
-  if (state.energy >= BALANCE.maxEnergy) {
+  const cap = maxEnergy(state, now);
+  if (state.energy >= cap) {
     return state.energyUpdatedAt === now ? state : { ...state, energyUpdatedAt: now };
   }
   const gained = Math.floor((now - state.energyUpdatedAt) / BALANCE.energyRegenMs);
   if (gained <= 0) return state;
-  const energy = Math.min(BALANCE.maxEnergy, state.energy + gained);
+  const energy = Math.min(cap, state.energy + gained);
   return {
     ...state,
     energy,
-    energyUpdatedAt:
-      energy >= BALANCE.maxEnergy ? now : state.energyUpdatedAt + gained * BALANCE.energyRegenMs,
+    energyUpdatedAt: energy >= cap ? now : state.energyUpdatedAt + gained * BALANCE.energyRegenMs,
   };
 }
 
 export function msUntilNextEnergy(
-  state: Pick<GameState, 'energy' | 'energyUpdatedAt'>,
+  state: Pick<GameState, 'energy' | 'energyUpdatedAt'> & { meta: { firstLaunchAt: number } },
   now: number
 ): number | null {
-  if (state.energy >= BALANCE.maxEnergy) return null;
+  if (state.energy >= maxEnergy(state, now)) return null;
   return Math.max(0, state.energyUpdatedAt + BALANCE.energyRegenMs - now);
 }
 
@@ -368,6 +375,26 @@ export function canMerge(a: Piece, b: Piece): boolean {
   );
 }
 
+/**
+ * 棋盤上第一對可以合成的相同品項（依格子順序）；沒有時回傳 null。
+ * 新手教學第 1 步與之後的閒置小提示用（S6.4）。
+ */
+export function findMergePair(
+  board: readonly (Piece | null)[],
+  /** 只找符合條件的品項（例如訂單要的那條鏈） */
+  include: (piece: ItemPiece) => boolean = () => true
+): [number, number] | null {
+  for (let a = 0; a < board.length; a++) {
+    const first = board[a];
+    if (first?.kind !== 'item' || !include(first)) continue;
+    for (let b = a + 1; b < board.length; b++) {
+      const second = board[b];
+      if (second && canMerge(first, second)) return [a, b];
+    }
+  }
+  return null;
+}
+
 // 拖曳放下：相同品項合成，空格移動，其他情況交換位置。
 // 規則層內部使用（drop.ts 的 move／merge／swap 與測試）；UI 一律呼叫 applyDrop（RC-4）
 export function movePiece(state: GameState, from: number, to: number): GameState {
@@ -411,21 +438,6 @@ export function findOrderCells(state: Pick<GameState, 'board'>, order: Order): n
     used.add(cell);
   }
   return [...used];
-}
-
-function applyLevelUps(state: GameState): GameState {
-  let next = state;
-  while (next.xp >= xpToNextLevel(next.level)) {
-    const level = next.level + 1;
-    next = {
-      ...next,
-      xp: next.xp - xpToNextLevel(next.level),
-      level,
-      energy: next.energy + BALANCE.levelUpEnergy,
-    };
-    // 產生器不再隨玩家等級出現，只在攤位重開時放上棋盤（RC-1、FR11，見 S1.9 reopenStall）
-  }
-  return next;
 }
 
 /**

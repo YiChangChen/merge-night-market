@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { gameEvents } from './events';
 import type { LoadFailure } from './save';
 import { syncAll } from './time';
+import { advanceTutorial } from './tutorial';
 import type { GameState } from './types';
 
 /**
@@ -50,7 +51,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
       const current = get().state;
       if (!current) return;
       const now = currentTime();
-      const next = action(syncAll(current, now), now);
+      // 新手教學依這一批事件推進（S6.4）：每個動作都會經過這裡
+      const next = advanceTutorial(action(syncAll(current, now), now));
       if (next === current) return;
       const { events } = next;
       // 先更新 store（事件清空），訂閱者收到事件時讀到的就是新的 state
@@ -59,7 +61,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
 
     hydrate: (state) => {
-      const synced = syncAll(state, currentTime());
+      // 讀檔時也檢查一次教學（例如匯入的存檔已經有攤位 ≥ Lv2）
+      const synced = advanceTutorial(syncAll(state, currentTime()));
       const { events } = synced;
       set({ state: { ...synced, events: [] }, status: { kind: 'ready' } });
       // 讀檔時的結算也可能產生事件（例如舊存檔補上的教學提示），和 apply 一樣分派，

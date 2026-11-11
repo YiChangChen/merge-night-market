@@ -2,6 +2,8 @@ import { BottomTabBarHeightCallbackContext, type BottomTabBarProps } from 'expo-
 import { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { TutorialTarget } from '@/features/tutorial/tutorial-target-view';
+
 import { markTabPress } from './tab-timing';
 
 const TABS: Record<string, { label: string; icon: string }> = {
@@ -36,7 +38,7 @@ export function TabBar({ state, emitter, navigateToTab, insets }: BottomTabBarPr
             navigateToTab(route.key);
           }
         };
-        return (
+        const button = (
           <Pressable
             key={route.key}
             testID={`tab-${route.name}`}
@@ -48,6 +50,14 @@ export function TabBar({ state, emitter, navigateToTab, insets }: BottomTabBarPr
             <Text style={[styles.icon, !focused && styles.dim]}>{tab.icon}</Text>
             <Text style={[styles.label, focused ? styles.labelFocused : styles.dim]}>{tab.label}</Text>
           </Pressable>
+        );
+        // 新手引導第 3 步：還在棋盤時指向夜市街分頁（S6.4）
+        return route.name === 'street' ? (
+          <TutorialTarget key={route.key} id="tab-street" style={styles.tab}>
+            {button}
+          </TutorialTarget>
+        ) : (
+          button
         );
       })}
     </View>

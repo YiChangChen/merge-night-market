@@ -111,7 +111,7 @@ describe('除錯用規則函式（S1.8）', () => {
 
   it('加體力可以超過上限（和獎勵一樣）', () => {
     const state = createGame(NOW, 1);
-    expect(debugAddEnergy(state, 100).energy).toBe(BALANCE.maxEnergy + 100);
+    expect(debugAddEnergy(state, 100).energy).toBe(BALANCE.openingWeekMaxEnergy + 100);
   });
 });
 

@@ -17,7 +17,9 @@ export type GameEvent =
   | { type: 'card_starred'; recipe: RecipeId; stars: number }
   // 阿嬤提示（S4.4）：保底第 5 次失敗，或 tea、fried 都到 Lv2 時的教學提示
   | { type: 'hint_shown'; recipe: RecipeId }
-  | { type: 'stall_reopened' | 'stall_upgraded'; stall: ChainId; level: number };
+  | { type: 'stall_reopened' | 'stall_upgraded'; stall: ChainId; level: number }
+  // 看完激勵廣告並領到獎勵（S6.1、NP-4）
+  | { type: 'ad_rewarded'; placement: 'energy' | 'sellout-double' };
 
 export type GameEventListener = (event: GameEvent) => void;
 

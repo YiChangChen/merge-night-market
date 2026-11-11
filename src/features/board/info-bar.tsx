@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CHAINS, RECIPES_BY_ID } from '@/game/content';
 import { dishSellPrice, sellPrice } from '@/game/engine';
+import { useTutorialLine } from '@/features/tutorial/tutorial-line';
 import { useGameStore } from '@/game/store';
 
 import { PieceIcon } from './board';
@@ -19,10 +20,14 @@ export function InfoBar({ selected, onSell }: InfoBarProps) {
   const piece = useGameStore((store) =>
     selected !== null ? (store.state?.board[selected] ?? null) : null
   );
+  // 新手教學期間，沒有選取棋子時顯示這一步的說明（S6.4）
+  const tutorial = useTutorialLine();
   if (!piece || selected === null) {
     return (
       <View style={styles.info}>
-        <Text style={styles.infoText}>點產生器出食材，拖曳相同品項合成</Text>
+        <Text testID="info-bar-hint" style={styles.infoText} numberOfLines={2}>
+          {tutorial ?? '點產生器出食材，拖曳相同品項合成'}
+        </Text>
       </View>
     );
   }

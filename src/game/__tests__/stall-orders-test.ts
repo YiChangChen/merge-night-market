@@ -24,6 +24,11 @@ function stalls(levels: Partial<Record<ChainId, StallLevel>>): Record<ChainId, S
 }
 
 /** 放好訂單需要的品項並交單，回傳交單後的 state（會產生一張新訂單）。 */
+/** 教學已完成的局：新訂單不套用新手金幣倍率（S6.4） */
+function tutorialFinished(state: GameState): GameState {
+  return { ...state, meta: { ...state.meta, tutorialStep: BALANCE.tutorialSteps } };
+}
+
 function fulfil(state: GameState, target: Order): GameState {
   const board = Array<Piece | null>(BOARD_SIZE).fill(null);
   target.requirements.forEach((requirement, index) => {
@@ -63,7 +68,12 @@ describe('orderCoins（FR8、FR15、RC-3）', () => {
 
 describe('訂單由攤位控制', () => {
   it('新訂單的金幣依建立當下的攤位等級計算', () => {
-    let state: GameState = { ...createGame(NOW, 3), level: 6, stalls: stalls({ tea: 3, fried: 2 }) };
+    // 教學已完成：這裡比的是攤位加成，不含新手訂單的金幣倍率（S6.4）
+    let state: GameState = {
+      ...tutorialFinished(createGame(NOW, 3)),
+      level: 6,
+      stalls: stalls({ tea: 3, fried: 2 }),
+    };
     for (let i = 0; i < 30; i++) {
       state = fulfil(state, simpleOrder('tea', 2));
       const created = state.orders[state.orders.length - 1];
@@ -126,7 +136,7 @@ describe('expectedOrderCoins（各玩家等級每單期望金幣）', () => {
   it('期望值和實際抽出的訂單相符（大量抽樣誤差 5% 以內）', () => {
     const level = 6;
     const open = stalls({ noodle: 1, dumpling: 2 });
-    let state: GameState = { ...createGame(NOW, 11), level, stalls: open };
+    let state: GameState = { ...tutorialFinished(createGame(NOW, 11)), level, stalls: open };
     let total = 0;
     const samples = 3000;
     for (let i = 0; i < samples; i++) {

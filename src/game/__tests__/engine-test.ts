@@ -55,7 +55,7 @@ describe('createGame', () => {
     const state = createGame(NOW, 1);
     const generators = state.board.filter((piece) => piece?.kind === 'generator');
     expect(generators).toHaveLength(2);
-    expect(state.energy).toBe(BALANCE.maxEnergy);
+    expect(state.energy).toBe(BALANCE.openingWeekMaxEnergy);
     expect(state.orders).toHaveLength(BALANCE.orderSlots);
     for (const { requirements } of state.orders) {
       for (const { chain, level } of requirements) {
@@ -162,20 +162,23 @@ describe('syncEnergy', () => {
     const state = { ...createGame(NOW, 1), energy: 10 };
     const later = NOW + regen * 1000;
     expect(syncEnergy(state, later)).toMatchObject({
-      energy: BALANCE.maxEnergy,
+      energy: BALANCE.openingWeekMaxEnergy,
       energyUpdatedAt: later,
     });
   });
 
   it('keeps bonus energy above the cap', () => {
-    const state = { ...createGame(NOW, 1), energy: BALANCE.maxEnergy + 7 };
-    expect(syncEnergy(state, NOW + regen * 5).energy).toBe(BALANCE.maxEnergy + 7);
+    const state = { ...createGame(NOW, 1), energy: BALANCE.openingWeekMaxEnergy + 7 };
+    expect(syncEnergy(state, NOW + regen * 5).energy).toBe(BALANCE.openingWeekMaxEnergy + 7);
   });
 
   it('does not bank regen while energy is full', () => {
     const later = NOW + regen * 50;
-    const spent = { ...syncEnergy(createGame(NOW, 1), later), energy: BALANCE.maxEnergy - 1 };
-    expect(syncEnergy(spent, later + 1).energy).toBe(BALANCE.maxEnergy - 1);
+    const spent = {
+      ...syncEnergy(createGame(NOW, 1), later),
+      energy: BALANCE.openingWeekMaxEnergy - 1,
+    };
+    expect(syncEnergy(spent, later + 1).energy).toBe(BALANCE.openingWeekMaxEnergy - 1);
   });
 
   it('recovers when the device clock moves backwards', () => {

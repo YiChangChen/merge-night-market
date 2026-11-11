@@ -95,11 +95,11 @@ development_status:
   epic-5-retrospective: done
 
   # Epic 6：開幕週與激勵廣告
-  epic-6: backlog
-  6-1-opening-week-energy-and-daily-ad-counts: backlog
+  epic-6: in-progress
+  6-1-opening-week-energy-and-daily-ad-counts: review
   6-2-rewarded-ad-for-energy: backlog
   6-3-rewarded-ad-sellout-double: backlog
-  6-4-tutorial-finger-guide: backlog
+  6-4-tutorial-finger-guide: review
   epic-6-retrospective: optional
 
   # Epic 7：聲音、數據與上架

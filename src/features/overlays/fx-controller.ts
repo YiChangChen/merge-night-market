@@ -6,10 +6,10 @@ import { gameEvents } from '@/game/events';
 import { useOverlayStore } from './overlay-store';
 
 /**
- * 升級攤位的同一次結算裡出現的阿嬤提示（教學提示），延到招牌通電演出（約 0.9 秒，見 street/neon-sign）
- * 播完才出現，不會一升級就被全螢幕的阿嬤蓋住（E4 code review）。
+ * 升級攤位的同一次結算裡出現的阿嬤提示（教學提示），延到招牌通電與升級慶祝（2 秒，見 street/neon-sign
+ * NEON_POWER_ON_MS）播完才出現，不會一升級就被全螢幕的阿嬤蓋住（E4 code review；S6.4 實機回饋後拉長）。
  */
-export const HINT_AFTER_UPGRADE_MS = 1000;
+export const HINT_AFTER_UPGRADE_MS = 2200;
 
 /** 啟動演出控制，回傳停止函式。 */
 export function startFxController(): () => void {

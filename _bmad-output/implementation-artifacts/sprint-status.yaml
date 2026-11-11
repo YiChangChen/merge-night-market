@@ -80,12 +80,12 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4：貴客上門與阿嬤指點
-  epic-4: in-progress
+  epic-4: done
   4-1-vip-order-rules: done
   4-2-clue-orders-and-dismiss: done
   4-3-vip-and-clue-order-cards: done
   4-4-grandma-pity-hints: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   # Epic 5：發明菜收藏冊
   epic-5: backlog

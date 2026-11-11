@@ -59,10 +59,12 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
 
     hydrate: (state) => {
-      set({
-        state: { ...syncAll(state, currentTime()), events: [] },
-        status: { kind: 'ready' },
-      });
+      const synced = syncAll(state, currentTime());
+      const { events } = synced;
+      set({ state: { ...synced, events: [] }, status: { kind: 'ready' } });
+      // 讀檔時的結算也可能產生事件（例如舊存檔補上的教學提示），和 apply 一樣分派，
+      // 否則 hintedRecipes 已經記下、阿嬤卻不會出現（E4 code review）
+      for (const event of events) gameEvents.emit(event);
     },
 
     failLoad: (reason) => {

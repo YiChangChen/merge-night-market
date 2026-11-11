@@ -671,8 +671,8 @@ So that 我能從客人的話裡猜出還沒發現的配方。
 **And** 線索單顯示該配方的 `clue` 台詞，部分台詞是味道描述（內容在 `recipes.ts`，FR30）
 **And** 線索單無法完成，不扣人龍，計入「同時最多 1 張」的上限
 **And** `syncOrders`：`now ≥ expiresAt` 時移除線索單並補上一張新訂單；時鐘倒退時，剩餘時間截到最多 10 分鐘
-**And** `needsTick` 擴充：存在 `kind: 'clue'` 的訂單時也回傳 true，讓線索單的倒數和到期移除在體力已滿時照常運作；`vip-test.ts` 補上「體力已滿、有線索單時 `needsTick` 為 true」
-**And** `dismissOrder(state, orderId)` 只能用在 `kind: 'clue'`，移除後補上新訂單，不扣人龍（RC-9）
+**And** `needsTick` 擴充：線索單**到期**、時鐘倒退需要截短、或線索的菜已經發明出來時回傳 true，讓到期移除在體力已滿時照常運作（倒數畫面由訂單卡自己計時，不每秒存檔）；`vip-test.ts` 補上「體力已滿、線索單到期時 `needsTick` 為 true」（S4.2 與 E4 code review 修訂）
+**And** `dismissOrder(state, orderId, now)` 可以用在線索單與貴客單（貴客單在 E4 code review 加入），移除後補上一張一般單，不扣人龍（RC-9）
 **And** `vip-test.ts` 補上：沒有可用配方時不會產生線索單、到期移除、提前請走、對非線索單呼叫 dismiss 時回傳原 state
 
 ### Story 4.3: 貴客與線索的訂單卡

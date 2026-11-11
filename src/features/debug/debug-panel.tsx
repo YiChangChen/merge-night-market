@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/shallow';
 
@@ -14,6 +14,7 @@ import {
   debugSetPlayerLevel,
   debugSetStallLevel,
 } from '@/game/debug';
+import { useOverlayStore } from '@/features/overlays';
 import { useGameStore } from '@/game/store';
 import type { StallLevel } from '@/game/types';
 import { exportSaveToClipboard, importSaveFromClipboard } from '@/services/save-transfer';
@@ -108,23 +109,32 @@ export function DebugPanel() {
   };
 
   // 開新局：先把目前的存檔複製到剪貼簿當備份，確認後才換成新的一局（之後可以用「從剪貼簿匯入」還原）
+  const startNewGame = async () => {
+    try {
+      const backup = await exportSaveToClipboard();
+      if (!backup.ok) {
+        setMessage('備份失敗，沒有開新局');
+        return;
+      }
+      resetTime();
+      // 舊進度的面板、演出與排隊（阿嬤提示、發明演出）不能出現在新局
+      useOverlayStore.getState().reset();
+      apply((state, now) => debugNewGame(state, now));
+      setMessage(`已開新局（舊進度已複製到剪貼簿，${backup.length} 字）`);
+    } catch {
+      setMessage('開新局失敗，進度沒有改變');
+    }
+  };
   const onNewGame = () => {
-    Alert.alert('開新局？', '目前的進度會先複製到剪貼簿當備份，之後可以用「從剪貼簿匯入」還原。', [
+    const detail = '目前的進度會先複製到剪貼簿當備份，之後可以用「從剪貼簿匯入」還原。';
+    // 網頁版的 Alert 沒有按鈕，改用瀏覽器的確認視窗
+    if (Platform.OS === 'web') {
+      if (globalThis.confirm?.(`開新局？${detail}`)) void startNewGame();
+      return;
+    }
+    Alert.alert('開新局？', detail, [
       { text: '取消', style: 'cancel' },
-      {
-        text: '開新局',
-        style: 'destructive',
-        onPress: async () => {
-          const backup = await exportSaveToClipboard();
-          if (!backup.ok) {
-            setMessage('備份失敗，沒有開新局');
-            return;
-          }
-          resetTime();
-          apply((state, now) => debugNewGame(state, now));
-          setMessage(`已開新局（舊進度已複製到剪貼簿，${backup.length} 字）`);
-        },
-      },
+      { text: '開新局', style: 'destructive', onPress: () => void startNewGame() },
     ]);
   };
 

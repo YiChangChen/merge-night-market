@@ -51,3 +51,8 @@
 - source_plan: _bmad-output/implementation-artifacts/3-3-board-dishes-and-reject-bounce.md
   summary: 棋盤冒熱氣的共用時鐘在 freezeOnBlur 下可能停不下來（和夜市街霓虹同一個疑慮）
   evidence: 和 S1.7 的霓虹待辦一起在 Android 複驗時用 Reanimated 效能監看確認
+## Deferred from: code review of Epic 4 stories 4.1–4.4 (2026-11-11)
+- source_plan: _bmad-output/implementation-artifacts/4-4-grandma-pity-hints.md
+  summary: 阿嬤提示在送出事件時就記入 hintedRecipes（會存檔），演出排隊只在記憶體；提示顯示途中 App 被關掉，這道提示不會再出現
+  evidence: 機率低，玩家仍可以靠線索與試錯找到配方。若要修，改成玩家關閉提示時才記錄（overlay 結束時 apply 一個 markHinted），並讓 recordRejection 在 ≥ 5 次且未記錄時重送
+

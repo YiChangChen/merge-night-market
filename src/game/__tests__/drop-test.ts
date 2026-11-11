@@ -325,3 +325,31 @@ describe('組錯第 5 次，阿嬤直接說出答案（S4.4）', () => {
     ]);
   });
 });
+
+describe('Epic 4 完成定義：每一道配方都能透過阿嬤保底找到（E4 code review）', () => {
+  // 五攤都 Lv2、什麼都還沒發現：對每一道配方 R，找得到一組「組錯」的拖放讓 R 被計入失敗次數，
+  // 連續 5 次後阿嬤就會說出 R 的答案
+  const allLv2 = { tea: 2, fried: 2, noodle: 2, dumpling: 2, sweet: 2 } as const;
+
+  it.each(RECIPES.map((recipe) => [recipe.id, recipe] as const))('%s', (_id, recipe) => {
+    let found = false;
+    for (const other of RECIPES) {
+      for (const partner of [other.a, other.b]) {
+        if (found || partner.chain === recipe.a.chain) continue;
+        if (partner.chain === recipe.b.chain && partner.level === recipe.b.level) continue;
+        const state = setup(
+          { 0: item(1, recipe.a.chain, recipe.a.level), 1: item(2, partner.chain, partner.level) },
+          allLv2
+        );
+        const result = resolveDrop(state, 0, 1);
+        if (result?.kind === 'reject' && result.affected.includes(recipe.id)) {
+          let next = state;
+          for (let i = 0; i < 5; i++) next = applyDrop({ ...next, events: [] }, 0, 1, NOW);
+          expect(next.meta.hintedRecipes).toContain(recipe.id);
+          found = true;
+        }
+      }
+    }
+    expect(found).toBe(true);
+  });
+});

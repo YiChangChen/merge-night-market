@@ -7,7 +7,7 @@ import { createGame } from '@/game/engine';
 import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
 
-import { startFxController } from '../fx-controller';
+import { HINT_AFTER_UPGRADE_MS, startFxController } from '../fx-controller';
 import { HINT_TAP_GUARD_MS, hintLine } from '../grandma-hint';
 import { OverlayHost } from '../overlay-host';
 import { useOverlayStore } from '../overlay-store';
@@ -61,7 +61,7 @@ describe('阿嬤保底提示（S4.4、UX-DR7）', () => {
 
     expect(screen.getByTestId('grandma-line')).toHaveTextContent('憨孫，紅茶配鹽酥雞啦！');
     expect(screen.getByText('拖在一起試試看，就是「紅茶鹽酥雞套餐」')).toBeTruthy();
-    expect(screen.getByLabelText('阿嬤說：憨孫，紅茶配鹽酥雞啦！。點一下關閉')).toBeTruthy();
+    expect(screen.getByLabelText('阿嬤的提示，點一下關閉')).toBeTruthy();
   });
 
   it('點一下關閉（剛出現的 0.4 秒內不算）；遊戲狀態不變', async () => {
@@ -112,5 +112,45 @@ describe('阿嬤保底提示（S4.4、UX-DR7）', () => {
     expect(useOverlayStore.getState().hint).toBeNull();
     expect(useOverlayStore.getState().stallPanel).toBe('tea');
     spy.mockRestore();
+  });
+});
+
+describe('E4 code review：演出時機與開新局', () => {
+  it('升級攤位同時出現的教學提示，延到招牌通電演出之後才顯示', async () => {
+    const stop = startFxController();
+    gameEvents.emit({ type: 'stall_upgraded', stall: 'fried', level: 2 });
+    gameEvents.emit({ type: 'hint_shown', recipe: 'tea-fried' });
+    expect(useOverlayStore.getState().hint).toBeNull();
+
+    await act(async () => {
+      await Promise.resolve();
+      jest.advanceTimersByTime(HINT_AFTER_UPGRADE_MS);
+    });
+    expect(useOverlayStore.getState().hint).toMatchObject({ recipe: 'tea-fried' });
+
+    // 之後的提示（不是跟著升級）立刻顯示
+    useOverlayStore.getState().finishHint();
+    gameEvents.emit({ type: 'hint_shown', recipe: 'tea-noodle' });
+    expect(useOverlayStore.getState().hint).toMatchObject({ recipe: 'tea-noodle' });
+    stop();
+  });
+
+  it('reset 清掉所有面板、演出與排隊', () => {
+    useOverlayStore.setState({ stallPanel: 'tea' });
+    useOverlayStore.getState().playHint('tea-fried');
+    useOverlayStore.getState().playHint('tea-noodle');
+    useOverlayStore.getState().playInvention('tea-fried');
+    useOverlayStore.getState().playInvention('fried-sweet');
+    useOverlayStore.getState().reset();
+
+    expect(useOverlayStore.getState()).toMatchObject({
+      stallPanel: null,
+      hint: null,
+      pendingHints: [],
+      invention: null,
+      pendingInventions: [],
+      sellout: null,
+      dishMade: null,
+    });
   });
 });

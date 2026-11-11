@@ -88,9 +88,25 @@ describe('貴客單（AC1、AC4）', () => {
     await renderCard(vip);
     expect(screen.getByTestId('vip-badge')).toHaveTextContent('貴客');
     expect(screen.getByText('紅茶鹽酥雞套餐')).toBeTruthy();
-    expect(screen.getByText('🪙132')).toBeTruthy();
+    // 體力也照實顯示（E4 code review）
+    expect(screen.getByText('🪙132 ⚡3')).toBeTruthy();
     expect(screen.getByLabelText('貴客富豪：紅茶鹽酥雞套餐，132 金幣')).toBeTruthy();
     expect(screen.getByTestId('order')).toBeDisabled();
+  });
+
+  it('可以出餐時，讀螢幕軟體也聽得到', async () => {
+    await renderCard(vip, true);
+    expect(screen.getByLabelText('貴客富豪：紅茶鹽酥雞套餐，132 金幣，可以出餐')).toBeTruthy();
+  });
+
+  it('請貴客先走（E4 code review，使用者決定）：觸控區 ≥ 44 pt，按下呼叫 onDismiss', async () => {
+    const { onDismiss, onComplete } = await renderCard(vip);
+    const button = screen.getByTestId('dismiss-vip');
+    // 視覺 22 pt + 四周 hitSlop 12 = 46 pt
+    expect(button.props.hitSlop).toBe(12);
+    await fireEvent.press(button);
+    expect(onDismiss).toHaveBeenCalledWith(9);
+    expect(onComplete).not.toHaveBeenCalled();
   });
 
   it('棋盤上有這道菜時可以出餐', async () => {

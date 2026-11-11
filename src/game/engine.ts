@@ -158,9 +158,9 @@ export function expectedOrderCoins(
   return perRequirement * expectedCount;
 }
 
-function createOrder(state: GameState, now: number): [Order, GameState] {
+function createOrder(state: GameState, now: number, allowSpecial = true): [Order, GameState] {
   // 先擲貴客或線索（S4.1、S4.2）：已發現發明菜、場上沒有貴客或線索單時才擲
-  const [vip, afterVip] = rollVip(state, now);
+  const [vip, afterVip] = rollVip(state, now, allowSpecial);
   if (vip) return [vip, { ...afterVip, nextId: afterVip.nextId + 1 }];
   let next = afterVip;
   const open = openStallChains(state.stalls);
@@ -203,9 +203,11 @@ function createOrder(state: GameState, now: number): [Order, GameState] {
  * 線索單到期（syncOrders）與請客人先走（dismissOrder）共用；不存在時回傳原 state。
  */
 export function replaceOrder(state: GameState, orderId: number, now: number): GameState {
-  if (!state.orders.some((order) => order.id === orderId)) return state;
+  const removed = state.orders.find((order) => order.id === orderId);
+  if (!removed) return state;
   const remaining = { ...state, orders: state.orders.filter((order) => order.id !== orderId) };
-  const [replacement, next] = createOrder(remaining, now);
+  // 請走或離開的是貴客／線索時，補的這張一定是一般單：不會馬上又來同一個客人（E4 code review）
+  const [replacement, next] = createOrder(remaining, now, removed.kind === 'normal');
   return { ...next, orders: [...next.orders, replacement] };
 }
 

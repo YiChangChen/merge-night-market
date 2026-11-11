@@ -402,7 +402,7 @@ src/game/content/
 | RC-6 | **發明菜一次賣 1 份**：`sellPiece` 對 dish 只扣 1 份，`count` 歸 0 時清空格子。單價為兩個材料 baseCost 總和 × 1.5 | `engine.ts` |
 | RC-7 | **Lv3 招牌菜由玩家選擇**：攤位面板列出棋盤上所有含該鏈的發明菜，玩家點選後呼叫 `upgradeStall(state, stall, now, recipe)`，從任一格扣 1 份，並設定 `signatureDish` | `stalls.ts`、`features/overlays/stall-panel` |
 | RC-8 | **貴客單與 Lv3 消耗發明菜時一律扣 1 份**（`count − 1`），扣到 0 時清空格子 | `vip.ts`、`stalls.ts` |
-| RC-9 | **線索單「請客人先走」**：`dismissOrder(state, orderId, now)` 只能用在 `kind: 'clue'`；移除後補一張新訂單，不扣人龍 | `orders.ts`（S4.2：放在 vip.ts 會和 engine 互相 import） |
+| RC-9 | **「請客人先走」**：`dismissOrder(state, orderId, now)` 可以用在線索單與貴客單（E4 code review：做不出來的貴客單不會永遠佔住欄位）；移除後補一張**一般單**（不會馬上又來同一位特殊客人），不扣人龍。貴客只指定已發現且兩攤都 ≥ Lv2 的菜 | `orders.ts`（S4.2：放在 vip.ts 會和 engine 互相 import） |
 
 ### Architecture Decision Records
 

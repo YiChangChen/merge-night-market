@@ -4,7 +4,7 @@ baseline_commit: 55e1f8b
 
 # Story 4.3: 貴客與線索的訂單卡
 
-Status: review
+Status: done
 
 ## Story
 
@@ -85,3 +85,9 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：貴客與線索的訂單卡；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 a066964..8fa0d1d）
+
+- [x] [Review][Patch] 貴客卡的金框（borderWidth 2）讓卡片高 4 pt，超出預留高度；改成絕對定位疊上去 [order-card.tsx]
+- [x] [Review][Patch] 貴客卡的讀螢幕標籤不會說「可以出餐」，卡片也沒有 button 角色 [order-card.tsx]
+- [x] [Review][Patch] 貴客卡加上「請貴客先走」（✕，觸控區 46 pt），對應使用者的決定 [order-card.tsx]

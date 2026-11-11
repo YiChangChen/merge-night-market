@@ -3,6 +3,7 @@
 import { type ChainId, STALLS } from './content';
 import { createGame, ensureGenerator } from './engine';
 import { growActiveWave } from './queue';
+import { tutorialHint } from './invention';
 import { nextRandom } from './random';
 import type { GameState, StallLevel } from './types';
 
@@ -68,5 +69,6 @@ export function debugSetStallLevel(state: GameState, chain: ChainId, level: Stal
       },
     },
   };
-  return growActiveWave(level >= 1 ? ensureGenerator(next, chain) : next);
+  // 調整後如果手搖飲、炸物都到 Lv2，立刻給教學提示（和真的升級一樣）
+  return tutorialHint(growActiveWave(level >= 1 ? ensureGenerator(next, chain) : next));
 }

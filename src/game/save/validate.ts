@@ -57,7 +57,7 @@ function isValidPiece(value: unknown): boolean {
   }
 }
 
-function isValidOrder(value: unknown): boolean {
+function isValidOrder(value: unknown, discovered: ReadonlySet<string>): boolean {
   if (
     !isObject(value) ||
     !isPositiveInteger(value.id) ||
@@ -83,9 +83,12 @@ function isValidOrder(value: unknown): boolean {
         )
       );
     case 'vip':
-      // 貴客單（S4.1）：指定一道已知的發明菜，沒有品項需求
+      // 貴客單（S4.1）：指定一道已知的發明菜，沒有品項需求；這道菜必須已經發現（不能劇透，E4 code review）
       return (
-        isRecipeId(value.recipe) && value.requirements.length === 0 && value.expiresAt === undefined
+        isRecipeId(value.recipe) &&
+        discovered.has(value.recipe as string) &&
+        value.requirements.length === 0 &&
+        value.expiresAt === undefined
       );
     case 'clue':
       // 線索單（S4.2）：只說一句台詞，沒有需求、沒有獎勵，有離開時間
@@ -107,6 +110,16 @@ const isSignatureOf = (value: unknown, chain: ChainId) => {
   const recipe = RECIPES_BY_ID[value as RecipeId];
   return recipe.a.chain === chain || recipe.b.chain === chain;
 };
+
+/** 存檔裡已發現的配方 id（inventions 本身的格式由 isValidInventions 另外檢查） */
+function discoveredRecipeIds(inventions: unknown): ReadonlySet<string> {
+  if (!isObject(inventions)) return new Set();
+  return new Set(
+    Object.entries(inventions)
+      .filter(([, record]) => isObject(record) && record.discovered === true)
+      .map(([id]) => id)
+  );
+}
 
 function isValidStalls(value: unknown): boolean {
   return (
@@ -211,7 +224,7 @@ export function isValidSaveV2(value: unknown): boolean {
     board.length !== BOARD_SIZE ||
     !board.every(isValidPiece) ||
     !Array.isArray(orders) ||
-    !orders.every(isValidOrder) ||
+    !orders.every((order) => isValidOrder(order, discoveredRecipeIds(value.inventions))) ||
     // 同一時間最多 1 張貴客或線索單（FR27）
     orders.filter((order) => isObject(order) && order.kind !== 'normal').length > 1 ||
     !Array.isArray(pendingGenerators) ||

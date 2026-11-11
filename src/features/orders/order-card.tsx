@@ -87,10 +87,18 @@ export function OrderCard({ order, ready, artSize, onComplete, onDismiss }: Orde
   return (
     <Pressable
       testID="order"
-      accessibilityLabel={vip ? `貴客${customer.name}：${name}，${order.coins} 金幣` : undefined}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !ready }}
+      accessibilityLabel={
+        vip
+          ? `貴客${customer.name}：${name}，${order.coins} 金幣${ready ? '，可以出餐' : ''}`
+          : undefined
+      }
       disabled={!ready}
       onPress={() => onComplete(order.id)}
-      style={[styles.order, vip && styles.vipCard]}>
+      style={styles.order}>
+      {/* 貴客的金框疊在卡片上（絕對定位），不改變卡片高度 */}
+      {vip ? <View pointerEvents="none" style={styles.vipFrame} /> : null}
       <CustomerTray
         customer={customer}
         requirements={order.requirements}
@@ -99,16 +107,28 @@ export function OrderCard({ order, ready, artSize, onComplete, onDismiss }: Orde
         height={artSize.height}
       />
       {vip ? (
-        <Text testID="vip-badge" style={styles.vipBadge}>
-          貴客
-        </Text>
+        <>
+          <Text testID="vip-badge" style={styles.vipBadge}>
+            貴客
+          </Text>
+          {/* 做不出來或不想做的貴客可以請走（E4 code review，使用者決定）；觸控區靠 hitSlop 撐到 ≥ 44 pt */}
+          <Pressable
+            testID="dismiss-vip"
+            accessibilityRole="button"
+            accessibilityLabel={`請貴客${customer.name}先走`}
+            hitSlop={12}
+            onPress={() => onDismiss(order.id)}
+            style={({ pressed }) => [styles.vipDismiss, pressed && styles.pressed]}>
+            <Text style={styles.vipDismissText}>✕</Text>
+          </Pressable>
+        </>
       ) : null}
       <View style={[styles.label, ready && styles.labelReady, vip && !ready && styles.vipLabel]}>
         <Text style={[styles.name, ready && styles.textReady]} numberOfLines={1}>
           {name}
         </Text>
         <Text style={[styles.reward, ready && styles.textReady]} numberOfLines={1}>
-          {ready ? '點我出餐！' : vip ? `🪙${order.coins}` : `🪙${order.coins} ⚡${order.energy}`}
+          {ready ? '點我出餐！' : `🪙${order.coins} ⚡${order.energy}`}
         </Text>
       </View>
     </Pressable>
@@ -121,12 +141,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  // 貴客：金色外框（不改變卡片高度）
-  vipCard: {
+  // 貴客：金色外框，絕對定位疊在卡片上（不改變卡片高度，E4 code review）
+  vipFrame: {
+    ...StyleSheet.absoluteFill,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#FFD966',
     backgroundColor: '#FFD96622',
+  },
+  vipDismiss: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000AA',
+  },
+  vipDismissText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
   vipBadge: {
     position: 'absolute',

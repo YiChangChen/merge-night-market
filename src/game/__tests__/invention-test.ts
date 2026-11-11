@@ -1,7 +1,8 @@
 // Story 3.1 起：配方判定與發明菜的規則（invention.ts）。
 import { RECIPE_IDS, type RecipeId } from '../content';
 import { createGame } from '../engine';
-import { dishSellPrice, hintRecipe, recordRejection } from '../invention';
+import { dishSellPrice, hintRecipe, recordRejection, tutorialHint } from '../invention';
+import { syncAll } from '../time';
 
 describe('dishSellPrice（GDD：兩個材料的 baseCost 總和 × 1.5）', () => {
   const expected: Record<RecipeId, number> = {
@@ -96,5 +97,38 @@ describe('hintRecipe（教學提示與保底提示共用）', () => {
     expect(once.meta.hintedRecipes).toEqual(['tea-fried']);
     expect(once.events).toEqual([{ type: 'hint_shown', recipe: 'tea-fried' }]);
     expect(hintRecipe(once, 'tea-fried')).toBe(once);
+  });
+});
+
+describe('tutorialHint（S4.4 AC4、FR32；E4 code review 補到 invention-test）', () => {
+  const NOW = 1_000_000;
+  const lv2 = (state: ReturnType<typeof createGame>) => ({
+    ...state,
+    stalls: {
+      ...state.stalls,
+      tea: { level: 2 as const, signatureDish: null },
+      fried: { level: 2 as const, signatureDish: null },
+    },
+  });
+
+  it('手搖飲、炸物都 Lv2：提示紅茶鹽酥雞套餐；只提示一次', () => {
+    const once = tutorialHint(lv2(createGame(NOW, 1)));
+    expect(once.events).toEqual([{ type: 'hint_shown', recipe: 'tea-fried' }]);
+    expect(tutorialHint(once)).toBe(once);
+  });
+
+  it('其中一攤還沒 Lv2、或已經發現過時不提示', () => {
+    const base = createGame(NOW, 1);
+    expect(tutorialHint(base)).toBe(base);
+    const found = {
+      ...lv2(base),
+      inventions: { 'tea-fried': { discovered: true, made: 1, failures: 0, clueSeen: false } },
+    };
+    expect(tutorialHint(found)).toBe(found);
+  });
+
+  it('舊存檔（兩攤早就 Lv2）：syncAll 第一次結算就補上提示', () => {
+    const next = syncAll(lv2(createGame(NOW, 1)), NOW);
+    expect(next.events).toContainEqual({ type: 'hint_shown', recipe: 'tea-fried' });
   });
 });

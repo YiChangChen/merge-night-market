@@ -20,6 +20,12 @@ export function hasSpecialOrder(orders: readonly Order[]): boolean {
   return orders.some((order) => order.kind !== 'normal');
 }
 
+/** 這道菜的兩攤目前都 ≥ Lv2（做得出來）。 */
+function canServe(state: Pick<GameState, 'stalls'>, recipe: RecipeId): boolean {
+  const { a, b } = RECIPES_BY_ID[recipe];
+  return state.stalls[a.chain].level >= 2 && state.stalls[b.chain].level >= 2;
+}
+
 /** 已發現的配方（依 RECIPES 順序）。 */
 function discoveredRecipes(state: Pick<GameState, 'inventions'>): RecipeId[] {
   return RECIPES.filter((recipe) => state.inventions[recipe.id]?.discovered).map((r) => r.id);
@@ -88,15 +94,24 @@ export function clueOrder(recipe: RecipeId, id: number, now: number): Order {
  * 貴客判定成立、而且還有線索候選時，再擲一次：一半改為線索單，並記下 clueSeen（S4.2）。
  * 回傳 [貴客／線索單或 null, 推進亂數後的 state]；訂單 id 是 nextId，由呼叫端遞增。
  */
-export function rollVip<S extends GameState>(state: S, now: number): [Order | null, S] {
+export function rollVip<S extends GameState>(
+  state: S,
+  now: number,
+  allowSpecial = true
+): [Order | null, S] {
   const discovered = discoveredRecipes(state);
-  if (discovered.length === 0 || hasSpecialOrder(state.orders)) return [null, state];
+  if (!allowSpecial || discovered.length === 0 || hasSpecialOrder(state.orders)) {
+    return [null, state];
+  }
   const [roll, afterRoll] = nextRandom(state);
   if (roll >= vipChance(state.stalls)) return [null, afterRoll];
 
+  // 貴客只指定現在做得出來的菜：已發現、而且兩攤目前都 ≥ Lv2（E4 code review，使用者決定）
+  const servable = discovered.filter((id) => canServe(afterRoll, id));
   const candidates = clueCandidates(afterRoll);
   if (candidates.length > 0) {
-    const [clueRoll, afterClueRoll] = nextRandom(afterRoll);
+    // 沒有做得出的貴客菜時直接給線索，不多擲一次
+    const [clueRoll, afterClueRoll] = servable.length > 0 ? nextRandom(afterRoll) : [0, afterRoll];
     if (clueRoll < BALANCE.clueChance) {
       const [index, afterPick] = randomInt(afterClueRoll, candidates.length);
       const recipe = candidates[index];
@@ -115,9 +130,10 @@ export function rollVip<S extends GameState>(state: S, now: number): [Order | nu
       };
       return [clueOrder(recipe, withSeen.nextId, now), withSeen];
     }
-    const [index, afterPick] = randomInt(afterClueRoll, discovered.length);
-    return [vipOrder(afterPick, discovered[index], afterPick.nextId), afterPick];
+    const [index, afterPick] = randomInt(afterClueRoll, servable.length);
+    return [vipOrder(afterPick, servable[index], afterPick.nextId), afterPick];
   }
-  const [index, afterPick] = randomInt(afterRoll, discovered.length);
-  return [vipOrder(afterPick, discovered[index], afterPick.nextId), afterPick];
+  if (servable.length === 0) return [null, afterRoll];
+  const [index, afterPick] = randomInt(afterRoll, servable.length);
+  return [vipOrder(afterPick, servable[index], afterPick.nextId), afterPick];
 }

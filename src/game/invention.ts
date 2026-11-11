@@ -106,3 +106,20 @@ export function recordRejection(state: GameState, affected: readonly RecipeId[])
   }
   return next;
 }
+
+/**
+ * 教學提示（FR32）：手搖飲與炸物都 ≥ Lv2、紅茶鹽酥雞套餐還沒發現時，阿嬤先教配方 #1（只一次）。
+ * 升級攤位時立刻檢查，syncAll 每次也檢查（舊存檔、匯入、除錯調整等級時才不會漏掉，E4 code review）；
+ * 條件不成立或已經提示過時回傳原 state。
+ */
+export function tutorialHint(state: GameState): GameState {
+  if (
+    state.stalls.tea.level < 2 ||
+    state.stalls.fried.level < 2 ||
+    state.inventions['tea-fried']?.discovered ||
+    state.meta.hintedRecipes.includes('tea-fried')
+  ) {
+    return state;
+  }
+  return hintRecipe(state, 'tea-fried');
+}

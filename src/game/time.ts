@@ -2,12 +2,14 @@
 // 之後的 story 會加入 syncDaily（換日歸零）。
 import { BALANCE } from './content';
 import { syncEnergy } from './engine';
+import { tutorialHint } from './invention';
 import { clueNeedsSync, syncOrders } from './orders';
 import { syncQueue } from './queue';
 import type { GameState } from './types';
 
 export function syncAll(state: GameState, now: number): GameState {
-  return syncOrders(syncQueue(syncEnergy(state, now), now), now);
+  // 教學提示放在最後：舊存檔、匯入、除錯調整等級後的第一次結算就會補上（只一次）
+  return tutorialHint(syncOrders(syncQueue(syncEnergy(state, now), now), now));
 }
 
 /**

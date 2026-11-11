@@ -342,12 +342,33 @@ describe('dismissOrder：請客人先走（RC-9）', () => {
     expect(next.queue).toEqual(state.queue);
   });
 
-  it('對一般單、貴客單、不存在的訂單呼叫時回傳原 state', () => {
+  it('對一般單、不存在的訂單呼叫時回傳原 state', () => {
     const vip = vipOrder(setup(), 'tea-fried', 4);
     const state = setup({ found: ['tea-fried'], orders: [normal(1), vip] });
     expect(dismissOrder(state, 1, NOW)).toBe(state);
-    expect(dismissOrder(state, 4, NOW)).toBe(state);
     expect(dismissOrder(state, 99, NOW)).toBe(state);
+  });
+
+  it('貴客單也可以請走（E4 code review，使用者決定）：補一張一般單，不動人龍', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const vip = vipOrder(setup(), 'tea-fried', 4);
+      const state = setup({ seed, found: ['tea-fried'], orders: [normal(1), vip] });
+      const next = dismissOrder(state, 4, NOW);
+      expect(next.orders.map((o) => o.kind)).toEqual(['normal', 'normal']);
+      expect(next.queue).toEqual(state.queue);
+    }
+  });
+
+  it('請走線索後補的一定是一般單：不會馬上又來線索或貴客', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const state = setup({
+        seed,
+        found: ['tea-fried'],
+        levels: { tea: 2, fried: 2, sweet: 2 },
+        orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
+      });
+      expect(dismissOrder(state, 2, NOW).orders.map((o) => o.kind)).toEqual(['normal', 'normal']);
+    }
   });
 });
 
@@ -370,5 +391,49 @@ describe('存檔驗證：線索單', () => {
       orders: [normal(1), { ...clue(2, 'tea-sweet', NOW), coins: 50 }],
     };
     expect(valid(withReward)).toBe(false);
+  });
+});
+
+describe('E4 code review：貴客只指定做得出來的菜、線索解開後離開', () => {
+  it('攤位被調低（做不出來）的已發現配方不會被貴客指定', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      // tea-fried、tea-sweet 都發現過，但 sweet 現在只有 Lv1：貴客只會指定 tea-fried
+      const state = setup({
+        seed,
+        found: ['tea-fried', 'tea-sweet'],
+        levels: { tea: 2, fried: 2, sweet: 1 },
+      });
+      const [order] = rollVip(state, NOW);
+      if (order) expect(order).toMatchObject({ kind: 'vip', recipe: 'tea-fried' });
+    }
+  });
+
+  it('沒有做得出來的菜、也沒有線索候選時：不出現貴客或線索', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const state = setup({ seed, found: ['tea-fried'], levels: { tea: 2, fried: 1 } });
+      expect(rollVip(state, NOW)[0]).toBeNull();
+    }
+  });
+
+  it('線索說的菜被發明出來後，下一次結算就換掉那張線索單', () => {
+    const state = setup({
+      found: ['tea-fried', 'tea-sweet'],
+      orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
+    });
+    const full = { ...state, energy: BALANCE.maxEnergy };
+    expect(needsTick(full, NOW)).toBe(true);
+    const next = syncOrders(state, NOW);
+    expect(next.orders.some((o) => o.id === 2)).toBe(false);
+    expect(next.orders).toHaveLength(2);
+  });
+
+  it('時鐘倒退經過 syncAll：線索單的剩餘時間截到 10 分鐘', () => {
+    const state = setup({
+      found: ['tea-fried'],
+      orders: [normal(1), clue(2, 'tea-sweet', NOW + CLUE_MS)],
+    });
+    const rewound = NOW - 2 * 60 * 60 * 1000;
+    const next = syncAll(state, rewound);
+    expect(next.orders.find((o) => o.id === 2)?.expiresAt).toBe(rewound + CLUE_MS);
   });
 });

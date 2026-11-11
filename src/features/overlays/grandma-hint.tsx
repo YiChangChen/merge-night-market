@@ -55,7 +55,8 @@ export function GrandmaHint({ recipe, onDone }: GrandmaHintProps) {
     <Pressable
       testID="grandma-hint"
       accessibilityRole="button"
-      accessibilityLabel={`阿嬤說：${line}。點一下關閉`}
+      // 台詞已經在出現時主動唸過，這裡只說明怎麼關閉，避免同一句唸兩次（E4 code review）
+      accessibilityLabel="阿嬤的提示，點一下關閉"
       accessibilityViewIsModal
       onPress={onPress}
       style={styles.backdrop}>

@@ -138,7 +138,11 @@ export default function GameScreen() {
   const focused = useIsFocused();
   // 選取記住「哪一格的哪一個棋子」：賣掉、升級用掉、或待放的產生器補進同一格時，
   // id 不同就自動取消，選取不會跳到別的棋子上（code review 2026-11-11、RC-6）
-  const [selection, setSelection] = useState<{ cell: number; id: number } | null>(null);
+  const [selection, setSelection] = useState<{ cell: number; id: number; game: number } | null>(
+    null
+  );
+  // 這一局的識別：開新局或匯入存檔後不同，舊的選取不會指到新局裡剛好同 id 的棋子（E4 code review）
+  const gameId = useGameStore((store) => store.state?.meta.firstLaunchAt ?? 0);
   // 演出或攤位面板蓋住棋盤時，暫停棋盤的循環動畫（冒熱氣）
   const overlayBlocking = useOverlayStore(
     (store) =>
@@ -167,7 +171,9 @@ export default function GameScreen() {
   if (!board) return <View style={styles.screen} />;
 
   const selected =
-    selection !== null && board[selection.cell]?.id === selection.id ? selection.cell : null;
+    selection !== null && selection.game === gameId && board[selection.cell]?.id === selection.id
+      ? selection.cell
+      : null;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);
   const artSize = customerArtSize((boardWidth + ORDER_GAP) / BALANCE.orderSlots);
@@ -194,7 +200,7 @@ export default function GameScreen() {
     const state = useGameStore.getState().state;
     if (!state) return;
     const piece = state.board[cell];
-    setSelection(piece ? { cell, id: piece.id } : null);
+    setSelection(piece ? { cell, id: piece.id, game: gameId } : null);
     if (piece?.kind !== 'generator') return;
     const blocker = getSpawnBlocker(state);
     if (blocker === 'no-energy') setToast('體力不足，稍等一下再來');

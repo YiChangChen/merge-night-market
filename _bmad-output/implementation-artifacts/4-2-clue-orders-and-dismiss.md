@@ -4,7 +4,7 @@ baseline_commit: 8be1a9c
 
 # Story 4.2: 線索單與「請客人先走」
 
-Status: review
+Status: done
 
 ## Story
 
@@ -116,3 +116,10 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：線索單與請客人先走（規則）；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 a066964..8fa0d1d）
+
+- [x] [Review][Patch] 請走或到期的線索，補單時可能馬上又是線索（甚至同一句）；補的單改成一定是一般單 [src/game/engine.ts replaceOrder]
+- [x] [Review][Patch] 線索說的菜被發明出來後，客人還繼續暗示最多 10 分鐘；下一次結算就換掉（needsTick 也算進去） [src/game/orders.ts]
+- [x] [Review][Patch] 時鐘倒退只在單一函式測過，補上經過 syncAll 的測試 [vip-test.ts]
+- [x] [Review][Patch] epics.md 的 S4.2 AC5／AC6 還是原本的寫法，同步成修訂後的 needsTick 條件與 dismissOrder [planning-artifacts/epics.md]

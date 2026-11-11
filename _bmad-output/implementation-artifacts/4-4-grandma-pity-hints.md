@@ -4,7 +4,7 @@ baseline_commit: 71e3fa6
 
 # Story 4.4: 阿嬤保底提示
 
-Status: review
+Status: done
 
 ## Story
 
@@ -93,3 +93,15 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：阿嬤保底提示與教學提示；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 a066964..8fa0d1d）
+
+- [x] [Review][Patch] （三層都抓到）教學提示只在 upgradeStall 檢查：舊存檔、除錯調整等級時不會出現，或延到不相干的升級才出現；抽成 tutorialHint，syncAll 與除錯也檢查，hydrate 會分派讀檔產生的事件 [invention.ts、time.ts、store.ts、debug.ts]
+- [x] [Review][Patch] 教學提示和招牌通電同一次結算出現，阿嬤立刻蓋住通電演出；延後 1 秒顯示 [fx-controller.ts]
+- [x] [Review][Patch] 開新局沒有清掉舊進度的面板、演出與排隊，選取也可能指到新局同 id 的棋子；overlay store 加 reset，選取記住是哪一局 [debug-panel.tsx、overlay-store.ts、(tabs)/index.tsx]
+- [x] [Review][Patch] 開新局在網頁版沒反應（Alert 沒有按鈕），也沒有處理例外；網頁改用 confirm，加上 try/catch [debug-panel.tsx]
+- [x] [Review][Patch] 阿嬤的台詞會被唸兩次（主動朗讀＋標籤），標籤改成只說明怎麼關閉 [grandma-hint.tsx]
+- [x] [Review][Patch] AC6 要求教學提示的測試在 invention-test，補上；E4 完成定義「每一道配方都找得到」沒有測試，在 drop-test 補上 10 道配方都能經由保底提示找到 [invention-test.ts、drop-test.ts]
+- [x] [Review][Patch] 阿嬤台詞寫在程式裡、content.md 沒有定稿，補上〈3.5 阿嬤提示的台詞〉 [docs/content.md]
+- [x] [Review][Patch] 「開新局」是範圍外新增的除錯功能，只寫在 Completion Notes；在這裡補記（使用者為了測教學提示而要求）
+- [x] [Review][Defer] 提示在出現前就記入 hintedRecipes：阿嬤顯示途中 App 被關掉，這道提示不會再出現 — deferred：機率低，玩家仍可靠線索與試錯找到；之後若有回報，再改成關閉提示時才記錄

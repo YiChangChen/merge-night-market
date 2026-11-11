@@ -175,6 +175,7 @@ describe('isValidSaveV2', () => {
   it('接受貴客單（S4.1）', () => {
     const save = saved();
     Object.assign(save.orders[0], { kind: 'vip', recipe: 'tea-fried', requirements: [] });
+    save.inventions['tea-fried'] = { discovered: true, made: 1, failures: 0, clueSeen: false };
     expect(isValidSaveV2(save)).toBe(true);
   });
 
@@ -198,6 +199,7 @@ describe('isValidSaveV2', () => {
     ['發明菜份數超過 3', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 4 })],
     // 貴客單（S4.1 起接受合法的）
     ['貴客單帶著品項需求', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried' })],
+    ['貴客單指定還沒發現的配方（劇透）', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried', requirements: [] })],
     ['貴客單指定未知的配方', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'pizza-cola', requirements: [] })],
     ['同時有 2 張貴客單', (s: any) => {
       Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried', requirements: [] });

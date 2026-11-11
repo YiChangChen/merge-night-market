@@ -30,6 +30,24 @@ describe('useGameStore', () => {
     expect(useGameStore.getState().state).toBeNull();
   });
 
+  it('hydrate 會分派讀檔結算產生的事件（舊存檔補上的教學提示，E4 code review）', () => {
+    const received: GameEvent[] = [];
+    const unsubscribe = gameEvents.subscribe((event) => received.push(event));
+    const base = freshGame();
+    useGameStore.getState().hydrate({
+      ...base,
+      stalls: {
+        ...base.stalls,
+        tea: { level: 2, signatureDish: null },
+        fried: { level: 2, signatureDish: null },
+      },
+    });
+    unsubscribe();
+
+    expect(received).toContainEqual({ type: 'hint_shown', recipe: 'tea-fried' });
+    expect(useGameStore.getState().state?.events).toEqual([]);
+  });
+
   it('hydrate 之後狀態是 ready', () => {
     useGameStore.getState().hydrate(freshGame());
 

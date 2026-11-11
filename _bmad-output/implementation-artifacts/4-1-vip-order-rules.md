@@ -4,7 +4,7 @@ baseline_commit: a066964
 
 # Story 4.1: 貴客單規則
 
-Status: review
+Status: done
 
 ## Story
 
@@ -112,3 +112,9 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：貴客單規則；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 a066964..8fa0d1d）
+
+- [x] [Review][Decision] （三層都抓到）貴客單沒有期限也不能請走，做不出來時永遠佔住欄位，也讓線索單不再出現 → 使用者決定：貴客單也可以請走，貴客只指定已發現而且兩攤目前都 ≥ Lv2 的菜（已套用，RC-9 同步）
+- [x] [Review][Patch] 存檔驗證：貴客單的配方必須已經發現（匯入的存檔不能劇透） [src/game/save/validate.ts]
+- [x] [Review][Patch] 貴客卡隱藏了體力獎勵，改成和一般單一樣顯示 🪙 ⚡ [src/features/orders/order-card.tsx]

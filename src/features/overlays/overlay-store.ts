@@ -35,11 +35,26 @@ type OverlayStore = {
   playHint: (recipe: RecipeId) => void;
   finishHint: () => void;
   hideDishMade: () => void;
+  /** 換成另一局（除錯開新局、匯入存檔）時清掉所有面板、演出與排隊，舊進度的演出不會出現在新局 */
+  reset: () => void;
 };
 
 let sequence = 0;
 
+const INITIAL = {
+  stallPanel: null,
+  shutterOpening: {},
+  neonPowerOn: {},
+  sellout: null,
+  invention: null,
+  pendingInventions: [],
+  dishMade: null,
+  hint: null,
+  pendingHints: [],
+} as const;
+
 export const useOverlayStore = create<OverlayStore>()((set) => ({
+  reset: () => set({ ...INITIAL, pendingInventions: [], pendingHints: [] }),
   stallPanel: null,
   shutterOpening: {},
   neonPowerOn: {},

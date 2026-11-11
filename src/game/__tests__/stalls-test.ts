@@ -324,3 +324,15 @@ describe('Epic 1 完成定義', () => {
     expect(state.stalls.noodle.level).toBe(1);
   });
 });
+
+describe('upgradeStall 保留攤位的其他欄位（code review 2026-11-11）', () => {
+  it('升級時展開原本的攤位物件', () => {
+    const base = ready({ coins: 250 });
+    const extra = {
+      ...base,
+      stalls: { ...base.stalls, fried: { ...base.stalls.fried, note: 'keep' } as never },
+    };
+    const next = upgradeStall(extra, 'fried', NOW);
+    expect(next.stalls.fried).toMatchObject({ level: 2, note: 'keep' });
+  });
+});

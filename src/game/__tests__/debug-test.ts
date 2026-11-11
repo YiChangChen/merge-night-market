@@ -128,3 +128,17 @@ describe('除錯函式的邊界（code review 2026-11-10）', () => {
     expect(debugSetPlayerLevel(state, 100)).toBe(state);
   });
 });
+
+describe('除錯：招牌菜只屬於 Lv3（code review 2026-11-11）', () => {
+  it('把 Lv3 攤位調低時清除招牌菜，存檔仍然合法', () => {
+    const base = createGame(NOW, 1);
+    const lv3 = {
+      ...base,
+      stalls: { ...base.stalls, tea: { level: 3 as const, signatureDish: 'tea-fried' as const } },
+    };
+
+    const lowered = debugSetStallLevel(lv3, 'tea', 2);
+    expect(lowered.stalls.tea).toEqual({ level: 2, signatureDish: null });
+    expect(valid(lowered)).toBe(true);
+  });
+});

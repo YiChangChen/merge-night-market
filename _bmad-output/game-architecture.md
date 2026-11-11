@@ -729,7 +729,7 @@ merge-night-market/
 **元件：**
 - `resolveDrop(state, from, to)`：純函式，只判定結果，不改 state。
 - `applyDrop(state, from, to, now)`：依照判定結果套用變更，並 push 對應的事件。
-- `board.tsx`：落子時呼叫 `apply(s => applyDrop(s, from, to, Date.now()))`，再依事件播放動畫。
+- `board.tsx`：放開時先用 `resolveDrop` 查一次判定，決定放開後的動畫（合成特效、搖頭彈回、交換滑回），再呼叫 `apply((s, now) => applyDrop(s, from, to, now))`。兩次結果一定一致：`apply` 之前的 `syncAll` 只動體力與人龍，不會改棋盤、攤位或發明紀錄（S3.3，E3 code review 2026-11-11）。全螢幕演出與音效仍然依事件播放。
 
 **判定順序（由上往下，先命中的優先）：**
 
@@ -739,7 +739,7 @@ merge-night-market/
 | 2 | 同一條鏈、同一階、未達最高階 | `merge` | `item_merged` |
 | 3 | 兩邊都是同一道發明菜，且目標格未滿 3 份 | `stack`：目標格最多到 3 份，多出的留在來源格 | — |
 | 4 | 兩邊是不同鏈的品項，`(A,B)` 剛好是某道配方，而且該配方的兩個攤位都已達 Lv2 | `invent` | `dish_invented`（帶 `first` 旗標） |
-| 5 | 兩邊都是品項，各自都是某道「兩攤皆達 Lv2」的配方材料，但兩者湊不成同一道配方 | `reject`：不消耗任何東西，播放彈回動畫 | `invent_rejected`（帶受影響的配方） |
+| 5 | 兩邊是不同鏈的品項，各自都是某道「兩攤皆達 Lv2」的配方材料，但兩者湊不成同一道配方，而且受影響的配方裡還有尚未發現的 | `reject`：不消耗任何東西，播放彈回動畫 | `invent_rejected`（帶受影響的配方） |
 | 6 | 其他情況 | `swap` | — |
 
 ```ts
@@ -761,6 +761,8 @@ function findRecipe(a: ItemPiece, b: ItemPiece): RecipeDef | undefined {
 - 產生器不參與合成或發明，碰到時一律走 `swap`。
 - 已經發現過的配方仍然可以 `invent`，用來製作更多份並累計星等，事件的 `first` 為 false。
 - 第 5 項的 `affected`：所有尚未發現、兩攤都已達 Lv2、且材料包含兩個品項其中至少一個的配方。這份清單交給 NP-3 使用。
+- `affected` 為空（相關配方都發現過）時不走 reject，改走 `swap`：彈回已經沒有提示意義，還會讓這兩個品項永遠無法互換位置（E3 code review 2026-11-11，使用者決定）。
+- 同鏈的兩個品項不走 reject（同階是 merge，其餘 swap），整理棋盤時不會被算成發明失敗。
 
 #### NP-2 人龍波次（Queue Wave）
 

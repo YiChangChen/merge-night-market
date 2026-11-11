@@ -44,3 +44,10 @@
 - source_plan: _bmad-output/implementation-artifacts/epic-2-retro-2026-11-10.md
   summary: syncEnergy 在體力滿時每次呼叫都會更新 energyUpdatedAt 並回傳新 state；只要每秒 tick 的條件放寬，就會變成每秒存檔
   evidence: E2 審查時因此改了 needsTick。根本解法是體力滿時不更新 energyUpdatedAt，改在體力從滿變成不滿時（例如 tapGenerator 扣體力）設定起點；牽涉 E1 的體力回復規則，要另外補測試
+## Deferred from: code review of Epic 3 stories 3.1–3.5 (2026-11-11)
+- source_plan: _bmad-output/implementation-artifacts/3-4-first-invention-show-and-dish-selling.md
+  summary: 全螢幕演出（完售、首次發明）在 Android TalkBack 下，焦點仍可移到底下的棋盤與夜市街
+  evidence: accessibilityViewIsModal 只對 iOS 有效。要在 src/app/_layout.tsx 依覆蓋層狀態，對 Stack 容器設定 importantForAccessibility="no-hide-descendants"；和 S7.x 的無障礙檢查一起做
+- source_plan: _bmad-output/implementation-artifacts/3-3-board-dishes-and-reject-bounce.md
+  summary: 棋盤冒熱氣的共用時鐘在 freezeOnBlur 下可能停不下來（和夜市街霓虹同一個疑慮）
+  evidence: 和 S1.7 的霓虹待辦一起在 Android 複驗時用 Reanimated 效能監看確認

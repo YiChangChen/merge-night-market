@@ -4,7 +4,7 @@ baseline_commit: ca1b164
 
 # Story 3.3: 棋盤上的發明菜與搖頭彈回
 
-Status: review
+Status: done
 
 ## Story
 
@@ -107,3 +107,11 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：搖頭彈回、發明菜份數徽章、冒熱氣；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 4157530..22879ef）
+
+- [x] [Review][Patch] 部分疊加（×3 拖到 ×2）時，整個來源連同 ×3 一起滑過去，留在原格的 ×2 被藏起來又突然出現；改成只滑一個 count = moved 的複本，原格不隱藏 [src/features/board/board.tsx]
+- [x] [Review][Patch] 冒熱氣：全螢幕演出或攤位面板蓋住棋盤時仍然每幀更新；被擋住時暫停，並修正「只有一個動畫在跑」的註解（每縷煙仍有自己的 animated style） [src/app/(tabs)/index.tsx、board.tsx]
+- [x] [Review][Patch] 新寫的 worklet 用 `.value`，架構規定新程式碼用 `.get()` [src/features/board/board.tsx]
+- [x] [Review][Patch] 發明菜圖示沒有預先載入，第一次出現或拖曳時會閃一下空白 [src/features/board/board.tsx ArtPreloader]
+- [x] [Review][Patch] 發明時棋盤上幾乎沒有回饋（目標品項當幀消失）；新發明菜出現時播一次合成特效 [src/features/board/board.tsx]

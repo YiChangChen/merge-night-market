@@ -48,7 +48,15 @@ export function debugSetStallLevel(state: GameState, chain: ChainId, level: Stal
   if (![0, 1, 2, 3].includes(level) || level < debugMinStallLevel(chain)) return state;
   const next: GameState = {
     ...state,
-    stalls: { ...state.stalls, [chain]: { ...state.stalls[chain], level } },
+    stalls: {
+      ...state.stalls,
+      [chain]: {
+        ...state.stalls[chain],
+        level,
+        // 招牌菜只屬於 Lv3（FR13）：調低時清除，之後重新升級可以再選
+        signatureDish: level === 3 ? state.stalls[chain].signatureDish : null,
+      },
+    },
   };
   return growActiveWave(level >= 1 ? ensureGenerator(next, chain) : next);
 }

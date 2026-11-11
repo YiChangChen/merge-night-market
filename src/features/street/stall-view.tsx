@@ -129,7 +129,8 @@ export const StallView = memo(function StallView({ chain, animate }: StallViewPr
           />
         ) : null}
         <Text style={styles.levelLabel}>{appearance.label}</Text>
-        {signatureDish ? (
+        {/* 招牌菜只屬於 Lv3（FR13）；存檔驗證與除錯面板也會維持這一點 */}
+        {level === 3 && signatureDish ? (
           // 招牌菜掛在霓虹招牌正下方；絕對定位，不改變攤位高度（星等徽章在 E5 接上）
           <View testID={`stall-${chain}-signature`} style={styles.signature}>
             <Image

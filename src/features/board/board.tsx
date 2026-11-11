@@ -18,12 +18,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { BALANCE, CHAIN_IDS, CHAINS, RECIPES_BY_ID } from '@/game/content';
+import { BALANCE, CHAIN_IDS, CHAINS, RECIPES, RECIPES_BY_ID } from '@/game/content';
 import {
   canMerge,
   findMerges,
   findSpawns,
-  type Merge,
   type Piece,
   type Spawn,
 } from '@/game/engine';
@@ -81,7 +80,7 @@ type BoardProps = {
    * 放開時查詢規則層的判定（resolveDrop），決定播放哪種動畫（S3.3）。
    * 沒有提供時退回舊的判斷（只分合成與交換）。
    */
-  previewDrop?: (from: number, to: number) => DropResult['kind'] | null;
+  previewDrop?: (from: number, to: number) => DropResult | null;
   /** 棋盤在前景時才播放循環動畫（冒熱氣） */
   animate?: boolean;
 };
@@ -139,7 +138,7 @@ function SteamWisp({
   left: number;
 }) {
   const style = useAnimatedStyle(() => {
-    const p = (clock.value + phase) % 1;
+    const p = (clock.get() + phase) % 1;
     return {
       opacity: Math.sin(Math.PI * p) * 0.75,
       transform: [{ translateY: -p * size * 0.32 }, { scale: 0.6 + 0.6 * p }],
@@ -156,7 +155,10 @@ function SteamWisp({
   );
 }
 
-/** 兩縷白煙往上飄並淡出；相位依格子錯開，整個棋盤共用同一個時鐘，只有一個動畫在跑。 */
+/**
+ * 兩縷白煙往上飄並淡出；相位依格子錯開。整個棋盤共用同一個時鐘（只有一個 withRepeat），
+ * 但每縷煙仍有自己的 animated style，每幀都會更新：棋盤被演出或面板擋住時要暫停（animate = false）。
+ */
 function Steam({ clock, cell, size }: { clock: SharedValue<number>; cell: number; size: number }) {
   const phase = (cell * 0.137) % 1;
   return (
@@ -320,7 +322,7 @@ function MergeBurst({
   cellSize,
   onDone,
 }: {
-  merge: Merge;
+  merge: Burst;
   cellSize: number;
   onDone: (id: number) => void;
 }) {
@@ -346,6 +348,7 @@ function MergeBurst({
 
   return (
     <View
+      testID="merge-burst"
       pointerEvents="none"
       style={[styles.floating, styles.burst, { left, top, width: cellSize, height: cellSize }]}>
       <Animated.View style={[styles.mergeRing, ringStyle]} />
@@ -391,7 +394,7 @@ function PieceGlide({
   const glideStyle = useAnimatedStyle(() => {
     if (shake) {
       // 前段在放開處左右搖頭（幅度漸小），後段才滑回原格
-      const t = progress.value;
+      const t = progress.get();
       const s = Math.min(t / SHAKE_PORTION, 1);
       const m = t <= SHAKE_PORTION ? 0 : (t - SHAKE_PORTION) / (1 - SHAKE_PORTION);
       const eased = 1 - (1 - m) ** 3;
@@ -426,6 +429,19 @@ function PieceGlide({
 }
 
 // 先用實際顯示的尺寸把所有圖片載進記憶體，第一次拖曳或合成時才不會空白
+/** 合成或發明時播放特效的棋子（合成是新的高一階品項，發明是新的發明菜） */
+type Burst = { piece: Piece; cell: number };
+
+/** 比對前後棋盤，找出剛發明出來的發明菜（新的 id）；疊加保留原 id，移動與交換也不會被算進來 */
+function findNewDishes(before: (Piece | null)[], after: (Piece | null)[]): Burst[] {
+  const beforeIds = new Set(before.map((piece) => piece?.id));
+  const bursts: Burst[] = [];
+  after.forEach((piece, cell) => {
+    if (piece?.kind === 'dish' && !beforeIds.has(piece.id)) bursts.push({ piece, cell });
+  });
+  return bursts;
+}
+
 const ArtPreloader = memo(function ArtPreloader({ size }: { size: number }) {
   return (
     <View pointerEvents="none" style={styles.preloader} testID="art-preloader">
@@ -439,6 +455,14 @@ const ArtPreloader = memo(function ArtPreloader({ size }: { size: number }) {
           />
         )),
       ])}
+      {/* 發明菜圖示也先載入，第一次出現或拖曳時才不會閃一下空白（code review 2026-11-11） */}
+      {RECIPES.map((recipe) => (
+        <PieceIcon
+          key={recipe.id}
+          piece={{ id: 0, kind: 'dish', recipe: recipe.id, count: 1 }}
+          size={size}
+        />
+      ))}
     </View>
   );
 });
@@ -531,7 +555,7 @@ export function Board({
   const pressCell = useSharedValue(NO_CELL);
   const pressScale = useSharedValue(1);
   const [flights, setFlights] = useState<Spawn[]>([]);
-  const [merges, setMerges] = useState<Merge[]>([]);
+  const [merges, setMerges] = useState<Burst[]>([]);
   const [glides, setGlides] = useState<Glide[]>([]);
   const nextGlideKey = useRef(0);
   const lastHover = useSharedValue<number | null>(null);
@@ -561,8 +585,9 @@ export function Board({
     setPreviousBoard(board);
     const spawns = findSpawns(previousBoard, board);
     if (spawns.length > 0) setFlights([...flights, ...spawns]);
-    const newMerges = findMerges(previousBoard, board);
-    if (newMerges.length > 0) setMerges([...merges, ...newMerges]);
+    // 合成與發明都播放同一個特效（發明時目標品項當幀消失，需要一點回饋，code review 2026-11-11）
+    const newBursts = [...findMerges(previousBoard, board), ...findNewDishes(previousBoard, board)];
+    if (newBursts.length > 0) setMerges([...merges, ...newBursts]);
   }
 
   const finishFlight = (id: number) => {
@@ -641,11 +666,12 @@ export function Board({
 
     // 放開後播什麼動畫由規則層的判定決定（S3.3）：合成交給合成特效、組錯搖頭彈回、交換才把目標滑回來
     const moving = to !== null && to !== from;
-    const kind = moving
-      ? (previewDrop?.(from, to) ??
-        (target && canMerge(source, target) ? 'merge' : target ? 'swap' : 'move'))
+    const result: DropResult | null = moving
+      ? (previewDrop?.(from, to) ?? {
+          kind: target && canMerge(source, target) ? 'merge' : target ? 'swap' : 'move',
+        } as DropResult)
       : null;
-    const plan = kind ? releasePlan(kind) : null;
+    const plan = result ? releasePlan(result.kind) : null;
     if (plan?.source === 'none') {
       onMove(from, to as number);
       return;
@@ -668,9 +694,16 @@ export function Board({
         fromScale: 1,
       });
     }
+    // 部分疊加（例如 ×3 疊到 ×2 只移過去 1 份）：只滑一個「移過去的份數」的複本，
+    // 複本用負數 id，留在原格的那幾份不會被藏起來（code review 2026-11-11）
+    const partialStack =
+      result?.kind === 'stack' && source.kind === 'dish' && result.moved < source.count;
+    const gliding: Piece = partialStack
+      ? { ...source, id: -1 - nextGlideKey.current, count: result.moved as 1 | 2 }
+      : source;
     newGlides.push({
       key: nextGlideKey.current++,
-      piece: source,
+      piece: gliding,
       fromX: x - cellSize / 2,
       fromY: y - cellSize / 2,
       toX: landing.x,

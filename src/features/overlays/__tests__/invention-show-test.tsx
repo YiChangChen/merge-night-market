@@ -7,7 +7,7 @@ import { useGameStore } from '@/game/store';
 
 import { DISH_MADE_TOAST_MS } from '../dish-made-toast';
 import { startFxController } from '../fx-controller';
-import { INVENTION_SHOW_MS } from '../invention-show';
+import { INVENTION_SHOW_MS, SHOW_TAP_GUARD_MS } from '../invention-show';
 import { OverlayHost } from '../overlay-host';
 import { useOverlayStore } from '../overlay-store';
 
@@ -22,6 +22,7 @@ beforeEach(() => {
     neonPowerOn: {},
     sellout: null,
     invention: null,
+    pendingInventions: [],
     dishMade: null,
   });
 });
@@ -62,6 +63,13 @@ describe('首次發明演出（S3.4、FR25、UX-DR5）', () => {
     useOverlayStore.getState().playInvention('tea-fried');
     await render(<OverlayHost />);
 
+    // 剛出現的 0.4 秒內點擊不算（發明後緊接著的點擊不會直接關掉慶祝）
+    await fireEvent.press(screen.getByTestId('invention-show'));
+    expect(useOverlayStore.getState().invention).not.toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(SHOW_TAP_GUARD_MS);
+    });
     await fireEvent.press(screen.getByTestId('invention-show'));
 
     expect(useOverlayStore.getState().invention).toBeNull();
@@ -77,6 +85,23 @@ describe('首次發明演出（S3.4、FR25、UX-DR5）', () => {
     });
 
     expect(useOverlayStore.getState().invention).toBeNull();
+  });
+
+  it('連續兩次首次發明：排隊依序播放，第二道不會蓋掉第一道', async () => {
+    useOverlayStore.getState().playInvention('tea-fried');
+    useOverlayStore.getState().playInvention('fried-sweet');
+    await render(<OverlayHost />);
+
+    expect(screen.getByText('紅茶鹽酥雞套餐')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(INVENTION_SHOW_MS);
+    });
+    expect(screen.getByText('甜鹹地瓜雞')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(INVENTION_SHOW_MS);
+    });
+    expect(useOverlayStore.getState().invention).toBeNull();
+    expect(useOverlayStore.getState().pendingInventions).toEqual([]);
   });
 
   it('小提示不擋操作，時間到自動消失', async () => {

@@ -36,7 +36,7 @@ export function OverlayHost() {
     return () => subscription.remove();
   }, [blocking, closePanel, finishInvention, finishSellout]);
 
-  if (!blocking && !dishMade) return null;
+  // 這一層一直掛著（pointerEvents box-none，不擋操作），小提示消失時才播得出淡出動畫
   return (
     <View style={styles.layer} pointerEvents="box-none">
       {stallPanel ? (

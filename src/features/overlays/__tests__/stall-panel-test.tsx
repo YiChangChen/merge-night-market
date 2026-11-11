@@ -161,7 +161,7 @@ describe('升級攤位（S1.10）', () => {
     await render(<OverlayHost />);
 
     expect(screen.getByText('升級到 Lv3 大店')).toBeTruthy();
-    expect(screen.getByText('1 份含這一攤食材的發明菜')).toBeTruthy();
+    expect(screen.getByText('1 份含手搖飲吧台食材的發明菜')).toBeTruthy();
     expect(screen.getByText('棋盤上沒有')).toBeTruthy();
     expect(screen.getByTestId('upgrade-stall')).toBeDisabled();
     expect(screen.getByText('需要含手搖飲吧台食材的發明菜')).toBeTruthy();

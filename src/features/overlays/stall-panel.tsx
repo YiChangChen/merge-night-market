@@ -115,7 +115,8 @@ export function StallPanel({ chain }: { chain: ChainId }) {
           {upgrade.needsDish ? (
             <>
               <Condition
-                label="1 份含這一攤食材的發明菜"
+                // 直接寫出是哪一攤：金幣不足時按鈕只顯示「金幣不足」，這裡仍然看得到要哪一攤的食材
+                label={`1 份含${stall.name}食材的發明菜`}
                 current={
                   upgrade.candidates.length > 0
                     ? `棋盤上有 ${upgrade.candidates.length} 道`

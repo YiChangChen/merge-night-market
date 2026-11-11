@@ -166,7 +166,7 @@ describe('isValidSaveV2', () => {
 
   it('接受已知配方的招牌菜、發明紀錄與阿嬤提示（S3.1）', () => {
     const save = saved();
-    save.stalls.tea.signatureDish = 'tea-fried';
+    save.stalls.tea = { level: 3, signatureDish: 'tea-fried' };
     save.inventions['tea-fried'] = { discovered: true, made: 2, failures: 1, clueSeen: true };
     save.meta.hintedRecipes = ['fried-sweet'];
     expect(isValidSaveV2(save)).toBe(true);
@@ -223,7 +223,9 @@ describe('isValidSaveV2', () => {
     ['人龍長度超過上限（放大完售獎勵）', (s: any) => Object.assign(s.queue, { length: 100000, remaining: 1 })],
     ['冷卻中還有人排隊', (s: any) => (s.queue.cooldownEndsAt = 2_000_000)],
     // 配方 id 只接受已知的 10 道（S3.1）
-    ['招牌菜是未知的配方', (s: any) => (s.stalls.tea.signatureDish = 'pizza-cola')],
+    ['招牌菜是未知的配方', (s: any) => (s.stalls.tea = { level: 3, signatureDish: 'pizza-cola' })],
+    ['Lv2 攤位有招牌菜（招牌菜只屬於 Lv3）', (s: any) => (s.stalls.tea = { level: 2, signatureDish: 'tea-fried' })],
+    ['招牌菜不含這一攤的食材', (s: any) => (s.stalls.tea = { level: 3, signatureDish: 'noodle-sweet' })],
     ['發明紀錄有未知的配方', (s: any) => (s.inventions['pizza-cola'] = { discovered: true, made: 1, failures: 0, clueSeen: false })],
     ['阿嬤提示過未知的配方', (s: any) => (s.meta.hintedRecipes = ['pizza-cola'])],
     ['教學步數超過上限', (s: any) => (s.meta.tutorialStep = 99)],

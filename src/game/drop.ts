@@ -70,7 +70,9 @@ export function resolveDrop(state: GameState, from: number, to: number): DropRes
         .filter((r) => !state.inventions[r.id]?.discovered)
         .filter((r) => isIngredientOf(r, source) || isIngredientOf(r, target))
         .map((r) => r.id);
-      return { kind: 'reject', affected };
+      // 相關配方都發現過時，彈回沒有意義，還會讓這兩個品項永遠無法互換位置：改走 swap
+      // （E3 code review 2026-11-11，使用者決定）
+      if (affected.length > 0) return { kind: 'reject', affected };
     }
   }
 

@@ -4,7 +4,7 @@ baseline_commit: b798e80
 
 # Story 3.1: 配方與發明菜資料
 
-Status: review
+Status: done
 
 ## Story
 
@@ -93,3 +93,8 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：配方與發明菜資料；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 4157530..22879ef）
+
+- [x] [Review][Patch] 存檔驗證：`signatureDish` 只能出現在 Lv3，而且配方必須含這一攤的鏈 [src/game/save/validate.ts]
+- [x] [Review][Patch] `isValidPiece` 的 default 分支註解還寫著「包含 dish」，已過時 [src/game/save/validate.ts]

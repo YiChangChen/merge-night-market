@@ -4,7 +4,7 @@ baseline_commit: eddc767
 
 # Story 3.2: 拖放解析規則（resolveDrop / applyDrop）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -46,7 +46,7 @@ S3.2 的 AC3 要求 UI 不再呼叫 `movePiece`，所以這個 story 就要把�
 - **merge**：兩個都是品項、同鏈同階、未達最高階（沿用 `canMerge`）。新棋子有新的 id（`findMerges` 依賴這點）。事件 `item_merged { chain, level: 合成後的階數 }`。
 - **stack**：兩個都是發明菜、同一道配方、目標格 `count < 3`。`moved = min(來源份數, 3 − 目標份數)`；目標保留原 id；來源剩 0 份時清空。來源格變空時要 `flushPendingGenerators`。
 - **invent**：兩個都是品項、不同鏈、`findRecipe` 找得到（不分方向），而且 `stalls[a.chain]`、`stalls[b.chain]` 都 ≥ Lv2。在**目標格**放 `createDish`，來源格清空，`flushPendingGenerators`。已發現的配方也可以再做（`first: false`）。
-- **reject**：兩個都是品項、不同鏈，而且兩者各自都是某道「兩攤皆 ≥ Lv2」配方的材料，但湊不成同一道。`affected` = 所有**尚未發現**、兩攤都 ≥ Lv2、且材料包含這兩個品項其中之一的配方（給 NP-3 阿嬤保底用，S4.x 才會累計失敗次數）。affected 為空時仍然是 reject（彈回），只是不會累計。
+- **reject**：兩個都是品項、不同鏈，而且兩者各自都是某道「兩攤皆 ≥ Lv2」配方的材料，但湊不成同一道。`affected` = 所有**尚未發現**、兩攤都 ≥ Lv2、且材料包含這兩個品項其中之一的配方（給 NP-3 阿嬤保底用，S4.x 才會累計失敗次數）。~~affected 為空時仍然是 reject（彈回），只是不會累計。~~ **code review 2026-11-11 修訂（使用者決定）：affected 為空時改走 swap**，否則相關配方都發現過之後，這兩個品項永遠無法互換位置。
   - 同鏈的兩個品項不會走 reject：同階可合成就是 merge，最高階或不同階就是 swap，避免拖兩個一樣的東西也被當成「發明失敗」。
 - **swap**：其他情況，包含產生器、發明菜對品項、不同發明菜、目標已滿 3 份的同一道發明菜。
 - **move**：目標是空格（產生器、發明菜也可以移動）。
@@ -120,3 +120,10 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：拖放解析規則與最小 UI 接線；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 4157530..22879ef）
+
+- [x] [Review][Decision] 所有相關配方都發現過、`affected` 為空時仍然 reject：有些品項組合永遠無法拖曳交換（例如 tea、fried、noodle 都 Lv2 後，鮮奶茶 L4 拖到麵線 L3 一律彈回），只能繞空格移動 — 要維持，還是 affected 為空時改走 swap → 使用者決定：affected 為空時改走 swap（已套用，架構 NP-1 同步）
+- [x] [Review][Patch] `movePiece` 只靠註解標示「內部使用」：用 ESLint 禁止 `src/app`、`src/features` 從 `@/game/engine` 匯入它（RC-4） [eslint.config.js]
+- [x] [Review][Patch] 規則層沒有測到發明菜之間、發明菜與品項的 swap 經過 `applyDrop` 的結果 [src/game/__tests__/drop-test.ts]
+- [x] [Review][Patch] 架構 NP-1 寫「再依事件播放動畫」，實作改成放開時先查 `resolveDrop` 決定動畫；同步文件並說明為什麼結果一致（apply 前的 syncAll 不動棋盤、攤位、發明紀錄） [_bmad-output/game-architecture.md]

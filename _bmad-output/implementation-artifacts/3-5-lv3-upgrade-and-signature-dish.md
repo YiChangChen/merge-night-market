@@ -4,7 +4,7 @@ baseline_commit: d2a2f19
 
 # Story 3.5: Lv3 升級與招牌菜
 
-Status: review
+Status: done
 
 ## Story
 
@@ -94,3 +94,9 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：Lv3 升級與招牌菜、防連點；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 4157530..22879ef）
+
+- [x] [Review][Patch] 金幣不足時按鈕只顯示「金幣不足」，條件列也沒有說是哪一攤的食材；條件列改成「1 份含{攤位}食材的發明菜」 [src/features/overlays/stall-panel.tsx]
+- [x] [Review][Patch] `upgradeStall` 直接組新的攤位物件，沒有展開原本的欄位；之後新增的欄位會被丟掉 [src/game/stalls.ts]
+- [x] [Review][Patch] 招牌菜沒有綁定 Lv3：除錯面板把 Lv3 調低時保留招牌菜，夜市街仍顯示，之後再升級會被覆寫。徽章只在 Lv3 顯示，除錯調低時清除招牌菜 [stall-view.tsx、src/game/debug.ts]

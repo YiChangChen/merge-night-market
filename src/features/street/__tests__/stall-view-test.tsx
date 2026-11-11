@@ -130,3 +130,26 @@ describe('StallView', () => {
     expect(screen.getByLabelText('排隊 4 人')).toBeTruthy();
   });
 });
+
+describe('招牌菜（S3.5、code review 2026-11-11）', () => {
+  async function setTea(level: StallLevel, signatureDish: 'tea-fried' | null) {
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && {
+          ...store.state,
+          stalls: { ...store.state.stalls, tea: { level, signatureDish } },
+        },
+      }));
+    });
+  }
+
+  it('Lv3 才顯示招牌菜；不是 Lv3 時就算欄位有值也不顯示', async () => {
+    await render(<StallView chain="tea" animate={false} />);
+
+    await setTea(3, 'tea-fried');
+    expect(screen.getByText('招牌：紅茶鹽酥雞套餐')).toBeTruthy();
+
+    await setTea(2, 'tea-fried');
+    expect(screen.queryByTestId('stall-tea-signature')).toBeNull();
+  });
+});

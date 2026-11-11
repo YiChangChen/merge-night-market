@@ -8,7 +8,16 @@
 // - S3.2 起棋盤支援發明菜，isValidPiece 接受 kind: 'dish'（{ recipe, count: 1–3 }）。
 // - E4 支援貴客單與線索單時，在 isValidOrder 接受 kind: 'vip' | 'clue'（含 recipe、expiresAt）。
 // 這兩者都是「接受更多」，舊版 App 讀到新資料只會顯示讀檔失敗、不會覆寫，所以不需要升版。
-import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId, RECIPE_IDS } from '../content';
+import {
+  BALANCE,
+  BOARD_SIZE,
+  CHAIN_IDS,
+  CHAINS,
+  type ChainId,
+  RECIPE_IDS,
+  RECIPES_BY_ID,
+  type RecipeId,
+} from '../content';
 import { SAVE_VERSION } from '../types';
 
 type Json = Record<string, unknown>;
@@ -43,7 +52,7 @@ function isValidPiece(value: unknown): boolean {
     case 'dish':
       return isRecipeId(value.recipe) && [1, 2, 3].includes(value.count as number);
     default:
-      // 包含 'dish'：S3.2 之前棋盤還畫不了發明菜
+      // 未知的棋子種類
       return false;
   }
 }
@@ -71,6 +80,12 @@ function isValidOrder(value: unknown): boolean {
   );
 }
 
+const isSignatureOf = (value: unknown, chain: ChainId) => {
+  if (!isRecipeId(value)) return false;
+  const recipe = RECIPES_BY_ID[value as RecipeId];
+  return recipe.a.chain === chain || recipe.b.chain === chain;
+};
+
 function isValidStalls(value: unknown): boolean {
   return (
     isObject(value) &&
@@ -81,7 +96,9 @@ function isValidStalls(value: unknown): boolean {
       return (
         isObject(stall) &&
         (stall.level === 0 || stall.level === 1 || stall.level === 2 || stall.level === 3) &&
-        (stall.signatureDish === null || isRecipeId(stall.signatureDish))
+        // 招牌菜只屬於 Lv3，而且一定含這一攤的食材（FR13、RC-7）
+        (stall.signatureDish === null ||
+          (stall.level === 3 && isSignatureOf(stall.signatureDish, chain)))
       );
     })
   );

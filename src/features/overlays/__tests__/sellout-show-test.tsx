@@ -88,6 +88,13 @@ describe('完售演出（S2.4、FR19、UX-DR4）', () => {
     useOverlayStore.getState().playSellout(1);
     await render(<OverlayHost />);
 
+    // 剛出現的 0.4 秒內點擊不算（避免出單後緊接著的點擊直接關掉）
+    await fireEvent.press(screen.getByTestId('sellout-show'));
+    expect(useOverlayStore.getState().sellout).not.toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
     await fireEvent.press(screen.getByTestId('sellout-show'));
 
     expect(useOverlayStore.getState().sellout).toBeNull();

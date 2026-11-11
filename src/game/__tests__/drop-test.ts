@@ -139,7 +139,7 @@ describe('resolveDrop：邊界', () => {
     expect(resolveDrop(state, 0, 1)).toEqual({ kind: 'swap' });
   });
 
-  it('reject 的 affected 不含已發現的配方；全部發現過時仍然 reject，affected 為空', () => {
+  it('reject 的 affected 不含已發現的配方；相關配方全部發現過時改走 swap（不再彈回）', () => {
     const base = setup(
       { 0: item(1, 'tea', 4), 1: item(2, 'fried', 3) },
       {
@@ -153,7 +153,7 @@ describe('resolveDrop：邊界', () => {
     expect(resolveDrop(oneFound, 0, 1)).toEqual({ kind: 'reject', affected: ['tea-noodle'] });
 
     const allFound = { ...base, inventions: { 'tea-fried': found, 'tea-noodle': found } };
-    expect(resolveDrop(allFound, 0, 1)).toEqual({ kind: 'reject', affected: [] });
+    expect(resolveDrop(allFound, 0, 1)).toEqual({ kind: 'swap' });
   });
 });
 
@@ -275,5 +275,35 @@ describe('Epic 3 完成定義：10 道配方都能觸發', () => {
 
     expect(next.board[1]).toEqual({ id: 1000, kind: 'dish', recipe: recipe.id, count: 1 });
     expect(next.events).toEqual([{ type: 'dish_invented', recipe: recipe.id, first: true }]);
+  });
+});
+
+describe('applyDrop：發明菜的交換（code review 2026-11-11）', () => {
+  it('不同發明菜互換位置，份數與 id 都不變', () => {
+    const state = setup({ 0: dish(1, 'tea-fried', 2), 1: dish(2, 'fried-sweet', 3) });
+    const next = applyDrop(state, 0, 1, NOW);
+    expect(next.board[0]).toEqual(dish(2, 'fried-sweet', 3));
+    expect(next.board[1]).toEqual(dish(1, 'tea-fried', 2));
+    expect(next.events).toEqual([]);
+  });
+
+  it('發明菜拖到品項、同一道菜拖到已滿 3 份的格子：交換，不會合成或疊加', () => {
+    const toItem = applyDrop(
+      setup({ 0: dish(1, 'tea-fried', 1), 1: item(2, 'tea', 3) }),
+      0,
+      1,
+      NOW
+    );
+    expect(toItem.board[0]).toEqual(item(2, 'tea', 3));
+    expect(toItem.board[1]).toEqual(dish(1, 'tea-fried', 1));
+
+    const toFull = applyDrop(
+      setup({ 0: dish(1, 'tea-fried', 1), 1: dish(2, 'tea-fried', 3) }),
+      0,
+      1,
+      NOW
+    );
+    expect(toFull.board[0]).toEqual(dish(2, 'tea-fried', 3));
+    expect(toFull.board[1]).toEqual(dish(1, 'tea-fried', 1));
   });
 });

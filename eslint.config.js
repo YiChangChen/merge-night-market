@@ -105,6 +105,25 @@ module.exports = defineConfig([
       'no-restricted-syntax': ['error', ...NO_CLOCK, ...NO_RANDOM],
     },
   },
+  // 畫面層：落子一律呼叫 applyDrop（RC-4、NP-1），不得直接呼叫規則層內部使用的 movePiece。
+  {
+    files: ['src/app/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
+    ignores: ['**/__tests__/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/game/engine',
+              importNames: ['movePiece'],
+              message: '落子一律呼叫 @/game/drop 的 applyDrop（RC-4）；movePiece 只給規則層內部使用。',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // store.ts 例外：它是規則層與外界的邊界。
   // 可以 import zustand（以及 zustand 所需的 react），也可以讀 Date.now 交給 syncAll；
   // Math.random 與其他 import 限制照舊。

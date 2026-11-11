@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -14,6 +14,8 @@ import { useGameStore } from '@/game/store';
 
 /** 完售演出的長度；沒點跳過時自動結束 */
 export const SELLOUT_SHOW_MS = 2800;
+/** 演出剛出現的這段時間不接受點擊：出單後緊接著的那一下點擊，不該直接關掉慶祝 */
+const SHOW_TAP_GUARD_MS = 400;
 
 // 煙火：固定位置與顏色的 3 組爆炸，依序施放（S1.3 原型約 30 顆粒子）
 const BURSTS = [
@@ -95,6 +97,18 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 剛出現時忽略點擊（code review 2026-11-11）：計時器過了才接受跳過
+  const tappable = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      tappable.current = true;
+    }, SHOW_TAP_GUARD_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  const onPress = () => {
+    if (tappable.current) onDone();
+  };
+
   useEffect(() => {
     // 用 JS 計時收尾，不必從 worklet 回呼（演出本身在 UI 執行緒播放）
     const timer = setTimeout(onDone, SELLOUT_SHOW_MS);
@@ -117,7 +131,7 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
       accessibilityLabel={label}
       // 焦點不要跑到底下的棋盤（iOS）
       accessibilityViewIsModal
-      onPress={onDone}
+      onPress={onPress}
       style={styles.backdrop}>
       <Fireworks />
       <View style={styles.panel} pointerEvents="none">

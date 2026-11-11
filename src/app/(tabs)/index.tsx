@@ -10,6 +10,7 @@ import { useShallow } from 'zustand/shallow';
 import { Board, InfoBar } from '@/features/board';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
+import { useOverlayStore } from '@/features/overlays';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
 import { BALANCE, BOARD_BACKGROUND, CHAINS } from '@/game/content';
 import { applyDrop, resolveDrop } from '@/game/drop';
@@ -157,7 +158,13 @@ export default function GameScreen() {
   useTabSwitchTiming('index');
   // 分頁失焦時暫停棋盤的循環動畫（冒熱氣）
   const focused = useIsFocused();
-  const [selected, setSelected] = useState<number | null>(null);
+  // 選取記住「哪一格的哪一個棋子」：賣掉、升級用掉、或待放的產生器補進同一格時，
+  // id 不同就自動取消，選取不會跳到別的棋子上（code review 2026-11-11、RC-6）
+  const [selection, setSelection] = useState<{ cell: number; id: number } | null>(null);
+  // 演出或攤位面板蓋住棋盤時，暫停棋盤的循環動畫（冒熱氣）
+  const overlayBlocking = useOverlayStore(
+    (store) => store.stallPanel !== null || store.sellout !== null || store.invention !== null
+  );
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -176,6 +183,9 @@ export default function GameScreen() {
     );
   }
   if (!board) return <View style={styles.screen} />;
+
+  const selected =
+    selection !== null && board[selection.cell]?.id === selection.id ? selection.cell : null;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);
   const artSize = customerArtSize((boardWidth + ORDER_GAP) / BALANCE.orderSlots);
@@ -202,7 +212,7 @@ export default function GameScreen() {
     const state = useGameStore.getState().state;
     if (!state) return;
     const piece = state.board[cell];
-    setSelected(piece ? cell : null);
+    setSelection(piece ? { cell, id: piece.id } : null);
     if (piece?.kind !== 'generator') return;
     const blocker = getSpawnBlocker(state);
     if (blocker === 'no-energy') setToast('體力不足，稍等一下再來');
@@ -213,23 +223,23 @@ export default function GameScreen() {
   // 放開時才查一次判定，決定播哪種動畫（不訂閱 store，拖曳時不會重繪）
   const previewDrop = (from: number, to: number) => {
     const state = useGameStore.getState().state;
-    return state ? (resolveDrop(state, from, to)?.kind ?? null) : null;
+    return state ? resolveDrop(state, from, to) : null;
   };
 
   const handleMove = (from: number, to: number) => {
-    setSelected(null);
+    setSelection(null);
     // 落子的判定一律交給規則層（RC-4、NP-1）；時間由 apply 傳入
     apply((current, now) => applyDrop(current, from, to, now));
   };
 
   const handleSell = (cell: number) => {
+    // 發明菜還有剩（一次只賣 1 份）時同一個棋子還在，保持選取方便連續賣；
+    // 賣完或換成別的棋子（例如補進來的產生器）時，下面的 selected 會自動變成 null（RC-6）
     apply((current) => sellPiece(current, cell));
-    // 發明菜還有剩（一次只賣 1 份）時保持選取，方便連續賣；格子空了才取消選取（RC-6）
-    if (!useGameStore.getState().state?.board[cell]) setSelected(null);
   };
 
   const handleCompleteOrder = (id: number) => {
-    setSelected(null);
+    setSelection(null);
     apply((current, now) => completeOrder(current, id, now));
   };
 
@@ -258,7 +268,7 @@ export default function GameScreen() {
             onTapCell={handleTapCell}
             onMove={handleMove}
             previewDrop={previewDrop}
-            animate={focused}
+            animate={focused && !overlayBlocking}
           />
         </View>
         {toast ? (

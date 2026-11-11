@@ -72,11 +72,11 @@ development_status:
 
   # Epic 3：老闆發明
   epic-3: in-progress
-  3-1-recipe-and-dish-data: review
-  3-2-drop-resolution-rules: review
-  3-3-board-dishes-and-reject-bounce: review
-  3-4-first-invention-show-and-dish-selling: review
-  3-5-lv3-upgrade-and-signature-dish: review
+  3-1-recipe-and-dish-data: done
+  3-2-drop-resolution-rules: done
+  3-3-board-dishes-and-reject-bounce: done
+  3-4-first-invention-show-and-dish-selling: done
+  3-5-lv3-upgrade-and-signature-dish: done
   epic-3-retrospective: optional
 
   # Epic 4：貴客上門與阿嬤指點

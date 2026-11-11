@@ -129,6 +129,8 @@ export function upgradeStall(
     stalls: {
       ...next.stalls,
       [chain]: {
+        // 展開原本的欄位，之後新增的攤位欄位才不會在升級時被丟掉
+        ...next.stalls[chain],
         level: check.targetLevel,
         signatureDish: check.needsDish ? (recipe ?? null) : next.stalls[chain].signatureDish,
       },

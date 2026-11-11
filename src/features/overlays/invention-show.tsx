@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -16,6 +17,8 @@ import { RECIPES_BY_ID, type RecipeId, STALLS } from '@/game/content';
 
 /** 首次發明演出的長度；沒點跳過時自動結束 */
 export const INVENTION_SHOW_MS = 3200;
+/** 演出剛出現的這段時間不接受點擊：發明後緊接著的那一下點擊，不該直接關掉慶祝 */
+export const SHOW_TAP_GUARD_MS = 400;
 
 const RAY_COUNT = 12;
 const DISH_SIZE = 168;
@@ -26,6 +29,7 @@ function Rays({ color }: { color: string }) {
   const spin = useSharedValue(0);
   useEffect(() => {
     spin.set(withRepeat(withTiming(1, { duration: 6000, easing: Easing.linear }), -1));
+    return () => cancelAnimation(spin);
   }, [spin]);
   const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.get() * 360}deg` }] }));
   return (
@@ -70,6 +74,18 @@ export function InventionShow({ recipe, onDone }: InventionShowProps) {
     return () => clearTimeout(timer);
   }, [onDone]);
 
+  // 剛出現時忽略點擊（code review 2026-11-11）：計時器過了才接受跳過
+  const tappable = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      tappable.current = true;
+    }, SHOW_TAP_GUARD_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  const onPress = () => {
+    if (tappable.current) onDone();
+  };
+
   // 發明菜彈出、標題稍後落下、老闆最後登場
   const pop = useSharedValue(0);
   const title = useSharedValue(0);
@@ -99,7 +115,7 @@ export function InventionShow({ recipe, onDone }: InventionShowProps) {
       accessibilityLabel={label}
       // 焦點不要跑到底下的棋盤（iOS）
       accessibilityViewIsModal
-      onPress={onDone}
+      onPress={onPress}
       style={styles.backdrop}>
       <View pointerEvents="none" style={styles.content}>
         <Animated.Text style={[styles.title, titleStyle]}>老闆發明！</Animated.Text>

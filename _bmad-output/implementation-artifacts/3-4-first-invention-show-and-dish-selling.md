@@ -4,7 +4,7 @@ baseline_commit: 4ac869d
 
 # Story 3.4: 首次發明演出與賣出發明菜
 
-Status: review
+Status: done
 
 ## Story
 
@@ -94,3 +94,12 @@ Claude Opus 5.5（claude-opus-5-5）
 ## Change Log
 
 - 2026-11-11：首次發明演出、重複發明小提示、賣出發明菜；狀態改為 review。
+
+### Review Findings（code review 2026-11-11，範圍 4157530..22879ef）
+
+- [x] [Review][Patch] （三層都抓到）選取記的是格子編號：棋盤滿時賣掉最後一份，待放的產生器會補進同一格，選取跑到產生器上；Lv3 升級用掉被選取格子的最後一份也一樣。改成記住棋子 id，id 不同就取消選取 [src/app/(tabs)/index.tsx]
+- [x] [Review][Patch] 3.2 秒內連續兩次首次發明，第二次會蓋掉第一次的演出；改成排隊依序播放 [src/features/overlays/overlay-store.ts]
+- [x] [Review][Patch] 光芒的無限動畫沒有在卸載時取消 [src/features/overlays/invention-show.tsx]
+- [x] [Review][Patch] 演出一出現就能被點掉，發明後緊接著點產生器的那一下會直接關掉慶祝；前 0.4 秒不接受點擊（完售演出一併處理） [invention-show.tsx、sellout-show.tsx]
+- [x] [Review][Patch] 小提示是唯一的覆蓋層時，結束時整層卸載，淡出動畫播不出來 [src/features/overlays/overlay-host.tsx]
+- [x] [Review][Defer] Android TalkBack 仍可聚焦到演出底下的畫面（`accessibilityViewIsModal` 只對 iOS 有效） — deferred：要在根層佈局切換 importantForAccessibility，和 S7.x 無障礙檢查一起做

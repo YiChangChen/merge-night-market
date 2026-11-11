@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 
 import { DishMadeToast } from './dish-made-toast';
+import { GrandmaHint } from './grandma-hint';
 import { InventionShow } from './invention-show';
 import { useOverlayStore } from './overlay-store';
 import { SelloutShow } from './sellout-show';
@@ -9,7 +10,7 @@ import { StallPanel } from './stall-panel';
 
 /**
  * Overlay Host：掛在根層，面板與演出都以元件顯示，不走路由（架構〈Navigation〉）。
- * 由下往上：攤位面板 → 完售演出（S2.4）→ 首次發明演出（S3.4）→ 小提示。阿嬤提示等之後加在這裡。
+ * 由下往上：攤位面板 → 完售演出（S2.4）→ 首次發明演出（S3.4）→ 阿嬤提示（S4.4）→ 小提示。
  */
 export function OverlayHost() {
   const stallPanel = useOverlayStore((store) => store.stallPanel);
@@ -18,23 +19,26 @@ export function OverlayHost() {
   const finishSellout = useOverlayStore((store) => store.finishSellout);
   const invention = useOverlayStore((store) => store.invention);
   const finishInvention = useOverlayStore((store) => store.finishInvention);
+  const hint = useOverlayStore((store) => store.hint);
+  const finishHint = useOverlayStore((store) => store.finishHint);
   const dishMade = useOverlayStore((store) => store.dishMade);
   const hideDishMade = useOverlayStore((store) => store.hideDishMade);
   // 會擋住操作、需要返回鍵關閉的層（小提示不擋操作，不算）
-  const blocking = stallPanel !== null || sellout !== null || invention !== null;
+  const blocking = stallPanel !== null || sellout !== null || invention !== null || hint !== null;
 
   // Android 返回鍵：由上往下關閉最上層；不要切換分頁或離開 App
   useEffect(() => {
     if (!blocking) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       const overlays = useOverlayStore.getState();
-      if (overlays.invention) finishInvention();
+      if (overlays.hint) finishHint();
+      else if (overlays.invention) finishInvention();
       else if (overlays.sellout) finishSellout();
       else closePanel();
       return true;
     });
     return () => subscription.remove();
-  }, [blocking, closePanel, finishInvention, finishSellout]);
+  }, [blocking, closePanel, finishHint, finishInvention, finishSellout]);
 
   // 這一層一直掛著（pointerEvents box-none，不擋操作），小提示消失時才播得出淡出動畫
   return (
@@ -58,6 +62,7 @@ export function OverlayHost() {
       {invention ? (
         <InventionShow key={invention.token} recipe={invention.recipe} onDone={finishInvention} />
       ) : null}
+      {hint ? <GrandmaHint key={hint.token} recipe={hint.recipe} onDone={finishHint} /> : null}
       {dishMade ? (
         <DishMadeToast key={dishMade.token} recipe={dishMade.recipe} onDone={hideDishMade} />
       ) : null}

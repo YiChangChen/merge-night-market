@@ -336,3 +336,24 @@ describe('upgradeStall 保留攤位的其他欄位（code review 2026-11-11）',
     expect(next.stalls.fried).toMatchObject({ level: 2, note: 'keep' });
   });
 });
+
+describe('教學提示：tea、fried 都到 Lv2 時阿嬤教配方 #1（S4.4、FR32）', () => {
+  it('第二攤升到 Lv2 的那一次送出 hint_shown tea-fried，只有一次', () => {
+    let state = ready({ coins: 2000 });
+    state = upgradeStall(state, 'tea', NOW);
+    expect(state.events.some((e) => e.type === 'hint_shown')).toBe(false);
+
+    state = upgradeStall({ ...state, events: [] }, 'fried', NOW);
+    expect(state.events).toContainEqual({ type: 'hint_shown', recipe: 'tea-fried' });
+    expect(state.meta.hintedRecipes).toEqual(['tea-fried']);
+    // 事件順序：先升級（招牌通電），再出現阿嬤
+    expect(state.events.map((e) => e.type)).toEqual(['stall_upgraded', 'hint_shown']);
+  });
+
+  it('已經發現紅茶鹽酥雞套餐時不提示', () => {
+    const found = { discovered: true, made: 1, failures: 0, clueSeen: false };
+    let state = ready({ coins: 2000, inventions: { 'tea-fried': found } });
+    state = upgradeStall(upgradeStall(state, 'tea', NOW), 'fried', NOW);
+    expect(state.events.some((e) => e.type === 'hint_shown')).toBe(false);
+  });
+});

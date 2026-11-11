@@ -1,6 +1,13 @@
 // 老闆發明（E3）：配方判定、發明菜、失敗計數、阿嬤提示。
 // 拖放的判定順序在 drop.ts（NP-1）；這裡放配方相關的純函式與發明菜工廠。
-import { type ChainId, type Ingredient, type Recipe, RECIPES, type RecipeId } from './content';
+import {
+  BALANCE,
+  type ChainId,
+  type Ingredient,
+  type Recipe,
+  RECIPES,
+  type RecipeId,
+} from './content';
 import type { DishPiece, GameState, ItemPiece, StallState } from './types';
 
 // 發明菜賣出價定義在 engine.ts（sellPiece 要用，避免互相 import）；這裡重新匯出
@@ -58,4 +65,44 @@ export function recordInvention(state: GameState, recipe: RecipeId): [boolean, G
       },
     },
   ];
+}
+
+/**
+ * 阿嬤提示（S4.4、UX-DR7）：加入 hintedRecipes 並送出 hint_shown。每道配方只提示一次，已提示過時回傳原 state。
+ * 保底（recordRejection）與教學（tea、fried 都到 Lv2，FR32）共用這條路徑。
+ */
+export function hintRecipe(state: GameState, recipe: RecipeId): GameState {
+  if (state.meta.hintedRecipes.includes(recipe)) return state;
+  return {
+    ...state,
+    meta: { ...state.meta, hintedRecipes: [...state.meta.hintedRecipes, recipe] },
+    events: [...state.events, { type: 'hint_shown', recipe }],
+  };
+}
+
+/**
+ * 一次無效的發明嘗試（NP-3、FR31）：affected 裡每一道尚未發現的配方 failures + 1；
+ * 達到 hintAfterFailures 次時由阿嬤直接說出答案（只提示一次）。已發現的配方不計數。
+ */
+export function recordRejection(state: GameState, affected: readonly RecipeId[]): GameState {
+  let next = state;
+  for (const recipe of affected) {
+    const previous = next.inventions[recipe];
+    if (previous?.discovered) continue;
+    const failures = (previous?.failures ?? 0) + 1;
+    next = {
+      ...next,
+      inventions: {
+        ...next.inventions,
+        [recipe]: {
+          discovered: false,
+          made: previous?.made ?? 0,
+          failures,
+          clueSeen: previous?.clueSeen ?? false,
+        },
+      },
+    };
+    if (failures >= BALANCE.hintAfterFailures) next = hintRecipe(next, recipe);
+  }
+  return next;
 }

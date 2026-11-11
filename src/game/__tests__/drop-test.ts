@@ -201,7 +201,7 @@ describe('applyDrop', () => {
     expect(next.board.some((p) => p?.kind === 'generator' && p.chain === 'noodle')).toBe(true);
   });
 
-  it('reject：state 完全不變，只送出 invent_rejected', () => {
+  it('reject：不消耗任何東西，累計失敗次數並送出 invent_rejected', () => {
     const state = setup(
       { 0: item(1, 'tea', 4), 1: item(2, 'fried', 3) },
       {
@@ -212,7 +212,10 @@ describe('applyDrop', () => {
     );
     const next = applyDrop(state, 0, 1, NOW);
 
-    expect({ ...next, events: [] }).toEqual(state);
+    // S4.4 起：棋盤、金幣都不變，只有受影響配方的失敗次數 +1（阿嬤保底）
+    expect({ ...next, events: [], inventions: state.inventions }).toEqual(state);
+    expect(next.inventions['tea-fried']?.failures).toBe(1);
+    expect(next.inventions['tea-noodle']?.failures).toBe(1);
     expect(next.events).toEqual([
       { type: 'invent_rejected', recipes: ['tea-fried', 'tea-noodle'] },
     ]);
@@ -305,5 +308,20 @@ describe('applyDrop：發明菜的交換（code review 2026-11-11）', () => {
     );
     expect(toFull.board[0]).toEqual(dish(2, 'tea-fried', 3));
     expect(toFull.board[1]).toEqual(dish(1, 'tea-fried', 1));
+  });
+});
+
+describe('組錯第 5 次，阿嬤直接說出答案（S4.4）', () => {
+  it('invent_rejected 之後接著 hint_shown', () => {
+    const four = { discovered: false, made: 0, failures: 4, clueSeen: false };
+    const state = {
+      ...setup({ 0: item(1, 'tea', 4), 1: item(2, 'fried', 3) }, { tea: 2, fried: 2, noodle: 2 }),
+      inventions: { 'tea-fried': four },
+    };
+    const next = applyDrop(state, 0, 1, NOW);
+    expect(next.events).toEqual([
+      { type: 'invent_rejected', recipes: ['tea-fried', 'tea-noodle'] },
+      { type: 'hint_shown', recipe: 'tea-fried' },
+    ]);
   });
 });

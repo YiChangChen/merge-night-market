@@ -27,6 +27,8 @@ export const BALANCE = {
   // 線索單（FR29）：貴客判定成立、而且還有未發現的可發明配方時，這個機率改為線索單；10 分鐘後離開
   clueChance: 0.5,
   clueDurationMs: 10 * 60 * 1000,
+  // 阿嬤保底（NP-3、FR31）：同一道配方失敗這麼多次後直接說出答案
+  hintAfterFailures: 5,
   // 人龍長度 = min(queueBase + queuePerStallLevel × Σ攤位等級, queueMax) + 額外人潮（FR17）
   queueBase: 8,
   queuePerStallLevel: 2,

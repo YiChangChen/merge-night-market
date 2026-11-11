@@ -16,6 +16,9 @@ type OverlayStore = {
   invention: { recipe: RecipeId; token: number } | null;
   /** 演出還在播時又發明了新菜：排隊，依序播放，每道菜的首次演出都不會被蓋掉 */
   pendingInventions: RecipeId[];
+  /** 阿嬤提示（S4.4）；同一次失敗可能同時提示兩道，排隊依序顯示 */
+  hint: { recipe: RecipeId; token: number } | null;
+  pendingHints: RecipeId[];
   /** 已發現的配方又做出一份：棋盤上方的小提示（S3.4） */
   dishMade: { recipe: RecipeId; token: number } | null;
   openStallPanel: (chain: ChainId) => void;
@@ -29,6 +32,8 @@ type OverlayStore = {
   playInvention: (recipe: RecipeId) => void;
   finishInvention: () => void;
   showDishMade: (recipe: RecipeId) => void;
+  playHint: (recipe: RecipeId) => void;
+  finishHint: () => void;
   hideDishMade: () => void;
 };
 
@@ -42,6 +47,8 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
   invention: null,
   pendingInventions: [],
   dishMade: null,
+  hint: null,
+  pendingHints: [],
   openStallPanel: (chain) => set({ stallPanel: chain }),
   closeStallPanel: () => set({ stallPanel: null }),
   playShutter: (chain) =>
@@ -75,4 +82,17 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
     }),
   showDishMade: (recipe) => set({ dishMade: { recipe, token: ++sequence } }),
   hideDishMade: () => set({ dishMade: null }),
+  playHint: (recipe) =>
+    set((store) =>
+      store.hint
+        ? { pendingHints: [...store.pendingHints, recipe] }
+        : { hint: { recipe, token: ++sequence } }
+    ),
+  finishHint: () =>
+    set((store) => {
+      const [next, ...rest] = store.pendingHints;
+      return next
+        ? { hint: { recipe: next, token: ++sequence }, pendingHints: rest }
+        : { hint: null, pendingHints: [] };
+    }),
 }));

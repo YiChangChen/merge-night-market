@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/shallow';
 
@@ -9,6 +9,7 @@ import {
   debugAddCoins,
   debugAddEnergy,
   debugMinStallLevel,
+  debugNewGame,
   debugQueueLastCustomer,
   debugSetPlayerLevel,
   debugSetStallLevel,
@@ -104,6 +105,27 @@ export function DebugPanel() {
   const onExport = async () => {
     const result = await exportSaveToClipboard();
     setMessage(result.ok ? `已複製存檔到剪貼簿（${result.length} 字）` : '匯出失敗');
+  };
+
+  // 開新局：先把目前的存檔複製到剪貼簿當備份，確認後才換成新的一局（之後可以用「從剪貼簿匯入」還原）
+  const onNewGame = () => {
+    Alert.alert('開新局？', '目前的進度會先複製到剪貼簿當備份，之後可以用「從剪貼簿匯入」還原。', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '開新局',
+        style: 'destructive',
+        onPress: async () => {
+          const backup = await exportSaveToClipboard();
+          if (!backup.ok) {
+            setMessage('備份失敗，沒有開新局');
+            return;
+          }
+          resetTime();
+          apply((state, now) => debugNewGame(state, now));
+          setMessage(`已開新局（舊進度已複製到剪貼簿，${backup.length} 字）`);
+        },
+      },
+    ]);
   };
 
   const onImport = async () => {
@@ -224,6 +246,7 @@ export function DebugPanel() {
         <View style={styles.row}>
           <DebugButton testID="debug-export" label="匯出到剪貼簿" onPress={onExport} />
           <DebugButton testID="debug-import" label="從剪貼簿匯入" onPress={onImport} />
+          <DebugButton testID="debug-new-game" label="開新局" onPress={onNewGame} />
         </View>
         <Text style={styles.note}>
           匯入會先執行遷移與驗證，不合法的存檔一律拒絕，匯入時也會取消時間快轉。快轉量本身不存檔，但快轉期間結算出的時間會被存起來；App

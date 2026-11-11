@@ -3,6 +3,7 @@ import { createGame } from '../engine';
 import {
   debugAddCoins,
   debugAddEnergy,
+  debugNewGame,
   debugQueueLastCustomer,
   debugSetPlayerLevel,
   debugSetStallLevel,
@@ -140,5 +141,27 @@ describe('除錯：招牌菜只屬於 Lv3（code review 2026-11-11）', () => {
     const lowered = debugSetStallLevel(lv3, 'tea', 2);
     expect(lowered.stalls.tea).toEqual({ level: 2, signatureDish: null });
     expect(valid(lowered)).toBe(true);
+  });
+});
+
+describe('除錯：開新局（S4.4）', () => {
+  it('換成全新的一局：存檔合法、清掉進度，種子和原本不同', () => {
+    const played = {
+      ...createGame(NOW, 1),
+      coins: 5000,
+      level: 9,
+      inventions: { 'tea-fried': { discovered: true, made: 3, failures: 0, clueSeen: false } },
+    };
+    const fresh = debugNewGame(played, NOW + 1000);
+
+    expect(fresh).toMatchObject({
+      coins: 0,
+      level: 1,
+      inventions: {},
+      energyUpdatedAt: NOW + 1000,
+    });
+    expect(fresh.meta.hintedRecipes).toEqual([]);
+    expect(fresh.rngSeed).not.toBe(played.rngSeed);
+    expect(valid(fresh)).toBe(true);
   });
 });

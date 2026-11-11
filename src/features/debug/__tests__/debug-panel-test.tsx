@@ -112,3 +112,30 @@ it('開局攤位的 − 不會把攤位調成鐵捲門（code review 2026-11-10�
 
   expect(useGameStore.getState().state?.stalls.tea.level).toBe(1);
 });
+
+describe('開新局（S4.4）', () => {
+  const { Alert } = jest.requireActual<typeof import('react-native')>('react-native');
+
+  it('確認後先備份到剪貼簿，再換成全新的一局；取消時不動', async () => {
+    const Clipboard = jest.requireMock<{ setStringAsync: jest.Mock }>('expo-clipboard');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    useGameStore.setState((store) => ({
+      state: store.state && { ...store.state, coins: 777, level: 6 },
+    }));
+    await render(<DebugPanel />);
+
+    await fireEvent.press(screen.getByTestId('debug-new-game'));
+    expect(alert).toHaveBeenCalledTimes(1);
+    const buttons = alert.mock.calls[0][2] as { text: string; onPress?: () => Promise<void> }[];
+    expect(useGameStore.getState().state?.coins).toBe(777);
+
+    await act(async () => {
+      await buttons.find((b) => b.text === '開新局')?.onPress?.();
+    });
+
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(expect.stringContaining('"coins":777'));
+    expect(useGameStore.getState().state).toMatchObject({ coins: 0, level: 1 });
+    expect(screen.getByTestId('debug-message')).toHaveTextContent(/已開新局/);
+    alert.mockRestore();
+  });
+});

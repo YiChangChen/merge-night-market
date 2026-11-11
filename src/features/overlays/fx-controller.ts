@@ -27,8 +27,12 @@ export function startFxController(): () => void {
         if (event.first) useOverlayStore.getState().playInvention(event.recipe);
         else useOverlayStore.getState().showDishMade(event.recipe);
         break;
+      case 'hint_shown':
+        // 阿嬤直接說出兩個材料（UX-DR7）
+        useOverlayStore.getState().playHint(event.recipe);
+        break;
       default:
-        // 其他演出（阿嬤提示、卡牌升星…）由之後的 story 加入
+        // 其他演出（卡牌升星…）由之後的 story 加入
         break;
     }
   });

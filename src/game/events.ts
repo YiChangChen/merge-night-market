@@ -13,6 +13,8 @@ export type GameEvent =
   // 發明（S3.2）：first 代表第一次做出這道菜；rejected 帶受影響、尚未發現的配方（給阿嬤保底，NP-3）
   | { type: 'dish_invented'; recipe: RecipeId; first: boolean }
   | { type: 'invent_rejected'; recipes: RecipeId[] }
+  // 阿嬤提示（S4.4）：保底第 5 次失敗，或 tea、fried 都到 Lv2 時的教學提示
+  | { type: 'hint_shown'; recipe: RecipeId }
   | { type: 'stall_reopened' | 'stall_upgraded'; stall: ChainId; level: number };
 
 export type GameEventListener = (event: GameEvent) => void;

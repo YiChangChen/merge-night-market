@@ -1,11 +1,21 @@
 // 除錯面板用的規則函式（S1.8）。只在 development／preview 的除錯面板呼叫，一律透過 apply。
 // 和一般規則一樣是純函式：不合法的輸入直接回傳原 state。
 import { type ChainId, STALLS } from './content';
-import { ensureGenerator } from './engine';
+import { createGame, ensureGenerator } from './engine';
 import { growActiveWave } from './queue';
+import { nextRandom } from './random';
 import type { GameState, StallLevel } from './types';
 
 const isAmount = (value: number) => Number.isFinite(value) && value > 0;
+
+/**
+ * 開新局（除錯用，S4.4 測試教學提示時加入）：換成全新的一局。
+ * 種子由目前的種子推一步產生（規則層不能用 Math.random），每次開新局的盤面都不同。
+ */
+export function debugNewGame(state: GameState, now: number): GameState {
+  const [, next] = nextRandom(state);
+  return createGame(now, next.rngSeed);
+}
 
 export function debugAddCoins(state: GameState, amount: number): GameState {
   return isAmount(amount) ? { ...state, coins: state.coins + amount } : state;

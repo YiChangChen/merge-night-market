@@ -141,7 +141,11 @@ export default function GameScreen() {
   const [selection, setSelection] = useState<{ cell: number; id: number } | null>(null);
   // 演出或攤位面板蓋住棋盤時，暫停棋盤的循環動畫（冒熱氣）
   const overlayBlocking = useOverlayStore(
-    (store) => store.stallPanel !== null || store.sellout !== null || store.invention !== null
+    (store) =>
+      store.stallPanel !== null ||
+      store.sellout !== null ||
+      store.invention !== null ||
+      store.hint !== null
   );
   const [toast, setToast] = useState<string | null>(null);
 

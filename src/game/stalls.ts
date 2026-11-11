@@ -1,6 +1,7 @@
 // 攤位規則：重開（S1.9）、升級到 Lv2（S1.10）、升級到 Lv3 與招牌菜（S3.5）。
 import { CHAINS, type ChainId, RECIPES, type RecipeId, STALLS } from './content';
 import { consumeDish, ensureGenerator } from './engine';
+import { hintRecipe } from './invention';
 import { growActiveWave } from './queue';
 import type { GameState } from './types';
 
@@ -122,8 +123,17 @@ export function upgradeStall(
       },
     },
   });
-  return {
+  next = {
     ...next,
     events: [...next.events, { type: 'stall_upgraded', stall: chain, level: check.targetLevel }],
   };
+  // 教學提示（FR32）：手搖飲與炸物都到 Lv2、開放發明時，阿嬤先教配方 #1（只一次，已發現就不教）
+  if (
+    next.stalls.tea.level >= 2 &&
+    next.stalls.fried.level >= 2 &&
+    !next.inventions['tea-fried']?.discovered
+  ) {
+    next = hintRecipe(next, 'tea-fried');
+  }
+  return next;
 }

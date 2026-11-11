@@ -9,6 +9,7 @@ import {
   inventableRecipes,
   isIngredientOf,
   recordInvention,
+  recordRejection,
 } from './invention';
 import type { DishPiece, GameState, ItemPiece, Piece } from './types';
 
@@ -123,10 +124,13 @@ export function applyDrop(state: GameState, from: number, to: number, _now: numb
     }
 
     case 'reject':
-      // 不消耗任何東西，只播放彈回（S3.3）；失敗次數由阿嬤保底（NP-3，E4）累計
-      return {
-        ...state,
-        events: [...state.events, { type: 'invent_rejected', recipes: result.affected }],
-      };
+      // 不消耗任何東西，只播放彈回（S3.3）；受影響的配方累計失敗次數，第 5 次阿嬤說出答案（S4.4）
+      return recordRejection(
+        {
+          ...state,
+          events: [...state.events, { type: 'invent_rejected', recipes: result.affected }],
+        },
+        result.affected
+      );
   }
 }

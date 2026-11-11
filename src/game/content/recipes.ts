@@ -113,10 +113,12 @@ export const RECIPES = [
   },
 ] as const satisfies readonly RecipeDef[];
 
-export type RecipeId = (typeof RECIPES)[number]['id'];
+/** 一道配方（id 是字面量型別）；規則層一律用它，不用寬鬆的 RecipeDef */
+export type Recipe = (typeof RECIPES)[number];
+export type RecipeId = Recipe['id'];
 
 export const RECIPE_IDS: readonly RecipeId[] = RECIPES.map((recipe) => recipe.id);
 
 export const RECIPES_BY_ID = Object.fromEntries(
   RECIPES.map((recipe) => [recipe.id, recipe])
-) as Record<RecipeId, RecipeDef>;
+) as Record<RecipeId, Recipe>;

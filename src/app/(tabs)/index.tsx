@@ -10,13 +10,13 @@ import { Board, PieceIcon } from '@/features/board';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, CustomerTray } from '@/features/orders';
 import { QUEUE_METER_HEIGHT, QueueMeter } from '@/features/queue-meter';
-import { BALANCE, BOARD_BACKGROUND, CHAINS } from '@/game/content';
+import { BALANCE, BOARD_BACKGROUND, CHAINS, RECIPES_BY_ID } from '@/game/content';
+import { applyDrop } from '@/game/drop';
 import {
   completeOrder,
   customerForOrder,
   findOrderCells,
   getSpawnBlocker,
-  movePiece,
   msUntilNextEnergy,
   sellPiece,
   sellPrice,
@@ -171,6 +171,19 @@ function InfoBar({
       </View>
     );
   }
+  if (piece.kind === 'dish') {
+    // 發明菜：顯示名稱與份數；賣出在 S3.4 加入
+    return (
+      <View style={styles.info}>
+        <View style={styles.infoLabel}>
+          <PieceIcon piece={piece} size={28} />
+          <Text style={styles.infoText} numberOfLines={1}>
+            {RECIPES_BY_ID[piece.recipe].name}（發明菜）×{piece.count}
+          </Text>
+        </View>
+      </View>
+    );
+  }
   const items = CHAINS[piece.chain].items;
   const nextItem = items[piece.level];
   return (
@@ -255,7 +268,8 @@ export default function GameScreen() {
 
   const handleMove = (from: number, to: number) => {
     setSelected(null);
-    apply((current) => movePiece(current, from, to));
+    // 落子的判定一律交給規則層（RC-4、NP-1）；時間由 apply 傳入
+    apply((current, now) => applyDrop(current, from, to, now));
   };
 
   const handleSell = (cell: number) => {

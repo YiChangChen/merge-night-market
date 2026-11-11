@@ -73,7 +73,7 @@ development_status:
   # Epic 3：老闆發明
   epic-3: in-progress
   3-1-recipe-and-dish-data: review
-  3-2-drop-resolution-rules: backlog
+  3-2-drop-resolution-rules: review
   3-3-board-dishes-and-reject-bounce: backlog
   3-4-first-invention-show-and-dish-selling: backlog
   3-5-lv3-upgrade-and-signature-dish: backlog

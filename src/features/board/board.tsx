@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { BALANCE, CHAIN_IDS, CHAINS } from '@/game/content';
+import { BALANCE, CHAIN_IDS, CHAINS, RECIPES_BY_ID } from '@/game/content';
 import {
   canMerge,
   findMerges,
@@ -67,13 +67,19 @@ type BoardProps = {
   onMove: (from: number, to: number) => void;
 };
 
-export function PieceIcon({ piece, size }: { piece: Piece; size: number }) {
+/** 棋子的圖示：產生器、品項、發明菜（S3.2；份數徽章與冒熱氣在 S3.3 完成正式樣式） */
+function pieceArt(piece: Piece): number {
+  if (piece.kind === 'dish') return RECIPES_BY_ID[piece.recipe].art;
   const chain = CHAINS[piece.chain];
+  return piece.kind === 'generator' ? chain.generatorArt : chain.items[piece.level - 1].art;
+}
+
+export function PieceIcon({ piece, size }: { piece: Piece; size: number }) {
   const isGenerator = piece.kind === 'generator';
   const iconSize = size * (isGenerator ? 0.88 : 0.84);
   return (
     <Image
-      source={isGenerator ? chain.generatorArt : chain.items[piece.level - 1].art}
+      source={pieceArt(piece)}
       contentFit="contain"
       // 預設只有硬碟快取，每次掛載都要非同步讀檔，拖曳開始時棋子會短暫消失
       cachePolicy="memory-disk"
@@ -89,6 +95,9 @@ function PieceView({ piece, size }: { piece: Piece; size: number }) {
     <>    
       <PieceIcon piece={piece} size={size} />
       {piece.kind === 'item' ? <Text style={styles.level}>{piece.level}</Text> : null}
+      {piece.kind === 'dish' && piece.count > 1 ? (
+        <Text style={styles.level}>×{piece.count}</Text>
+      ) : null}
     </>
   );
 }

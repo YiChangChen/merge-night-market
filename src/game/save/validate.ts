@@ -5,7 +5,7 @@
 // 所以一律在這裡擋下，交給「存檔讀取失敗」畫面處理。
 //
 // 擴充時機：
-// - S3.2 讓棋盤支援發明菜時，在 isValidPiece 接受 kind: 'dish'（{ recipe, count: 1–3 }）。
+// - S3.2 起棋盤支援發明菜，isValidPiece 接受 kind: 'dish'（{ recipe, count: 1–3 }）。
 // - E4 支援貴客單與線索單時，在 isValidOrder 接受 kind: 'vip' | 'clue'（含 recipe、expiresAt）。
 // 這兩者都是「接受更多」，舊版 App 讀到新資料只會顯示讀檔失敗、不會覆寫，所以不需要升版。
 import { BALANCE, BOARD_SIZE, CHAIN_IDS, CHAINS, type ChainId, RECIPE_IDS } from '../content';
@@ -28,6 +28,10 @@ const isChain = (value: unknown): value is ChainId =>
 const isItemLevel = (chain: ChainId, level: unknown): boolean =>
   isInteger(level) && (level as number) >= 1 && (level as number) <= CHAINS[chain].items.length;
 
+// 只接受已知的配方 id（S3.1）：未知的 id 在查 RECIPES_BY_ID 時會讓畫面或規則崩潰
+const isRecipeId = (value: unknown) =>
+  typeof value === 'string' && (RECIPE_IDS as readonly string[]).includes(value);
+
 function isValidPiece(value: unknown): boolean {
   if (value === null) return true;
   if (!isObject(value) || !isPositiveInteger(value.id)) return false;
@@ -36,6 +40,8 @@ function isValidPiece(value: unknown): boolean {
       return isChain(value.chain) && isItemLevel(value.chain, value.level);
     case 'generator':
       return isChain(value.chain);
+    case 'dish':
+      return isRecipeId(value.recipe) && [1, 2, 3].includes(value.count as number);
     default:
       // 包含 'dish'：S3.2 之前棋盤還畫不了發明菜
       return false;
@@ -64,10 +70,6 @@ function isValidOrder(value: unknown): boolean {
     isNonNegative(value.energy)
   );
 }
-
-// 只接受已知的配方 id（S3.1）：未知的 id 在查 RECIPES_BY_ID 時會讓畫面或規則崩潰
-const isRecipeId = (value: unknown) =>
-  typeof value === 'string' && (RECIPE_IDS as readonly string[]).includes(value);
 
 function isValidStalls(value: unknown): boolean {
   return (

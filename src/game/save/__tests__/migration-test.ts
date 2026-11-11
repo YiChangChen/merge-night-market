@@ -172,6 +172,12 @@ describe('isValidSaveV2', () => {
     expect(isValidSaveV2(save)).toBe(true);
   });
 
+  it('接受棋盤上的發明菜（S3.2）', () => {
+    const save = saved();
+    withPiece(save, { kind: 'dish', recipe: 'tea-fried', count: 3 });
+    expect(isValidSaveV2(save)).toBe(true);
+  });
+
   it('接受棋盤上新增的合法品項', () => {
     const save = saved();
     withPiece(save, { kind: 'item', chain: 'sweet', level: 7 });
@@ -180,7 +186,10 @@ describe('isValidSaveV2', () => {
 
   it.each([
     // 引擎與畫面還處理不了的資料（S3.2／E4 之前）
-    ['發明菜棋子（S3.2 之前）', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 1 })],
+    // 發明菜（S3.2 起接受合法的）
+    ['發明菜是未知的配方', (s: any) => withPiece(s, { kind: 'dish', recipe: 'pizza-cola', count: 1 })],
+    ['發明菜份數 0', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 0 })],
+    ['發明菜份數超過 3', (s: any) => withPiece(s, { kind: 'dish', recipe: 'tea-fried', count: 4 })],
     ['貴客單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'vip', recipe: 'tea-fried' })],
     ['線索單（E4 之前）', (s: any) => Object.assign(s.orders[0], { kind: 'clue', expiresAt: 1 })],
     // 型別

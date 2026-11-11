@@ -21,7 +21,15 @@ import {
 } from './types';
 
 // 型別定義在 types.ts；這裡重新匯出，既有的 import 路徑不必修改
-export type { GameState, GeneratorPiece, ItemPiece, Order, Piece, Requirement } from './types';
+export type {
+  DishPiece,
+  GameState,
+  GeneratorPiece,
+  ItemPiece,
+  Order,
+  Piece,
+  Requirement,
+} from './types';
 
 export type SpawnBlocker = 'no-energy' | 'board-full';
 
@@ -83,7 +91,8 @@ export function ensureGenerator(state: GameState, chain: ChainId): GameState {
   return placeGenerator(state, chain);
 }
 
-function flushPendingGenerators(state: GameState): GameState {
+/** 棋盤騰出空格後，把待放的產生器放上去（合成、交單、賣出、發明、疊加都要呼叫）。 */
+export function flushPendingGenerators(state: GameState): GameState {
   let next: GameState = { ...state, pendingGenerators: [] };
   for (const chain of state.pendingGenerators) {
     next = placeGenerator(next, chain);
@@ -334,7 +343,8 @@ export function canMerge(a: Piece, b: Piece): boolean {
   );
 }
 
-// 拖曳放下：相同品項合成，空格移動，其他情況交換位置
+// 拖曳放下：相同品項合成，空格移動，其他情況交換位置。
+// 規則層內部使用（drop.ts 的 move／merge／swap 與測試）；UI 一律呼叫 applyDrop（RC-4）
 export function movePiece(state: GameState, from: number, to: number): GameState {
   const source = state.board[from];
   if (!source || from === to || to < 0 || to >= BOARD_SIZE) return state;

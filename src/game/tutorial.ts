@@ -18,9 +18,12 @@ export function tutorialDone(state: Pick<GameState, 'meta'>): boolean {
 /**
  * 教學期間建立的一般單金幣倍率（AC4）：新手 8 張單以內一定能存到第一次升級的 200 金幣。
  * 在建立訂單時套用並鎖定（RC-3）；教學完成後恢復 1。
+ * 只在玩家 Lv2 以下套用：前 8 張單一定在 Lv1、Lv2 建立；一直不升級攤位也不能無限期拿 ×2.5（E6 code review，使用者決定）。
  */
-export function tutorialOrderCoinMultiplier(state: Pick<GameState, 'meta'>): number {
-  return tutorialDone(state) ? 1 : BALANCE.tutorialOrderCoinMultiplier;
+export function tutorialOrderCoinMultiplier(state: Pick<GameState, 'meta' | 'level'>): number {
+  return tutorialDone(state) || state.level > BALANCE.tutorialBonusMaxLevel
+    ? 1
+    : BALANCE.tutorialOrderCoinMultiplier;
 }
 
 function stepDone(state: GameState, step: number): boolean {

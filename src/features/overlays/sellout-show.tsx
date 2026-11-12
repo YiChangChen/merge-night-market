@@ -123,7 +123,10 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
   const apply = useGameStore((store) => store.apply);
   const ready = useAdReady('sellout-double');
   const [playing, setPlaying] = useState(false);
-  const [doubled, setDoubled] = useState(false);
+  // 「已加倍」以遊戲狀態為準：真的發出去才顯示加倍（E6 code review）
+  const doubled = useGameStore(
+    (store) => store.state?.lastSellout?.wave === wave && store.state.lastSellout.doubled
+  );
   const showDouble = canDouble && ready && !doubled;
 
   const onPress = () => {
@@ -143,11 +146,11 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
   const watchDouble = async () => {
     if (playing) return;
     setPlaying(true);
-    const result = await ads.show('sellout-double');
+    // 廣告 SDK 出錯（reject）時當成沒有廣告，演出不能卡在「播放中」（E6 code review）
+    const result = await ads.show('sellout-double').catch(() => 'unavailable' as const);
     if (result === 'earned') {
       // 獎勵唯一入口；就算演出已經被關掉也照樣發，看了廣告一定拿得到（NP-4）
       apply((state, now) => grantAdReward(state, 'sellout-double', now));
-      setDoubled(true);
     }
     setPlaying(false);
   };

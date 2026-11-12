@@ -1,7 +1,7 @@
 // 新手引導的目標位置登記表（S6.4）：元件回報自己在視窗中的位置，根層的手指層依步驟挑一個指過去。
 // 介面狀態，不存檔；教學完成後元件就不再量測。
 import { type ComponentRef, useCallback, useEffect, useRef } from 'react';
-import type { View } from 'react-native';
+import { Dimensions, type View } from 'react-native';
 import { create } from 'zustand';
 
 import { useGameStore } from '@/game/store';
@@ -68,7 +68,16 @@ export function useTutorialTarget(
   const measure = useCallback(() => {
     if (!enabled) return;
     node.current?.measureInWindow((x, y, width, height) => {
-      setRect(id, width > 0 && height > 0 ? { x, y, width, height } : null);
+      // 捲到畫面外（例如夜市街往右捲）的目標不登記，手指才不會指到看不到的地方（E6 code review）
+      const screen = Dimensions.get('window');
+      const visible =
+        width > 0 &&
+        height > 0 &&
+        x + width > 0 &&
+        y + height > 0 &&
+        x < screen.width &&
+        y < screen.height;
+      setRect(id, visible ? { x, y, width, height } : null);
     });
   }, [enabled, id, setRect]);
 

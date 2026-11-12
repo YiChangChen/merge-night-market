@@ -53,7 +53,12 @@ export function TabBar({ state, emitter, navigateToTab, insets }: BottomTabBarPr
         );
         // 新手引導第 3 步：還在棋盤時指向夜市街分頁（S6.4）
         return route.name === 'street' ? (
-          <TutorialTarget key={route.key} id="tab-street" style={styles.tab}>
+          <TutorialTarget
+            key={route.key}
+            id="tab-street"
+            // 已經在夜市街時不指分頁按鈕（改指攤位）；有其他畫面疊在上面時由手指層判斷（E6 code review）
+            active={!focused}
+            style={styles.tab}>
             {button}
           </TutorialTarget>
         ) : (

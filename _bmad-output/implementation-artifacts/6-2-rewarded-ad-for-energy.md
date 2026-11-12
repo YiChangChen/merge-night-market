@@ -4,7 +4,7 @@ baseline_commit: 04d008b
 
 # Story 6.2: 體力不足時看廣告補體力
 
-Status: review
+Status: done
 
 ## Story
 
@@ -63,6 +63,12 @@ so that 我可以把這一局玩完，而且是不是要看廣告由我決定。
   - 用除錯「體力歸零」後點產生器，看提示卡與按鈕。
   - 切換三種模式各試一次：看完 → +20；跳過 → 沒有獎勵；沒有廣告 → 只有倒數。
   - 看滿 5 次後按鈕消失。
+
+### Review Findings
+
+- [x] [Review][Patch] 獎勵沒有真的發出時，畫面仍然顯示「+20 體力！」；要比對 apply 前後的次數（blind；包含播放中切分頁、再看第二支廣告的情況） [src/features/energy/energy-prompt.tsx]
+- [x] [Review][Patch] `ads.show` reject 時 `playing` 一直是 true，提示卡關不掉，還會產生 unhandled rejection；要用 try/finally 並把錯誤當成沒有廣告（blind） [src/features/energy/energy-prompt.tsx]
+- [x] [Review][Patch] 提示卡沒有接 Android 返回鍵：按返回會離開 App。要改成返回先關卡片，播放中則不處理（auditor） [src/features/energy/energy-prompt.tsx]
 
 ## Dev Notes
 
@@ -163,3 +169,4 @@ Claude Opus 5.5（claude-opus-5-5）
 - 2026-11-12：S6.2 實作完成（假的廣告服務、體力不足提示卡、除錯廣告模式），狀態改為 review，等實機確認（T8）。
 - 2026-11-12：實機回饋修正：引導不再疊在提示卡上；按鈕文字改成一行。
 - 2026-11-12：使用者實機確認通過（T8）。
+- 2026-11-12：Epic 6 code review。真的發出才說「+20 體力」、廣告出錯當成沒有廣告、Android 返回鍵先關提示卡。狀態改為 done。

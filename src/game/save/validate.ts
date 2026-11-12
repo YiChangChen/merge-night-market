@@ -184,7 +184,9 @@ function isValidMeta(value: unknown): boolean {
 function isValidDaily(value: unknown): boolean {
   return (
     isObject(value) &&
+    // 空字串（還沒結算過）或 UTC+8 的 YYYY-MM-DD；其他字串會讓換日比較永遠不成立（E6 code review）
     typeof value.dateKey === 'string' &&
+    /^(\d{4}-\d{2}-\d{2})?$/.test(value.dateKey) &&
     isNonNegativeInteger(value.adEnergyUsed) &&
     isNonNegativeInteger(value.adDoubleUsed)
   );

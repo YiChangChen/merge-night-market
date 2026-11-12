@@ -96,10 +96,10 @@ development_status:
 
   # Epic 6：開幕週與激勵廣告
   epic-6: in-progress
-  6-1-opening-week-energy-and-daily-ad-counts: review
-  6-2-rewarded-ad-for-energy: review
-  6-3-rewarded-ad-sellout-double: review
-  6-4-tutorial-finger-guide: review
+  6-1-opening-week-energy-and-daily-ad-counts: done
+  6-2-rewarded-ad-for-energy: done
+  6-3-rewarded-ad-sellout-double: done
+  6-4-tutorial-finger-guide: done
   epic-6-retrospective: optional
 
   # Epic 7：聲音、數據與上架

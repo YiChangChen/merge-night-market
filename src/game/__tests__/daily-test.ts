@@ -112,10 +112,17 @@ describe('dateKeyUTC8 與 syncDaily', () => {
     expect(dateKeyUTC8(Date.UTC(2026, 11, 31, 16, 0, 0))).toBe('2027-01-01');
   });
 
-  it('裝置時區改變不影響結果（只依時間戳計算）', () => {
-    const spy = jest.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(300);
-    expect(dateKeyUTC8(Date.UTC(2026, 10, 11, 16, 0, 0))).toBe('2026-11-12');
-    spy.mockRestore();
+  it('裝置時區改變不影響結果：本地時間的取值全部是錯的也照樣算對（E6 code review）', () => {
+    // 執行中切換 TZ 在這個環境不會生效，所以改成讓所有「本地時間」的取值回傳錯的值：
+    // 實作只要用到本地時間（受裝置時區影響），結果就會錯
+    const local = ['getFullYear', 'getMonth', 'getDate', 'getHours', 'getTimezoneOffset'] as const;
+    const spies = local.map((name) => jest.spyOn(Date.prototype, name).mockReturnValue(7));
+    try {
+      expect(dateKeyUTC8(Date.UTC(2026, 10, 11, 15, 59, 59))).toBe('2026-11-11');
+      expect(dateKeyUTC8(Date.UTC(2026, 10, 11, 16, 0, 0))).toBe('2026-11-12');
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
   });
 
   it('新局開局就是當天日期；dateKey 是空字串（v1 遷移）時，第一次結算寫入當天日期', () => {
@@ -197,13 +204,21 @@ describe('grantAdReward（NP-4）', () => {
     expect(next.events).toEqual([{ type: 'ad_rewarded', placement: 'energy' }]);
   });
 
-  it('energy 連續呼叫兩次：第二次體力已足夠，不再給', () => {
+  it('energy 連續呼叫兩次（看了兩支廣告）：兩次都給，各用掉一次額度', () => {
     const state = game({ energy: 0, daily: { dateKey: TODAY, adEnergyUsed: 0, adDoubleUsed: 0 } });
     const once = { ...grantAdReward(state, 'energy', NOW), events: [] };
     const twice = grantAdReward(once, 'energy', NOW);
-    expect(twice.energy).toBe(20);
-    expect(twice.daily.adEnergyUsed).toBe(1);
-    expect(twice.events).toEqual([]);
+    expect(twice.energy).toBe(40);
+    expect(twice.daily.adEnergyUsed).toBe(2);
+  });
+
+  it('播放期間體力自然回復了：看完的人仍然拿到獎勵（E6 code review）', () => {
+    // 按鈕只在體力 0 時出現；播放 30 秒期間回了 1 點
+    const state = game({ energy: 1, daily: { dateKey: TODAY, adEnergyUsed: 0, adDoubleUsed: 0 } });
+    expect(canWatchAd(state, 'energy')).toBe(false);
+    const next = grantAdReward(state, 'energy', NOW);
+    expect(next.energy).toBe(21);
+    expect(next.daily.adEnergyUsed).toBe(1);
   });
 
   it('每日上限：第 6 次不給；跨日後又可以', () => {

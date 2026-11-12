@@ -88,3 +88,15 @@ describe('tutorialFocus', () => {
     expect(tutorialFocusLine(game(3))).toBeNull();
   });
 });
+
+describe('棋盤滿了（E6 code review）', () => {
+  it('不指產生器，說明改成先合成或賣掉', () => {
+    const base = game(1);
+    // 塞滿已到最高階的品項：不能合成，也沒有可以合成的一對
+    const board = base.board.map((piece, cell) => piece ?? item(5000 + cell, 'tea', 7));
+    const state = { ...base, board };
+    expect(state.board.every((piece) => piece !== null)).toBe(true);
+    expect(tutorialFocus(state)).toBeNull();
+    expect(tutorialFocusLine(state)).toBe('棋盤滿了，先合成或賣掉一些');
+  });
+});

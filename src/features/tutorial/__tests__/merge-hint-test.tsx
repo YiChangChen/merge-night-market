@@ -108,3 +108,19 @@ describe('棋盤晃動 hintCells', () => {
     expect(screen.queryByTestId('wobble-0')).toBeNull();
   });
 });
+
+describe('useIdleMergePair（E6 code review）', () => {
+  it('被蓋住後再回到前景：重新等 6 秒，不會馬上晃', async () => {
+    setGame(BALANCE.tutorialSteps);
+    await render(<Probe active />);
+    await act(async () => jest.advanceTimersByTime(IDLE_HINT_MS));
+    expect(screen.getByTestId('pair')).toHaveTextContent('9,12');
+
+    // 同一個元件：被蓋住（active false）再回到前景
+    await screen.rerender(<Probe active={false} />);
+    await screen.rerender(<Probe active />);
+    expect(screen.getByTestId('pair')).toHaveTextContent('none');
+    await act(async () => jest.advanceTimersByTime(IDLE_HINT_MS));
+    expect(screen.getByTestId('pair')).toHaveTextContent('9,12');
+  });
+});

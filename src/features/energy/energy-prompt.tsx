@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 
 import { BALANCE } from '@/game/content';
@@ -66,13 +66,18 @@ export function EnergyPrompt({ onClose, onRewarded }: Props) {
   const watch = async () => {
     if (playing) return;
     setPlaying(true);
-    const result = await ads.show('energy');
+    // 廣告 SDK 出錯（reject）時當成沒有廣告，不能讓提示卡卡在「播放中」（E6 code review）
+    const result = await ads.show('energy').catch(() => 'unavailable' as const);
     if (result === 'earned') {
-      // 獎勵唯一入口；重複呼叫是安全的（NP-4）
+      // 獎勵唯一入口（NP-4）；比對前後的次數，真的發出才說「+20 體力」（E6 code review）
+      const before = useGameStore.getState().state?.daily.adEnergyUsed ?? 0;
       apply((state, at) => grantAdReward(state, 'energy', at));
-      onRewarded?.();
-      onClose();
-      return;
+      const after = useGameStore.getState().state?.daily.adEnergyUsed ?? 0;
+      if (after > before) {
+        onRewarded?.();
+        onClose();
+        return;
+      }
     }
     // 跳過或沒有廣告：什麼都不給，可以再試（沒有廣告時按鈕會因為 isReady 變成 false 而隱藏）
     setPlaying(false);
@@ -81,6 +86,15 @@ export function EnergyPrompt({ onClose, onRewarded }: Props) {
   const close = () => {
     if (!playing) onClose();
   };
+
+  // Android 返回鍵：先關提示卡，不離開 App；播放中不處理（E6 code review）
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!playing) onClose();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [onClose, playing]);
 
   return (
     <View style={styles.layer}>

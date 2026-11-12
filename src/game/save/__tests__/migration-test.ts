@@ -214,6 +214,9 @@ describe('isValidSaveV2', () => {
     ['未知的訂單種類', (s: any) => (s.orders[0].kind = 'rush')],
     ['人龍冷卻時間不是數字', (s: any) => (s.queue.cooldownEndsAt = 'soon')],
     ['meta 缺少 firstLaunchAt', (s: any) => delete s.meta.firstLaunchAt],
+    // E6 code review：格式不對的日期會讓換日比較永遠不成立
+    ['daily.dateKey 格式不對', (s: any) => (s.daily.dateKey = '9999')],
+    ['daily.dateKey 不是日期', (s: any) => (s.daily.dateKey = 'z')],
     ['lastSellout 缺少 doubled', (s: any) => (s.lastSellout = { wave: 1, coins: 1, energy: 1, xp: 1 })],
     // 語意：會讓畫面或規則崩潰的資料
     ['品項階數超過該鏈長度', (s: any) => withPiece(s, { kind: 'item', chain: 'tea', level: 99 })],

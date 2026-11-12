@@ -4,7 +4,7 @@ baseline_commit: aa6202c
 
 # Story 6.1: 開幕週體力與每日廣告計數
 
-Status: review
+Status: done
 
 ## Story
 
@@ -45,6 +45,14 @@ so that 我在最容易流失的前幾天玩得夠盡興，規則也清楚好懂
 - [x] T8 反向驗證（A4、E5 retro A5）：拿掉「時鐘倒退不歸零」、「doubled 為 true 時不能再加倍」、「開幕週結束後超過 100 不回復」，確認測試失敗
 - [x] T9 驗證：lint、tsc、jest；換行都是 LF（E5 retro A4）
 - [x] T10 **（使用者）** 實機：除錯「開新局」後 HUD 顯示 ⚡ 200/200；用掉一些體力後會回復到 200
+
+### Review Findings
+
+- [x] [Review][Patch] 補體力廣告看完卻可能拿不到獎勵：播放期間體力自然回 1 點，`grantAdReward` 重新檢查 `energy < 1` 就拒發。NP-4 要求看了一定拿得到，發獎勵時只該檢查每日次數（blind） [src/game/daily.ts]
+- [x] [Review][Patch] `daily.dateKey` 只驗證是字串；格式不對的值（例如 `9999-12-31`、`z`）會讓次數永遠不歸零。要驗證是空字串或 `YYYY-MM-DD`（edge） [src/game/save/validate.ts]
+- [x] [Review][Patch] 「裝置時區改變不影響結果」的測試 mock 了 `getTimezoneOffset`，但這對結果沒有作用。改成實際切換 `TZ` 來驗證（auditor） [src/game/__tests__/daily-test.ts]
+- [x] [Review][Defer] 時鐘曾調到未來時，計數會停在未來的日期而不歸零；往前調一天又能重置次數 [src/game/daily.ts] — deferred, 架構〈Time & Day Rollover〉刻意規定「dateKey 變小視為未換日」，防作弊策略留到 E7 上架前一併評估
+- [x] [Review][Defer] `firstLaunchAt` 沒有上限，開局時鐘偏快或匯入未來值時，開幕週會被延長 [src/game/save/validate.ts] — deferred, 同上
 
 ## Dev Notes
 
@@ -156,3 +164,4 @@ Claude Opus 5.5（claude-opus-5-5）
 
 - 2026-11-11：S6.1 實作完成（開幕週體力上限、每日廣告計數、canWatchAd／grantAdReward），狀態改為 review，等實機確認（T10）。
 - 2026-11-11：使用者實機確認通過（T10）。
+- 2026-11-12：Epic 6 code review。發獎勵只檢查每日次數（播放中體力回復也拿得到）、存檔驗證 `dateKey` 格式、時區測試改成讓本地時間取值全錯也算對；2 項延後（時鐘調到未來）。狀態改為 done。

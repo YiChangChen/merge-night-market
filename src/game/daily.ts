@@ -58,13 +58,25 @@ export function canWatchAd(state: GameState, placement: Placement): boolean {
 }
 
 /**
- * 看完廣告的獎勵（NP-4）：獎勵發放的唯一入口。先換日結算，不能看就回傳結算後的 state，所以重複呼叫是安全的。
+ * 看完廣告之後能不能發獎勵：只看今天的次數，以及完售加倍的紀錄還在、還沒加倍。
+ * 不再檢查「體力不足」：那是按鈕出現的條件；廣告播放期間體力自然回復 1 點時，看完的人仍然要拿到獎勵
+ * （NP-4「看了一定拿得到」，E6 code review）。
+ */
+function canGrant(state: GameState, placement: Placement): boolean {
+  if (adRemaining(state, placement) <= 0) return false;
+  if (placement === 'energy') return true;
+  return state.lastSellout !== null && !state.lastSellout.doubled;
+}
+
+/**
+ * 看完廣告的獎勵（NP-4）：獎勵發放的唯一入口。先換日結算，條件不符就回傳結算後的 state。
+ * 每次呼叫代表看完一支廣告：補體力每次都消耗一次額度；同一波完售只能加倍一次。
  * - energy：+20 體力（和其他獎勵一樣可以超過上限）。
  * - sellout-double：這一波的完售獎勵（金幣、體力、XP）整份再發一次並標記已加倍，XP 造成的升級一併結算。
  */
 export function grantAdReward(state: GameState, placement: Placement, now: number): GameState {
   const synced = syncDaily(state, now);
-  if (!canWatchAd(synced, placement)) return synced;
+  if (!canGrant(synced, placement)) return synced;
   const events = [...synced.events, { type: 'ad_rewarded', placement } as const];
   if (placement === 'energy') {
     return {

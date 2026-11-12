@@ -132,6 +132,15 @@ describe('手指指向這一步的目標', () => {
     await act(async () => useOverlayStore.getState().finishSellout());
     await act(async () => useOverlayStore.getState().playInvention('tea-fried'));
     expect(screen.queryByTestId('tutorial-finger')).toBeNull();
+    await act(async () => useOverlayStore.getState().finishInvention());
+    // 阿嬤提示、升星演出（E6 code review）
+    await act(async () => useOverlayStore.getState().playHint('tea-fried'));
+    expect(screen.queryByTestId('tutorial-finger')).toBeNull();
+    await act(async () => useOverlayStore.getState().finishHint());
+    await act(async () => useOverlayStore.getState().playStarred('tea-fried', 2));
+    expect(screen.queryByTestId('tutorial-finger')).toBeNull();
+    await act(async () => useOverlayStore.getState().finishStarred());
+    expect(screen.getByTestId('tutorial-finger')).toBeTruthy();
   });
 
   it('體力不足的提示卡開著時讓開（S6.2 實機回饋）', async () => {
@@ -215,5 +224,14 @@ describe('合成提示', () => {
     withPair(BALANCE.tutorialSteps);
     await render(<TutorialGuide />);
     expect(screen.queryByTestId('merge-hint')).toBeNull();
+  });
+});
+
+describe('第 3 步的夜市街分頁按鈕（E6 code review）', () => {
+  it('棋盤畫面不在前景（收藏冊、設定等疊在上面，棋盤目標沒有登記）時不指分頁按鈕', async () => {
+    useTutorialTargets.setState({ rects: { 'tab-street': TAB } });
+    setGame(2, 200);
+    await render(<TutorialGuide />);
+    expect(screen.queryByTestId('tutorial-finger')).toBeNull();
   });
 });

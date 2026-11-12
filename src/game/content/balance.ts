@@ -56,6 +56,8 @@ export const BALANCE = {
   tutorialSteps: 3,
   // 教學期間建立的一般單金幣倍率（S6.4）：Lv1 每張 25，8 張以內一定存到第一次升級的 200 金幣
   tutorialOrderCoinMultiplier: 2.5,
+  // 新手訂單金幣倍率只套用到這個玩家等級（含）；之後就算教學還沒完成也恢復原價（E6 code review）
+  tutorialBonusMaxLevel: 2,
 } as const;
 
 export const BOARD_SIZE = BALANCE.boardColumns * BALANCE.boardRows;

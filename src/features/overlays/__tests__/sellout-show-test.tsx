@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { StallView } from '@/features/street';
 import { shouldPlayFlash } from '@/features/street/neon-sign';
 import { BALANCE } from '@/game/content';
+import { dateKeyUTC8 } from '@/game/daily';
 import { createGame, type GameState } from '@/game/engine';
 import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
@@ -280,5 +281,52 @@ describe('完售時看廣告加倍（S6.3、FR38）', () => {
     await fireEvent.press(screen.getByTestId('sellout-show'));
     expect(useOverlayStore.getState().sellout).not.toBeNull();
     spy.mockRestore();
+  });
+});
+
+describe('完售加倍（E6 code review）', () => {
+  beforeEach(() => {
+    useFakeAds.setState({ enabled: true, mode: 'earned' });
+  });
+
+  it('廣告服務出錯（reject）：當成沒有廣告，按鈕回來，演出不會卡住', async () => {
+    const spy = jest.spyOn(ads, 'show').mockRejectedValue(new Error('SDK'));
+    setGame({ lastSellout: SOLD_OUT });
+    useOverlayStore.getState().playSellout(1);
+    await render(<OverlayHost />);
+
+    await fireEvent.press(screen.getByTestId('watch-ad-double'));
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('watch-ad-double')).toHaveTextContent('📺 看廣告 獎勵加倍');
+    await act(async () => {
+      jest.advanceTimersByTime(SELLOUT_DECIDE_MS);
+    });
+    expect(useOverlayStore.getState().sellout).toBeNull();
+    spy.mockRestore();
+  });
+
+  it('看完了但加倍沒有發出（次數在播放中用完）：不顯示「獎勵加倍！」', async () => {
+    // 當天的日期：apply 的換日結算才不會把次數歸零
+    const base = createGame(NOW, 1);
+    setGame({
+      lastSellout: SOLD_OUT,
+      daily: { ...base.daily, dateKey: dateKeyUTC8(Date.now()), adDoubleUsed: 2 },
+    });
+    useOverlayStore.getState().playSellout(1);
+    await render(<OverlayHost />);
+    await fireEvent.press(screen.getByTestId('watch-ad-double'));
+    await act(async () => {
+      useGameStore.setState((store) => ({
+        state: store.state && { ...store.state, daily: { ...store.state.daily, adDoubleUsed: 3 } },
+      }));
+    });
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(FAKE_AD_MS);
+    });
+    expect(screen.queryByText('獎勵加倍！')).toBeNull();
+    expect(screen.getByText('🪙 +60')).toBeTruthy();
+    expect(useGameStore.getState().state?.lastSellout?.doubled).toBe(false);
   });
 });

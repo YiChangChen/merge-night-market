@@ -50,19 +50,23 @@ export function StreetScreen() {
           <Text style={styles.icon}>📖</Text>
         </Pressable>
       </View>
-      {/* 新手引導第 3 步的說明（S6.4） */}
-      <TutorialLine steps={[2]} />
-      <ScrollView
-        // 捲動停止後，手指重新量測攤位位置（S6.4）
-        onScrollEndDrag={requestRemeasure}
-        onMomentumScrollEnd={requestRemeasure}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.street}>
-        {CHAIN_IDS.map((chain) => (
-          <StallView key={chain} chain={chain} animate={focused} />
-        ))}
-      </ScrollView>
+      <View style={styles.streetArea}>
+        <ScrollView
+          // 捲動停止後，手指重新量測攤位位置（S6.4）
+          onScrollEndDrag={requestRemeasure}
+          onMomentumScrollEnd={requestRemeasure}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.street}>
+          {CHAIN_IDS.map((chain) => (
+            <StallView key={chain} chain={chain} animate={focused} />
+          ))}
+        </ScrollView>
+        {/* 新手引導第 3 步的說明（S6.4）：疊在攤位區頂端，不佔版面、不擋觸控（E6 code review） */}
+        <View pointerEvents="none" style={styles.tutorialLine}>
+          <TutorialLine steps={[2]} />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -72,6 +76,15 @@ const styles = StyleSheet.create({
     flex: 1,
     // 深藍夜空（UX-DR10）
     backgroundColor: '#0B1638',
+  },
+  streetArea: {
+    flex: 1,
+  },
+  tutorialLine: {
+    position: 'absolute',
+    top: 4,
+    left: 0,
+    right: 0,
   },
   header: {
     flexDirection: 'row',

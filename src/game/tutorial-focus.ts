@@ -62,6 +62,8 @@ export function tutorialFocus(state: GameState): TutorialFocus | null {
     (step === 0 ? findMergePair(state.board) : null);
   if (pair) return { kind: 'merge', pair };
 
+  // 棋盤滿了：點產生器也不會出東西，不指產生器（E6 code review）
+  if (!state.board.includes(null)) return null;
   const cell = generatorCell(state, need?.chain);
   if (cell < 0) return null;
   const generator = state.board[cell];
@@ -76,6 +78,7 @@ export function tutorialFocusLine(state: GameState): string | null {
   if (step !== 0 && step !== 1) return null;
   const focus = tutorialFocus(state);
   const need = neededItem(state);
+  if (!focus && !state.board.includes(null)) return '棋盤滿了，先合成或賣掉一些';
   const needName = need ? CHAINS[need.chain].items[need.level - 1]?.name : undefined;
   if (step === 0) {
     if (focus?.kind === 'generator') {

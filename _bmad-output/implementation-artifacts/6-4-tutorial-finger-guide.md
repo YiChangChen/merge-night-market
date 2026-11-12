@@ -4,7 +4,7 @@ baseline_commit: aa6202c
 
 # Story 6.4: 新手手指引導
 
-Status: review
+Status: done
 
 ## Story
 
@@ -67,6 +67,18 @@ so that 我在一分鐘內就懂這款遊戲要怎麼玩。
   - 除錯「開新局」後跟著手指走完 3 步，確認手指位置正確、不擋操作。
   - 中途關掉 App 重開，從同一步繼續。
   - 開飛航模式冷啟動，可以完整遊玩（NFR6）。
+
+### Review Findings
+
+- [x] [Review][Decision] 教學期間 ×2.5 訂單金幣可以無限期刷：不升級攤位，第 3 步就不會完成（blind）— 使用者決定：只在玩家 Lv2 以下套用（`BALANCE.tutorialBonusMaxLevel`）
+- [x] [Review][Decision] E6 之前的 v2 存檔 `tutorialStep` 是 0，更新後會重新跑教學，也會拿到 ×2.5（blind）— 使用者決定：不處理（尚未上架，只影響測試存檔，用除錯「開新局」）
+- [x] [Review][Patch] 打開收藏冊、設定、除錯等路由時，`tab-street` 仍然登記著，手指會畫在新畫面上。手指只在分頁畫面顯示，`tab-street` 也只在不在夜市街時登記（blind） [src/features/tutorial/tutorial-guide.tsx]
+- [x] [Review][Patch] 第 3 步的攤位捲到畫面外時，手指也畫在畫面外；量到畫面外的目標不登記（edge） [src/features/tutorial/tutorial-targets.ts]
+- [x] [Review][Patch] 棋盤滿了，手指仍然指產生器（點了也不會出東西）；改成說明「棋盤滿了，先合成或賣掉一些」（edge） [src/game/tutorial-focus.ts]
+- [x] [Review][Patch] 合成小提示：演出或面板關掉、`active` 回到 true 時，沒有重新等 6 秒就馬上晃（blind） [src/features/tutorial/merge-hint.ts]
+- [x] [Review][Patch] 升星演出時沒有隱藏手指（blind） [src/features/tutorial/tutorial-guide.tsx]
+- [x] [Review][Patch] 夜市街的教學說明列佔了一列版面，第 3 步出現或消失時攤位區高度會跳動；改成疊在上面（auditor） [src/features/street/street-screen.tsx]
+- [x] [Review][Patch] T3「阿嬤提示時隱藏手指」沒有測試（auditor） [src/features/tutorial/__tests__/tutorial-guide-test.tsx]
 
 ## Dev Notes
 
@@ -229,3 +241,4 @@ Claude Opus 5.5（claude-opus-5-5）
 - 2026-11-11：教學完成後的合成小提示改成晃動那一對品項（使用者要求）。
 - 2026-11-11：升級演出拉長到 2 秒並加入慶祝效果（使用者實機回饋）。
 - 2026-11-11：使用者實機確認通過（T9：教學 3 步、合成提示、升級演出、飛航模式）。
+- 2026-11-12：Epic 6 code review。新手 ×2.5 只到玩家 Lv2（使用者決定）；E6 前的存檔不處理（使用者決定：尚未上架）；手指不指被蓋住的分頁列與畫面外的攤位、棋盤滿時改說明、升星演出時隱藏、合成小提示被蓋住後重新計時、夜市街說明列改成疊在上面、補阿嬤與升星隱藏手指的測試。狀態改為 done。

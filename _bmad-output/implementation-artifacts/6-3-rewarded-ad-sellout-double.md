@@ -4,7 +4,7 @@ baseline_commit: 44134e7
 
 # Story 6.3: 完售時看廣告加倍
 
-Status: review
+Status: done
 
 ## Story
 
@@ -49,6 +49,11 @@ so that 完售的那一刻有更大的回報。
   - 看完後金幣、體力、XP 加倍。
   - 看滿 3 次後按鈕消失。
   - 量 iPhone 效能數字（E5 retro A6）：冷啟動、分頁切換、拖曳。
+
+### Review Findings
+
+- [x] [Review][Patch] 加倍沒有真的發出時（拒發），畫面仍然顯示「獎勵加倍！」和 ×2 的數字；要依 store 的 `lastSellout.doubled` 判斷（blind） [src/features/overlays/sellout-show.tsx]
+- [x] [Review][Patch] `ads.show` reject 時演出會永遠卡住；要用 try/finally 並把錯誤當成沒有廣告（blind） [src/features/overlays/sellout-show.tsx]
 
 ## Dev Notes
 
@@ -138,3 +143,4 @@ Claude Opus 5.5（claude-opus-5-5）
 - 2026-11-12：S6.3 實作完成（完售加倍按鈕、延長決定時間、播放中不結束），狀態改為 review，等實機確認（T5）。
 - 2026-11-12：冷卻期間的訂單標成「加班」（使用者選 A）；記錄 iPhone 效能數字。
 - 2026-11-12：使用者實機確認通過（T5：三種廣告模式、加倍獎勵）。
+- 2026-11-12：Epic 6 code review。「已加倍」以遊戲狀態為準、廣告出錯當成沒有廣告。狀態改為 done。

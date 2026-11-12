@@ -24,7 +24,11 @@ export function useIdleMergePair(active: boolean): readonly [number, number] | n
   useEffect(() => {
     if (!active || !allowed || !pairKey || !board) return;
     const timer = setTimeout(() => setIdleBoard(board), IDLE_HINT_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // 被蓋住（active 變 false）或棋盤變了：重新計時，演出關掉後不會馬上晃（E6 code review）
+      setIdleBoard(null);
+    };
   }, [active, allowed, board, pairKey]);
 
   return active && allowed && pair && idleBoard === board ? pair : null;

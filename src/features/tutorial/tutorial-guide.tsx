@@ -41,7 +41,10 @@ export function pickUpgradeTarget(
   // 金幣還不夠時不指，免得玩家一直被帶去夜市街
   if (!context.upgradable) return null;
   if (context.panelOpen) return rects.upgrade ?? null;
-  return rects[`stall-${context.upgradable}` as TutorialTargetId] ?? rects['tab-street'] ?? null;
+  const stall = rects[`stall-${context.upgradable}` as TutorialTargetId];
+  if (stall) return stall;
+  // 分頁按鈕只在棋盤畫面在前景時指（棋盤目標有登記）：收藏冊、設定等畫面疊在上面時不指（E6 code review）
+  return rects.board ? (rects['tab-street'] ?? null) : null;
 }
 
 /** tutorialFocus 轉成字串給 selector 回傳（物件每次都是新的，會造成重繪） */
@@ -76,6 +79,8 @@ export function TutorialGuide() {
       store.sellout !== null ||
       store.invention !== null ||
       store.hint !== null ||
+      // 升星演出（E6 code review）
+      store.starred !== null ||
       // 體力不足的提示卡開著時讓開，不疊在卡片上（S6.2 實機回饋）
       store.energyPrompt
   );

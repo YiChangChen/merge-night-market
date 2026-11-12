@@ -100,6 +100,11 @@ describe('新手訂單金幣（AC4）', () => {
     expect(tutorialOrderCoinMultiplier(at(3))).toBe(1);
   });
 
+  it('只在玩家 Lv2 以下套用：一直不升級攤位，到 Lv3 也恢復原價（E6 code review）', () => {
+    expect(tutorialOrderCoinMultiplier(at(2, [], { level: 2 }))).toBe(2.5);
+    expect(tutorialOrderCoinMultiplier(at(2, [], { level: 3 }))).toBe(1);
+  });
+
   it('新局的一般單：Lv1 每張 25 金幣', () => {
     for (const order of createGame(NOW, 1).orders) {
       expect(order.coins).toBe(25);

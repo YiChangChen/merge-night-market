@@ -45,6 +45,8 @@ type OrderCardProps = {
  */
 export function OrderCard({ order, ready, artSize, onComplete, onDismiss }: OrderCardProps) {
   const customer = customerForOrder(order);
+  // 完售後的冷卻期間（FR20）：訂單照常給基本獎勵但不計入人龍，卡片標成「加班」讓玩家知道（E6 實機回饋）
+  const overtime = useGameStore((store) => store.state?.queue.cooldownEndsAt != null);
 
   if (order.kind === 'clue' && order.recipe !== undefined) {
     const clue = RECIPES_BY_ID[order.recipe].clue;
@@ -91,8 +93,10 @@ export function OrderCard({ order, ready, artSize, onComplete, onDismiss }: Orde
       accessibilityState={{ disabled: !ready }}
       accessibilityLabel={
         vip
-          ? `貴客${customer.name}：${name}，${order.coins} 金幣${ready ? '，可以出餐' : ''}`
-          : undefined
+          ? `貴客${customer.name}：${name}，${order.coins} 金幣${ready ? '，可以出餐' : ''}${overtime ? '，加班客人，不計入人龍' : ''}`
+          : overtime
+            ? `加班客人：${name}，${order.coins} 金幣，不計入人龍${ready ? '，可以出餐' : ''}`
+            : undefined
       }
       disabled={!ready}
       onPress={() => onComplete(order.id)}
@@ -109,7 +113,7 @@ export function OrderCard({ order, ready, artSize, onComplete, onDismiss }: Orde
       {vip ? (
         <>
           <Text testID="vip-badge" style={styles.vipBadge}>
-            貴客
+            {overtime ? '貴客・加班' : '貴客'}
           </Text>
           {/* 做不出來或不想做的貴客可以請走（E4 code review，使用者決定）；觸控區靠 hitSlop 撐到 ≥ 44 pt */}
           <Pressable
@@ -122,6 +126,10 @@ export function OrderCard({ order, ready, artSize, onComplete, onDismiss }: Orde
             <Text style={styles.vipDismissText}>✕</Text>
           </Pressable>
         </>
+      ) : overtime ? (
+        <Text testID="overtime-badge" style={styles.overtimeBadge}>
+          加班
+        </Text>
       ) : null}
       <View style={[styles.label, ready && styles.labelReady, vip && !ready && styles.vipLabel]}>
         <Text style={[styles.name, ready && styles.textReady]} numberOfLines={1}>
@@ -174,6 +182,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     color: '#4A3420',
     backgroundColor: '#FFD966',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  // 冷卻期間的加班客人（FR20）：和貴客標籤同一個位置，顏色不同
+  overtimeBadge: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    paddingHorizontal: 5,
+    borderRadius: 6,
+    overflow: 'hidden',
+    color: '#FFFFFF',
+    backgroundColor: '#5B6BA8',
     fontSize: 11,
     fontWeight: '800',
   },

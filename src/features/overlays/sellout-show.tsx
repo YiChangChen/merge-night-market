@@ -10,10 +10,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { adRemaining, canWatchAd, grantAdReward } from '@/game/daily';
 import { useGameStore } from '@/game/store';
+import { ads, useAdReady } from '@/services/ads';
 
 /** 完售演出的長度；沒點跳過時自動結束 */
 export const SELLOUT_SHOW_MS = 2800;
+/** 有「看廣告獎勵加倍」按鈕時的長度：2.8 秒來不及決定要不要看（S6.3） */
+export const SELLOUT_DECIDE_MS = 6000;
+/** 看完廣告、獎勵加倍之後，再停這麼久讓玩家看到加倍的數字 */
+export const SELLOUT_DOUBLED_MS = 1200;
 /** 演出剛出現的這段時間不接受點擊：出單後緊接著的那一下點擊，不該直接關掉慶祝 */
 const SHOW_TAP_GUARD_MS = 400;
 
@@ -105,15 +111,50 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
     }, SHOW_TAP_GUARD_MS);
     return () => clearTimeout(timer);
   }, []);
+  // 看廣告獎勵加倍（S6.3、FR38、NP-4）：這一波的紀錄還在、還沒加倍、今天還有次數，而且有廣告
+  const canDouble = useGameStore((store) =>
+    store.state
+      ? store.state.lastSellout?.wave === wave && canWatchAd(store.state, 'sellout-double')
+      : false
+  );
+  const remaining = useGameStore((store) =>
+    store.state ? adRemaining(store.state, 'sellout-double') : 0
+  );
+  const apply = useGameStore((store) => store.apply);
+  const ready = useAdReady('sellout-double');
+  const [playing, setPlaying] = useState(false);
+  const [doubled, setDoubled] = useState(false);
+  const showDouble = canDouble && ready && !doubled;
+
   const onPress = () => {
-    if (tappable.current) onDone();
+    // 播放廣告時不能跳過：結果出來之前演出要留著
+    if (tappable.current && !playing) onDone();
   };
 
+  // 自動結束：播放中不計時；看完加倍後停一下讓玩家看到數字；有加倍按鈕時給比較久的時間決定
+  const duration = doubled ? SELLOUT_DOUBLED_MS : showDouble ? SELLOUT_DECIDE_MS : SELLOUT_SHOW_MS;
   useEffect(() => {
+    if (playing) return;
     // 用 JS 計時收尾，不必從 worklet 回呼（演出本身在 UI 執行緒播放）
-    const timer = setTimeout(onDone, SELLOUT_SHOW_MS);
+    const timer = setTimeout(onDone, duration);
     return () => clearTimeout(timer);
-  }, [onDone]);
+  }, [duration, onDone, playing]);
+
+  const watchDouble = async () => {
+    if (playing) return;
+    setPlaying(true);
+    const result = await ads.show('sellout-double');
+    if (result === 'earned') {
+      // 獎勵唯一入口；就算演出已經被關掉也照樣發，看了廣告一定拿得到（NP-4）
+      apply((state, now) => grantAdReward(state, 'sellout-double', now));
+      setDoubled(true);
+    }
+    setPlaying(false);
+  };
+  const shown =
+    reward && doubled
+      ? { ...reward, coins: reward.coins * 2, energy: reward.energy * 2, xp: reward.xp * 2 }
+      : reward;
 
   const pop = useSharedValue(0);
   useEffect(() => {
@@ -134,18 +175,40 @@ export function SelloutShow({ wave, onDone }: SelloutShowProps) {
       onPress={onPress}
       style={styles.backdrop}>
       <Fireworks />
-      <View style={styles.panel} pointerEvents="none">
+      {/* 面板本身不擋點擊（點面板外的背景跳過）；只有加倍按鈕可以點 */}
+      <View style={styles.panel} pointerEvents="box-none">
         <Animated.Text style={[styles.title, titleStyle]}>完售！</Animated.Text>
         <Text style={styles.wave}>第 {wave} 波客人全部招呼完了</Text>
-        {reward ? (
+        {shown ? (
           <View testID="sellout-reward" style={styles.rewards}>
-            <Text style={styles.reward}>🪙 +{reward.coins}</Text>
-            <Text style={styles.reward}>⚡ +{reward.energy}</Text>
-            <Text style={styles.reward}>⭐ +{reward.xp}</Text>
+            <Text style={styles.reward}>🪙 +{shown.coins}</Text>
+            <Text style={styles.reward}>⚡ +{shown.energy}</Text>
+            <Text style={styles.reward}>⭐ +{shown.xp}</Text>
           </View>
         ) : null}
-        {/* 「看廣告獎勵加倍」按鈕的位置（UX-DR4）；S6.3 接上 canWatchAd 之前一律不顯示 */}
-        <View testID="sellout-double-slot" style={styles.doubleSlot} />
+        {/* 「看廣告獎勵加倍」按鈕（UX-DR4、S6.3）；沒有廣告或不能加倍時只留位置 */}
+        <View testID="sellout-double-slot" style={styles.doubleSlot}>
+          {doubled ? (
+            <Text style={styles.doubledText}>獎勵加倍！</Text>
+          ) : showDouble || playing ? (
+            <>
+              <Pressable
+                testID="watch-ad-double"
+                accessibilityRole="button"
+                disabled={playing}
+                // 不把 Promise 回傳給 onPress：播放在背景進行，畫面靠 playing 狀態更新
+                onPress={() => void watchDouble()}
+                style={({ pressed }) => [styles.double, (pressed || playing) && styles.pressed]}>
+                <Text style={styles.doubleText}>
+                  {playing ? '廣告播放中…' : '📺 看廣告 獎勵加倍'}
+                </Text>
+              </Pressable>
+              <Text testID="double-remaining" style={styles.remaining}>
+                今天還剩 {remaining} 次
+              </Text>
+            </>
+          ) : null}
+        </View>
         <Text style={styles.hint}>點一下繼續</Text>
       </View>
     </Pressable>
@@ -205,7 +268,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   doubleSlot: {
-    height: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  double: {
+    minHeight: 44,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFD966',
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  doubleText: {
+    color: '#3A2A1A',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  remaining: {
+    color: '#C9D1E8',
+    fontSize: 12,
+  },
+  doubledText: {
+    color: '#FFD966',
+    fontSize: 20,
+    fontWeight: '900',
   },
   hint: {
     color: '#9FB3D1',

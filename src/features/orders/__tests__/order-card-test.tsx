@@ -146,3 +146,48 @@ describe('線索單（AC2）', () => {
     expect(onDismiss).toHaveBeenCalledWith(13);
   });
 });
+
+describe('冷卻期間的加班客人（FR20，E6 實機回饋）', () => {
+  function setCooldown(cooling: boolean) {
+    const base = createGame(NOW, 1);
+    useGameStore.setState({
+      state: {
+        ...base,
+        queue: { ...base.queue, remaining: 0, cooldownEndsAt: cooling ? NOW + 60_000 : null },
+      },
+      status: { kind: 'ready' },
+    });
+  }
+
+  it('冷卻中：一般單標「加班」，讀螢幕軟體說明不計入人龍', async () => {
+    setCooldown(true);
+    await render(
+      <OrderCard order={normal} ready artSize={ART} onComplete={jest.fn()} onDismiss={jest.fn()} />
+    );
+    expect(screen.getByTestId('overtime-badge')).toHaveTextContent('加班');
+    expect(screen.getByLabelText(/加班客人：紅茶.*不計入人龍/)).toBeTruthy();
+  });
+
+  it('冷卻中：貴客標成「貴客・加班」', async () => {
+    setCooldown(true);
+    await render(
+      <OrderCard
+        order={vip}
+        ready={false}
+        artSize={ART}
+        onComplete={jest.fn()}
+        onDismiss={jest.fn()}
+      />
+    );
+    expect(screen.getByTestId('vip-badge')).toHaveTextContent('貴客・加班');
+    expect(screen.queryByTestId('overtime-badge')).toBeNull();
+  });
+
+  it('人龍進行中：沒有加班標示', async () => {
+    setCooldown(false);
+    await render(
+      <OrderCard order={normal} ready artSize={ART} onComplete={jest.fn()} onDismiss={jest.fn()} />
+    );
+    expect(screen.queryByTestId('overtime-badge')).toBeNull();
+  });
+});

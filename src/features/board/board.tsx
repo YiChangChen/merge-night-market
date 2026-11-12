@@ -108,6 +108,8 @@ export function PieceIcon({ piece, size }: { piece: Piece; size: number }) {
       cachePolicy="memory-disk"
       // 網頁版的 img 預設可原生拖曳，會取消棋盤的拖曳手勢
       draggable={false}
+      // 網頁版預設延遲載入（loading="lazy"）：手機 Safari 上剛出現的棋子可能一直沒載入、只剩階數（實機回饋）
+      loading="eager"
       style={{ width: iconSize, height: iconSize, borderRadius: isGenerator ? 6 : 0 }}
     />
   );

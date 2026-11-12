@@ -39,6 +39,8 @@ export function CustomerTray({
         source={customer.art}
         contentFit="contain"
         draggable={false}
+        // 網頁版預設延遲載入，手機 Safari 上新換的訂單圖可能不出現（實機回饋）
+        loading="eager"
         style={{ width, height }}
       />
       <View style={[styles.food, foodPosition]}>
@@ -47,6 +49,7 @@ export function CustomerTray({
             source={RECIPES_BY_ID[dish].art}
             contentFit="contain"
             draggable={false}
+            loading="eager"
             style={{ width: foodSize * 1.2, height: foodSize * 1.2 }}
           />
         ) : null}
@@ -56,6 +59,7 @@ export function CustomerTray({
             source={CHAINS[requirement.chain].items[requirement.level - 1].art}
             contentFit="contain"
             draggable={false}
+            loading="eager"
             style={{ width: foodSize, height: foodSize }}
           />
         ))}

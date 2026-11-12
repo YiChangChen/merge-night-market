@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/shallow';
 
 import { Board, InfoBar } from '@/features/board';
+import { fitBoard } from '@/features/board/board-layout';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, ORDER_LABEL_HEIGHT, OrderCard } from '@/features/orders';
 import { useOverlayStore } from '@/features/overlays';
@@ -191,18 +192,18 @@ export default function GameScreen() {
       : null;
 
   const boardWidth = Math.min(windowWidth - SCREEN_PADDING * 2, MAX_BOARD_WIDTH);
-  const artSize = customerArtSize((boardWidth + ORDER_GAP) / BALANCE.orderSlots);
-  const boardHeight =
-    windowHeight -
-    insets.top -
-    tabBarHeight -
-    NON_BOARD_HEIGHT -
-    QUEUE_METER_SPACE -
-    artSize.height -
-    ORDER_LABEL_HEIGHT;
-  const cellSize = Math.floor(
-    Math.min(boardWidth / BALANCE.boardColumns, boardHeight / BALANCE.boardRows)
-  );
+  // 客人圖與棋盤共用剩下的高度；高度不夠時（例如手機網頁有瀏覽器工具列）先縮客人圖，棋盤格才不會太小
+  const { cellSize, art: artSize } = fitBoard({
+    boardWidth,
+    height:
+      windowHeight -
+      insets.top -
+      tabBarHeight -
+      NON_BOARD_HEIGHT -
+      QUEUE_METER_SPACE -
+      ORDER_LABEL_HEIGHT,
+    art: customerArtSize((boardWidth + ORDER_GAP) / BALANCE.orderSlots),
+  });
 
   // 背景維持直式比例：手機填滿寬度，寬螢幕置中，兩側露出與夜空相近的底色
   const backgroundWidth = Math.min(

@@ -134,6 +134,17 @@ describe('手指指向這一步的目標', () => {
     expect(screen.queryByTestId('tutorial-finger')).toBeNull();
   });
 
+  it('體力不足的提示卡開著時讓開（S6.2 實機回饋）', async () => {
+    withPair(0);
+    await render(<TutorialGuide />);
+    expect(screen.getByTestId('merge-hint')).toBeTruthy();
+
+    await act(async () => useOverlayStore.getState().openEnergyPrompt());
+    expect(screen.queryByTestId('merge-hint')).toBeNull();
+    await act(async () => useOverlayStore.getState().closeEnergyPrompt());
+    expect(screen.getByTestId('merge-hint')).toBeTruthy();
+  });
+
   it('目標還沒登記（所在畫面不在前景）時不顯示', async () => {
     useTutorialTargets.setState({ rects: {} });
     setGame(1);

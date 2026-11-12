@@ -22,6 +22,10 @@ type OverlayStore = {
   /** 卡牌升星演出（S5.3）；同發明演出，播放中又升星就排隊 */
   starred: { recipe: RecipeId; stars: number; token: number } | null;
   pendingStarred: { recipe: RecipeId; stars: number }[];
+  /** 體力不足的提示卡（S6.2）；放在這裡，新手引導等疊在上面的層才知道要讓開 */
+  energyPrompt: boolean;
+  openEnergyPrompt: () => void;
+  closeEnergyPrompt: () => void;
   /** 已發現的配方又做出一份：棋盤上方的小提示（S3.4） */
   dishMade: { recipe: RecipeId; token: number } | null;
   openStallPanel: (chain: ChainId) => void;
@@ -58,6 +62,7 @@ const INITIAL = {
   pendingHints: [],
   starred: null,
   pendingStarred: [],
+  energyPrompt: false,
 } as const;
 
 export const useOverlayStore = create<OverlayStore>()((set) => ({
@@ -73,6 +78,9 @@ export const useOverlayStore = create<OverlayStore>()((set) => ({
   pendingHints: [],
   starred: null,
   pendingStarred: [],
+  energyPrompt: false,
+  openEnergyPrompt: () => set({ energyPrompt: true }),
+  closeEnergyPrompt: () => set({ energyPrompt: false }),
   openStallPanel: (chain) => set({ stallPanel: chain }),
   closeStallPanel: () => set({ stallPanel: null }),
   playShutter: (chain) =>

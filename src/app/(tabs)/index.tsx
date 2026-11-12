@@ -1,13 +1,14 @@
 import { Image } from 'expo-image';
 import { useIsFocused } from 'expo-router';
 import { useBottomTabBarHeight } from 'expo-router/js-tabs';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInRight, LinearTransition, ZoomOut } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/shallow';
 
 import { Board, InfoBar } from '@/features/board';
+import { EnergyPrompt } from '@/features/energy';
 import { fitBoard } from '@/features/board/board-layout';
 import { SaveErrorScreen } from '@/features/errors';
 import { customerArtSize, ORDER_LABEL_HEIGHT, OrderCard } from '@/features/orders';
@@ -163,9 +164,20 @@ export default function GameScreen() {
       store.stallPanel !== null ||
       store.sellout !== null ||
       store.invention !== null ||
-      store.hint !== null
+      store.hint !== null ||
+      store.energyPrompt
   );
   const [toast, setToast] = useState<string | null>(null);
+  // 體力不足的提示卡（S6.2）：點產生器遇到 no-energy 時打開；切到別的分頁時不顯示。
+  // 開關放在 overlay store，新手引導才會在提示卡打開時讓開（實機回饋）
+  const energyPrompt = useOverlayStore((store) => store.energyPrompt);
+  const openEnergyPrompt = useOverlayStore((store) => store.openEnergyPrompt);
+  const closeEnergyPrompt = useOverlayStore((store) => store.closeEnergyPrompt);
+  const onEnergyRewarded = useCallback(() => setToast(`+${BALANCE.adEnergy} 體力！`), []);
+  // 切到別的分頁就關掉提示卡：留著的話，夜市街上的新手引導也會被當成「有卡片擋著」而藏起來
+  useEffect(() => {
+    if (!focused) closeEnergyPrompt();
+  }, [closeEnergyPrompt, focused]);
   // 合成小提示（S6.4）：棋盤停著一段時間，可以合成的一對會晃動
   const hintCells = useIdleMergePair(focused && !overlayBlocking);
 
@@ -219,7 +231,7 @@ export default function GameScreen() {
     setSelection(piece ? { cell, id: piece.id, game: gameId } : null);
     if (piece?.kind !== 'generator') return;
     const blocker = getSpawnBlocker(state);
-    if (blocker === 'no-energy') setToast('體力不足，稍等一下再來');
+    if (blocker === 'no-energy') openEnergyPrompt();
     if (blocker === 'board-full') setToast('棋盤滿了，先合成或賣掉一些');
     apply((current) => tapGenerator(current, cell));
   };
@@ -289,6 +301,9 @@ export default function GameScreen() {
             />
           </TutorialTarget>
         </View>
+        {energyPrompt && focused ? (
+          <EnergyPrompt onClose={closeEnergyPrompt} onRewarded={onEnergyRewarded} />
+        ) : null}
         {toast ? (
           <View pointerEvents="none" style={styles.toast}>
             <Text style={styles.toastText}>{toast}</Text>

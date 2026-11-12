@@ -72,7 +72,12 @@ export function TutorialGuide() {
   });
   const panel = useOverlayStore((store) => store.stallPanel);
   const showing = useOverlayStore(
-    (store) => store.sellout !== null || store.invention !== null || store.hint !== null
+    (store) =>
+      store.sellout !== null ||
+      store.invention !== null ||
+      store.hint !== null ||
+      // 體力不足的提示卡開著時讓開，不疊在卡片上（S6.2 實機回饋）
+      store.energyPrompt
   );
   const focusKey = useGameStore((store) =>
     store.state && step < 2 ? encodeFocus(tutorialFocus(store.state)) : null

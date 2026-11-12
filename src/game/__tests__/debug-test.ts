@@ -4,8 +4,10 @@ import {
   debugAddCardMade,
   debugAddCoins,
   debugAddEnergy,
+  debugDrainEnergy,
   debugNewGame,
   debugQueueLastCustomer,
+  debugResetAdCounts,
   debugRevealClues,
   debugSetPlayerLevel,
   debugSetStallLevel,
@@ -197,5 +199,24 @@ describe('除錯：卡牌（S5.2）', () => {
       clueSeen: true,
     });
     expect(valid(next)).toBe(true);
+  });
+});
+
+describe('廣告除錯（S6.2）', () => {
+  it('debugDrainEnergy：體力歸零，回復計時從現在開始，存檔仍然合法', () => {
+    const next = debugDrainEnergy(createGame(NOW, 1), NOW + 5000);
+    expect(next.energy).toBe(0);
+    expect(next.energyUpdatedAt).toBe(NOW + 5000);
+    expect(valid(next)).toBe(true);
+  });
+
+  it('debugResetAdCounts：兩個廣告計數歸零，日期不變', () => {
+    const state = { ...createGame(NOW, 1) };
+    const used = { ...state, daily: { ...state.daily, adEnergyUsed: 5, adDoubleUsed: 3 } };
+    expect(debugResetAdCounts(used).daily).toEqual({
+      dateKey: state.daily.dateKey,
+      adEnergyUsed: 0,
+      adDoubleUsed: 0,
+    });
   });
 });

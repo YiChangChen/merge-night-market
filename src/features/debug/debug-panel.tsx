@@ -11,7 +11,9 @@ import {
   debugAddEnergy,
   debugMinStallLevel,
   debugNewGame,
+  debugDrainEnergy,
   debugQueueLastCustomer,
+  debugResetAdCounts,
   debugRevealClues,
   debugSetPlayerLevel,
   debugSetStallLevel,
@@ -19,6 +21,7 @@ import {
 import { useOverlayStore } from '@/features/overlays';
 import { useGameStore } from '@/game/store';
 import type { StallLevel } from '@/game/types';
+import { type AdResult, useFakeAds } from '@/services/ads';
 import { exportSaveToClipboard, importSaveFromClipboard } from '@/services/save-transfer';
 
 const MINUTE = 60 * 1000;
@@ -39,6 +42,37 @@ function formatOffset(ms: number): string {
   if (ms === 0) return '無';
   const minutes = Math.round(ms / MINUTE);
   return minutes >= 60 ? `+${Math.floor(minutes / 60)} 小時 ${minutes % 60} 分` : `+${minutes} 分`;
+}
+
+const FAKE_AD_MODES: { mode: AdResult; label: string }[] = [
+  { mode: 'earned', label: '看完' },
+  { mode: 'dismissed', label: '跳過' },
+  { mode: 'unavailable', label: '沒有廣告' },
+];
+
+/** 假廣告的結果（S6.2）：看完才發獎勵；沒有廣告時按鈕會隱藏 */
+function FakeAdModes() {
+  const mode = useFakeAds((store) => store.mode);
+  const setMode = useFakeAds((store) => store.setMode);
+  return (
+    <View style={styles.row}>
+      {FAKE_AD_MODES.map((option) => (
+        <Pressable
+          key={option.mode}
+          testID={`debug-ad-${option.mode}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: mode === option.mode }}
+          onPress={() => setMode(option.mode)}
+          style={({ pressed }) => [
+            styles.button,
+            mode === option.mode && styles.adSelected,
+            pressed && styles.pressed,
+          ]}>
+          <Text style={styles.buttonText}>{option.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
 }
 
 function DebugButton({
@@ -229,6 +263,21 @@ export function DebugPanel() {
           />
         </View>
 
+        <Text style={styles.section}>廣告（假的實作，E5 retro D1；下一次播放的結果）</Text>
+        <FakeAdModes />
+        <View style={styles.row}>
+          <DebugButton
+            testID="debug-drain-energy"
+            label="體力歸零"
+            onPress={() => apply((s, now) => debugDrainEnergy(s, now))}
+          />
+          <DebugButton
+            testID="debug-reset-ad-counts"
+            label="廣告次數歸零"
+            onPress={() => apply(debugResetAdCounts)}
+          />
+        </View>
+
         <Text style={styles.section}>卡牌（已發現的卡加製作次數；不播升星演出）</Text>
         <View style={styles.row}>
           <DebugButton
@@ -360,6 +409,10 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.6,
+  },
+  adSelected: {
+    borderWidth: 2,
+    borderColor: '#FFD966',
   },
   buttonText: {
     color: '#FFFFFF',

@@ -102,3 +102,13 @@ export function debugRevealClues(state: GameState): GameState {
   }
   return { ...state, inventions };
 }
+
+/** 體力歸零（S6.2：測試體力不足的提示與看廣告補體力）；回復計時從現在開始。 */
+export function debugDrainEnergy(state: GameState, now: number): GameState {
+  return { ...state, energy: 0, energyUpdatedAt: now };
+}
+
+/** 今天的廣告計數歸零（S6.2），日期不變。 */
+export function debugResetAdCounts(state: GameState): GameState {
+  return { ...state, daily: { ...state.daily, adEnergyUsed: 0, adDoubleUsed: 0 } };
+}

@@ -8,6 +8,7 @@ import { needsTick } from '@/game/time';
 
 import { log } from './log';
 import { type LoadResult, loadGame, saveGame, startOverAfterBackup } from './save';
+import { markStartup } from './startup-timing';
 
 const SAVE_DEBOUNCE_MS = 500;
 const TICK_MS = 1000;
@@ -32,6 +33,7 @@ function loadIntoStore(load: () => Promise<LoadResult>) {
       const store = useGameStore.getState();
       if (result.kind === 'ready') store.hydrate(result.state);
       else store.failLoad(result.reason);
+      markStartup('save-loaded');
     })
     .catch((error) => {
       // 例如 hydrate 或訂閱者拋出例外：顯示錯誤畫面，不能卡在載入中

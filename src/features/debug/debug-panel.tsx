@@ -23,6 +23,7 @@ import { useGameStore } from '@/game/store';
 import type { StallLevel } from '@/game/types';
 import { type AdResult, useFakeAds } from '@/services/ads';
 import { exportSaveToClipboard, importSaveFromClipboard } from '@/services/save-transfer';
+import { getNativeStartupTiming, getStartupMarks } from '@/services/startup-timing';
 
 const MINUTE = 60 * 1000;
 
@@ -42,6 +43,30 @@ function formatOffset(ms: number): string {
   if (ms === 0) return '無';
   const minutes = Math.round(ms / MINUTE);
   return minutes >= 60 ? `+${Math.floor(minutes / 60)} 小時 ${minutes % 60} 分` : `+${minutes} 分`;
+}
+
+/** 冷啟動各階段的時間（E6 retro A3）：完全關掉 App 再打開，接著打開這裡看 */
+function StartupTimes() {
+  const marks = getStartupMarks();
+  const native = getNativeStartupTiming();
+  const first = marks[0]?.at ?? 0;
+  return (
+    <View testID="debug-startup-times">
+      {marks.map((mark, index) => (
+        <Text key={mark.stage} style={styles.label}>
+          {mark.label}：{Math.round(mark.at)} ms
+          {index > 0 ? `（距 JS 開始 +${Math.round(mark.at - first)} ms）` : ''}
+        </Text>
+      ))}
+      {native
+        ? Object.entries(native).map(([key, value]) => (
+            <Text key={key} style={styles.label}>
+              原生 {key}：{Math.round(value)}
+            </Text>
+          ))
+        : null}
+    </View>
+  );
 }
 
 const FAKE_AD_MODES: { mode: AdResult; label: string }[] = [
@@ -262,6 +287,9 @@ export function DebugPanel() {
             onPress={() => apply(debugQueueLastCustomer)}
           />
         </View>
+
+        <Text style={styles.section}>啟動時間（完全關掉 App 再打開後看這裡）</Text>
+        <StartupTimes />
 
         <Text style={styles.section}>廣告（假的實作，E5 retro D1；下一次播放的結果）</Text>
         <FakeAdModes />

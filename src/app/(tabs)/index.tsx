@@ -32,6 +32,7 @@ import {
 import { useGameStore } from '@/game/store';
 import { useTabSwitchTiming } from '@/features/tabs';
 import { retryLoadGame, startOverAfterSaveFailure } from '@/services/game-session';
+import { markStartup } from '@/services/startup-timing';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
@@ -168,6 +169,13 @@ export default function GameScreen() {
       store.energyPrompt
   );
   const [toast, setToast] = useState<string | null>(null);
+  // 冷啟動量測（E6 retro A3）：棋盤第一次畫出來（讀檔完成後的下一幀）
+  const hasBoard = board != null;
+  useEffect(() => {
+    if (!hasBoard) return;
+    const frame = requestAnimationFrame(() => markStartup('board-visible'));
+    return () => cancelAnimationFrame(frame);
+  }, [hasBoard]);
   // 體力不足的提示卡（S6.2）：點產生器遇到 no-energy 時打開；切到別的分頁時不顯示。
   // 開關放在 overlay store，新手引導才會在提示卡打開時讓開（實機回饋）
   const energyPrompt = useOverlayStore((store) => store.energyPrompt);

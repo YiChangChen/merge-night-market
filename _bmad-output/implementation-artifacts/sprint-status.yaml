@@ -103,8 +103,8 @@ development_status:
   epic-6-retrospective: done
 
   # Epic 7：聲音、數據與上架
-  epic-7: backlog
-  7-1-audio-service-and-event-sfx: backlog
+  epic-7: in-progress
+  7-1-audio-service-and-event-sfx: review
   7-2-bgm-voice-and-mute-settings: backlog
   7-3-telemetry-posthog: backlog
   7-4-crash-reporting-sentry: backlog  # E6 retro D1：需要商店帳號與建置環境，延後

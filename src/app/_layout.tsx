@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ErrorScreen } from '@/features/errors';
 import { OverlayHost, startFxController } from '@/features/overlays';
 import { TutorialGuide } from '@/features/tutorial';
+import { startAudioService } from '@/services/audio';
 import { startGameSession } from '@/services/game-session';
 import { markStartup } from '@/services/startup-timing';
 
@@ -34,6 +35,8 @@ export default function RootLayout() {
   useEffect(() => startGameSession(), []);
   // 演出：把遊戲事件轉成 Overlay Host 的演出（例如重開攤位的鐵捲門）
   useEffect(() => startFxController(), []);
+  // 音效：把遊戲事件轉成音效（S7.1）；預載排在首幀之後
+  useEffect(() => startAudioService(), []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

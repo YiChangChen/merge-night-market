@@ -24,3 +24,18 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
+
+// expo-audio（S7.1）在 Node 裡沒有原生模組：換成不發聲的假 player。
+// 音效服務自己的測試（audio-test）會用自己的 mock 覆蓋，檢查呼叫內容。
+jest.mock('expo-audio', () => ({
+  createAudioPlayer: () => ({
+    volume: 1,
+    shouldCorrectPitch: true,
+    play: () => {},
+    pause: () => {},
+    seekTo: () => Promise.resolve(),
+    setPlaybackRate: () => {},
+    remove: () => {},
+  }),
+  setAudioModeAsync: () => Promise.resolve(),
+}));

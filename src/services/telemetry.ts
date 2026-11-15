@@ -2,6 +2,7 @@
 // 只在 src/app/_layout.tsx 的啟動序列呼叫一次。網頁版見 telemetry.web.ts（no-op）。
 //
 // 隱私：只用 PostHog 的匿名 ID，不建立個人資料、不擷取 geoip、不自動擷取畫面與觸控（AC4）。
+// IP 由 PostHog 專案設定「Discard client IP data」丟棄（7.3 審查決策）；SDK 附的 $device_name 是機型名稱，不是使用者取的名字。
 import PostHog from 'posthog-react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 
@@ -9,12 +10,18 @@ import type { Placement } from '@/game/daily';
 import { type GameEvent, gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
 
-import { config } from './config';
+import { config, type TelemetrySettings } from './config';
 import { log } from './log';
 
 type Props = Record<string, string | number | boolean>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 不送的 GameEvent：合成一局上百次，目前的指標（留存、漏斗、升級、發明、廣告）都用不到，
+ * 送了只會吃掉 PostHog 的額度（7.3 審查決策）
+ */
+export const EXCLUDED_EVENTS: ReadonlySet<GameEvent['type']> = new Set(['item_merged']);
 
 /** 首次啟動到現在過了幾天（第 0 天是安裝當天），給 D1／D7／D30 留存用 */
 export function daysSinceFirstLaunch(firstLaunchAt: number, now: number): number {
@@ -42,6 +49,7 @@ export function eventProperties(event: GameEvent): Props {
 
 // 目前的 PostHog 實例（廣告服務的 trackAdShown 也要用）
 let client: PostHog | null = null;
+let env: TelemetrySettings['env'] = 'development';
 let warned = false;
 
 function warnOnce(message: string, error: unknown) {
@@ -50,10 +58,22 @@ function warnOnce(message: string, error: unknown) {
   log.warn('telemetry', message, { error: String(error) });
 }
 
-function capture(event: string, props?: Props) {
+/**
+ * 每個事件都附上：
+ * - env：建置 profile，報表篩選 production（AC6）
+ * - days_since_first_launch：「第 1 天第一次升級率」「第 3 天首次發明率」要用安裝後第幾天分群（AC3）
+ */
+function capture(event: string, props: Props = {}) {
   if (!client) return;
+  const state = useGameStore.getState().state;
   try {
-    client.capture(event, props);
+    client.capture(event, {
+      ...props,
+      env,
+      ...(state && {
+        days_since_first_launch: daysSinceFirstLaunch(state.meta.firstLaunchAt, Date.now()),
+      }),
+    });
   } catch (error) {
     warnOnce('送出埋點失敗', error);
   }
@@ -70,9 +90,10 @@ export function trackAdShown(placement: Placement): void {
  */
 export function startTelemetry({
   settings = config.telemetry,
-}: { settings?: { key: string; host: string } | null } = {}): () => void {
+}: { settings?: TelemetrySettings | null } = {}): () => void {
   if (!settings) return () => {};
   warned = false;
+  env = settings.env;
 
   const init = () => {
     try {
@@ -97,37 +118,46 @@ export function startTelemetry({
   };
   const frame = requestAnimationFrame(init);
 
-  // app_open：讀檔完成時送一次；從背景回到前景再送（留存要靠它）
+  // app_open：讀檔完成時送一次；從背景回到前景再送（留存要靠它）。
+  // 只在前景送：iOS 進背景後的寬限期內計時器仍會更新 store，不能在那時候算成一次開啟
+  let appActive = AppState.currentState !== 'background';
   let openedThisSession = false;
   const trackAppOpen = () => {
     const { state, status } = useGameStore.getState();
-    if (!client || !state || status.kind !== 'ready' || openedThisSession) return;
+    if (!client || !appActive || !state || status.kind !== 'ready' || openedThisSession) return;
     openedThisSession = true;
-    capture('app_open', {
-      days_since_first_launch: daysSinceFirstLaunch(state.meta.firstLaunchAt, Date.now()),
-    });
+    capture('app_open');
   };
 
-  // tutorial_step：教學步驟變大時送（讀檔時的第一次不算改變）
-  let tutorialStep = useGameStore.getState().state?.meta.tutorialStep ?? null;
+  // tutorial_step：教學推進到新的步驟時送（讀檔時的第一次不算）。
+  // 一次跳好幾步時每一步都補送；步驟倒退（除錯面板開新局、匯入存檔）後不重複送已經送過的步驟
+  let maxTutorialStep = useGameStore.getState().state?.meta.tutorialStep ?? null;
   const unsubscribeStore = useGameStore.subscribe((store) => {
     trackAppOpen();
     const step = store.state?.meta.tutorialStep ?? null;
     if (step === null) return;
-    if (tutorialStep !== null && step > tutorialStep) capture('tutorial_step', { step });
-    tutorialStep = step;
+    if (maxTutorialStep === null) {
+      maxTutorialStep = step;
+      return;
+    }
+    for (let next = maxTutorialStep + 1; next <= step; next++) {
+      capture('tutorial_step', { step: next });
+    }
+    maxTutorialStep = Math.max(maxTutorialStep, step);
   });
 
   const unsubscribeEvents = gameEvents.subscribe((event) => {
+    if (EXCLUDED_EVENTS.has(event.type)) return;
     capture(event.type, eventProperties(event));
   });
 
   const appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
-    if (state === 'background') {
+    appActive = state !== 'background';
+    if (!appActive) {
       // 進背景：先把排隊的事件送出去，下一次回到前景算新的一次開啟
       openedThisSession = false;
       client?.flush().catch((error: unknown) => warnOnce('送出埋點失敗', error));
-    } else if (state === 'active') {
+    } else {
       trackAppOpen();
     }
   });

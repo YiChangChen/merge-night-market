@@ -4,7 +4,7 @@ baseline_commit: 3c86618
 
 # Story 7.2: 背景音樂、叫賣語音與靜音設定
 
-Status: review
+Status: done
 
 ## Story
 
@@ -15,7 +15,7 @@ so that 我在通勤時也能安靜地玩。
 ## Acceptance Criteria
 
 1. 已有 S7.1 的 AudioService。遊戲在前景時，背景音樂 `bgm-night-market` 循環播放；App 進入背景時暫停，回到前景時繼續。
-2. 新一波人龍開始、完售時，隨機播放 2–3 句叫賣語音的其中一句（FR44）。
+2. 新一波人龍開始時，從 2 句叫賣中隨機播放一句；完售時在煙火之後播 1 句道謝（共 3 句，FR44；E7 審查決策）。
 3. 在 S1.7 的設定畫面加上「音樂」和「音效」兩個開關。設定存在 `merge-night-market/settings`，不寫進遊戲存檔；重新啟動後設定不變。
 4. 所有音訊素材都確認是可商用的授權，授權來源記錄在 `art-source/LICENSES.md`。
 
@@ -44,6 +44,14 @@ so that 我在通勤時也能安靜地玩。
   - 新一波與完售時的叫賣。
   - 關閉音樂或音效，重開 App 後設定還在。
   - 找到背景音樂、錄好叫賣後交付。
+
+### Review Findings（E7 程式碼審查，2026-11-15）
+
+- [x] [Review][Decision] AC2 措辭與實作不一致：完售時固定播「voice-sold-out」一句，沒有從 2–3 句隨機挑（Dev Notes 有記錄設計）— 改 AC 措辭，或補完售語音的第二句 — 決策：改 AC 措辭配合實作（已改 AC2 與 epics.md）
+- [x] [Review][Patch] `bgmPlaying` 旗標在 iOS 來電中斷、拔耳機後和原生狀態脫節，背景音樂一直不恢復；改看 `player.playing`，播放失敗時還原 [src/services/audio.ts:updateBgm]
+- [x] [Review][Patch] 設定讀取完成前切換開關，會被讀到的舊值蓋掉、儲存也可能覆寫另一個欄位；讀取期間的變更要保留 [src/services/settings.ts:loadSettings、save]
+- [x] [Review][Patch] settings-test 用 `await Promise.resolve()` 等 AsyncStorage 寫完，依賴 mock 內部的 promise 層數；改用 waitFor [src/services/__tests__/settings-test.ts:38]
+- [x] [Review][Defer] 背景音樂用 MP3 循環，接縫處會有編碼器補的空白 [src/services/audio-assets.ts:BGM_ASSET] — deferred，等使用者交付正式背景音樂時一起改成 m4a（AAC gapless）
 
 ## Dev Notes
 
@@ -137,3 +145,4 @@ Claude Opus 5.5（claude-opus-5-5）
 
 - 2026-11-15：S7.2 實作完成（背景音樂、叫賣、音樂與音效開關、`wave_started`），先用占位音檔；狀態改為 review，等實機確認與正式素材（T9）。
 - 2026-11-15：使用者實機確認通過（T9）；正式背景音樂與叫賣語音之後補上，屆時以 `process-e7-audio.py` 處理並完成 AC4。
+- 2026-11-15：E7 程式碼審查（三層依序）；決策 1 項、修正 3 項、延後 1 項，狀態改為 done。

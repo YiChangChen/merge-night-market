@@ -50,9 +50,12 @@ def measure(path: Path, chain: str) -> tuple[float, float]:
         [FFMPEG, "-hide_banner", "-i", str(path), "-af", f"{chain},volumedetect", "-f", "null", "-"],
         capture_output=True, text=True, encoding="utf8", errors="replace",
     ).stderr
-    mean = float(re.search(r"mean_volume: (-?[\d.]+) dB", result).group(1))
-    peak = float(re.search(r"max_volume: (-?[\d.]+) dB", result).group(1))
-    return mean, peak
+    mean = re.search(r"mean_volume: (-?[\d.]+) dB", result)
+    peak = re.search(r"max_volume: (-?[\d.]+) dB", result)
+    if mean is None or peak is None:
+        # ffmpeg 失敗（檔案壞掉、格式不支援）或沒有任何聲音時量不到音量
+        raise SystemExit(f"量不到音量：{path}\n{result[-800:]}")
+    return float(mean.group(1)), float(peak.group(1))
 
 
 OUT.mkdir(parents=True, exist_ok=True)

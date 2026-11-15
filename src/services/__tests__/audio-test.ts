@@ -18,6 +18,8 @@ type FakePlayer = {
   volume: number;
   loop: boolean;
   shouldCorrectPitch: boolean;
+  /** 原生的實際播放狀態：play／pause 會改它；測試也可以直接改，模擬系統中斷 */
+  playing: boolean;
   play: jest.Mock;
   pause: jest.Mock;
   seekTo: jest.Mock;
@@ -38,8 +40,13 @@ const mockCreate = jest.fn((source: unknown): FakePlayer => {
     volume: 1,
     loop: false,
     shouldCorrectPitch: true,
-    play: jest.fn(),
-    pause: jest.fn(),
+    playing: false,
+    play: jest.fn(() => {
+      player.playing = true;
+    }),
+    pause: jest.fn(() => {
+      player.playing = false;
+    }),
     seekTo: jest.fn(() => Promise.resolve()),
     setPlaybackRate: jest.fn(),
     remove: jest.fn(),
@@ -337,6 +344,61 @@ describe('人龍最後 3 人的節奏音（補完 S2.2）', () => {
     stop();
     spy.mockRestore();
   });
+
+  it('連續快速出餐（每次都比節奏短）：換節奏時接著上一聲算，仍然會響', async () => {
+    const stop = startAudioService();
+    await jest.advanceTimersByTimeAsync(20);
+    setQueue(3);
+    await jest.advanceTimersByTimeAsync(600);
+    expect(ticks()).toBe(0);
+    // 剩 2 人：650 ms 節奏，距開始已 600 ms，再 50 ms 就響
+    setQueue(2);
+    await jest.advanceTimersByTimeAsync(50);
+    expect(ticks()).toBe(1);
+    // 剩 1 人：420 ms 節奏，距上一聲已 450 ms，馬上響
+    await jest.advanceTimersByTimeAsync(450);
+    setQueue(1);
+    await jest.advanceTimersByTimeAsync(0);
+    expect(ticks()).toBe(2);
+    stop();
+  });
+});
+
+describe('App 在背景與停止之後', () => {
+  it('背景時不播事件音效，也不播延後的完售道謝', async () => {
+    let handler: ((state: string) => void) | undefined;
+    const spy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      handler = listener as (state: string) => void;
+      return { remove: jest.fn() } as never;
+    });
+    const stop = startAudioService();
+    await jest.advanceTimersByTimeAsync(20);
+    gameEvents.emit({ type: 'queue_sold_out', wave: 1, length: 12 });
+    await flush();
+    expect(playedIds()).toEqual(['sfx-fireworks']);
+
+    handler?.('background');
+    gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
+    await jest.advanceTimersByTimeAsync(SOLD_OUT_VOICE_DELAY_MS * 2);
+    expect(playedIds()).toEqual(['sfx-fireworks']);
+
+    handler?.('active');
+    gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
+    await flush();
+    expect(playedIds().sort()).toEqual(['sfx-cash', 'sfx-fireworks']);
+    stop();
+    spy.mockRestore();
+  });
+
+  it('停止時還在等 seekTo 的音效不播', async () => {
+    const stop = startAudioService();
+    await jest.advanceTimersByTimeAsync(20);
+    gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
+    const cash = playerOf('sfx-cash');
+    stop();
+    await flush();
+    expect(cash.play).not.toHaveBeenCalled();
+  });
 });
 
 describe('叫賣語音（S7.2、FR44）', () => {
@@ -450,6 +512,43 @@ describe('背景音樂（S7.2）', () => {
     expect(bgm.play).toHaveBeenCalledTimes(2);
     stop();
     spy.mockRestore();
+  });
+
+  it('iOS 來電等中斷由系統暫停後，回到前景會再播（看 player 的實際狀態）', async () => {
+    let handler: ((state: string) => void) | undefined;
+    const spy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      handler = listener as (state: string) => void;
+      return { remove: jest.fn() } as never;
+    });
+    const stop = startAudioService();
+    await jest.advanceTimersByTimeAsync(20);
+    const bgm = bgmPlayer();
+    expect(bgm.play).toHaveBeenCalledTimes(1);
+    // 來電：系統直接暫停 player，AppState 只變 inactive
+    bgm.playing = false;
+    handler?.('inactive');
+    handler?.('active');
+    expect(bgm.play).toHaveBeenCalledTimes(2);
+    stop();
+    spy.mockRestore();
+  });
+
+  it('播放失敗後，下一次設定變化會再試', async () => {
+    const warn = jest.spyOn(log, 'warn').mockImplementation(() => {});
+    useSettings.setState({ music: false });
+    const stop = startAudioService();
+    await jest.advanceTimersByTimeAsync(20);
+    const bgm = bgmPlayer();
+    bgm.play.mockImplementationOnce(() => {
+      throw new Error('play');
+    });
+    setMusicEnabled(true);
+    expect(bgm.playing).toBe(false);
+    useSettings.setState({ sfx: false });
+    expect(bgm.play).toHaveBeenCalledTimes(2);
+    expect(bgm.playing).toBe(true);
+    stop();
+    warn.mockRestore();
   });
 
   it('停止時取消設定的訂閱', () => {

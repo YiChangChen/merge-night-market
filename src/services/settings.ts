@@ -33,15 +33,21 @@ export function parseSettings(raw: string | null): Settings {
   }
 }
 
+// 讀完之前玩家改過的欄位：讀完時以玩家的選擇為準，再一起寫入（不會被讀到的舊值蓋掉，也不會用預設值蓋掉另一個欄位）
+let changedBeforeLoad: Partial<Settings> = {};
+
 /** 啟動時讀一次；失敗只記 log.warn，用預設值 */
 export async function loadSettings(): Promise<void> {
+  let stored: Settings | null = null;
   try {
-    const raw = await AsyncStorage.getItem(SETTINGS_KEY);
-    useSettings.setState({ ...parseSettings(raw), loaded: true });
+    stored = parseSettings(await AsyncStorage.getItem(SETTINGS_KEY));
   } catch (error) {
     log.warn('boot', '讀取設定失敗，使用預設值', { error: String(error) });
-    useSettings.setState({ loaded: true });
   }
+  const changed = changedBeforeLoad;
+  changedBeforeLoad = {};
+  useSettings.setState({ ...stored, ...changed, loaded: true });
+  if (Object.keys(changed).length > 0) save();
 }
 
 function save(): void {
@@ -53,11 +59,19 @@ function save(): void {
 
 /** 改設定：畫面立刻生效，再寫入儲存（寫入失敗只記 log.warn） */
 export function setMusicEnabled(music: boolean): void {
-  useSettings.setState({ music });
-  save();
+  update({ music });
 }
 
 export function setSfxEnabled(sfx: boolean): void {
-  useSettings.setState({ sfx });
+  update({ sfx });
+}
+
+function update(change: Partial<Settings>): void {
+  useSettings.setState(change);
+  // 還沒讀完：先記著，讀完時再寫入
+  if (!useSettings.getState().loaded) {
+    changedBeforeLoad = { ...changedBeforeLoad, ...change };
+    return;
+  }
   save();
 }

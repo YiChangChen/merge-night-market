@@ -4,7 +4,7 @@ baseline_commit: 7604ef9
 
 # Story 7.1: 音效服務與事件音效
 
-Status: review
+Status: done
 
 ## Story
 
@@ -22,7 +22,7 @@ so that 每一個動作都有夜市的手感。
    - `stall_reopened`：鐵捲門
    - `stall_upgraded`：招牌通電「嗡」
    - `queue_sold_out`：煙火
-   - `dish_invented`：鑼聲
+   - `dish_invented`：第一次發明播鑼聲；已發現的配方再做出來時播合成音（E7 審查決策）
    - `invent_rejected`：輕的否定音
 4. 人龍剩最後 3 人時，計量條的節奏音效加快（補完 Story 2.2）。
 5. 音效載入或播放失敗時只記 `log.warn`，靜默跳過，不影響遊戲。
@@ -52,6 +52,17 @@ so that 每一個動作都有夜市的手感。
   - 開著音樂 App 時兩邊可以同時發聲。
   - 連續快速合成時拖曳不卡。
   - 人龍最後 3 人的節奏音。
+
+### Review Findings（E7 程式碼審查，2026-11-15）
+
+- [x] [Review][Decision] AC3 措辭與實作不一致：`dish_invented` 只有第一次發明播鑼聲，之後播合成音（Dev Notes 有記錄理由）— 改 AC 措辭，或改成每次都播鑼聲 — 決策：改 AC 措辭配合實作（已改 AC3 與 epics.md）
+- [x] [Review][Patch] App 在背景時仍會呼叫 play：事件音效、完售語音的延遲計時器沒檢查前景；play 檢查前景即可擋住兩者 [src/services/audio.ts:play]
+- [x] [Review][Patch] 最後衝刺連續快速出餐時，節奏音每次被重設，可能一聲都不響；換節奏時要保留相位（距上一聲已超過新間隔就立刻響） [src/services/audio.ts:tick]
+- [x] [Review][Patch] stop 之後，還在等 seekTo 的 then 仍會對已釋放的 player 呼叫 play；加 stopped 旗標 [src/services/audio.ts:play]
+- [x] [Review][Patch] process-e7-audio.py：ffmpeg 失敗或全靜音時 `re.search(...).group` 丟 AttributeError，改成清楚的錯誤訊息 [art-source/scripts/process-e7-audio.py:53]
+- [x] [Review][Defer] 首幀後同一個 callback 同步建立約 26 個 player（AC1 寫約 12 個並排入分段預載）；實機量測 +234 ms 沒有退步 [src/services/audio.ts:load] — deferred，等 E8 效能預算（A8）時改成分批或延遲建立
+- [x] [Review][Defer] `mixWithOthers` 會讓背景音樂疊在玩家自己的音樂上（AC2 指定此模式） [src/services/audio.ts:setAudioModeAsync] — deferred，上架前評估「其他 App 在播就不播背景音樂」
+- [x] [Review][Defer] 服務層的音訊與 SDK 調校常數沒有放在 `src/game/content/` [src/services/audio-map.ts、audio.ts、telemetry.ts] — deferred，屬調校值而非遊戲數值，project-context 規則要不要加例外留到 retro
 
 ## Dev Notes
 
@@ -161,3 +172,4 @@ Claude Opus 5.5（claude-opus-5-5）
 - 2026-11-15：換上使用者交付的正式音效（處理腳本、授權紀錄）；`npx expo install --fix` 升級 8 個 Expo 套件的修補版。
 - 2026-11-15：實機回饋修正：連續合成時有時沒聲音（player 輪流用、等回到開頭才播放）。
 - 2026-11-15：使用者實機確認通過（T8）。
+- 2026-11-15：E7 程式碼審查（三層依序）；決策 1 項、修正 4 項、延後 3 項，狀態改為 done。

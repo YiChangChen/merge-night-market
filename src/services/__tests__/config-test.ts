@@ -55,11 +55,21 @@ describe('resolveTelemetry（S7.3）', () => {
   it('只接受 Project API Key（phc_）', () => {
     expect(
       resolveTelemetry({ posthogKey: 'phc_abc', posthogHost: 'https://eu.i.posthog.com' })
-    ).toEqual({ key: 'phc_abc', host: 'https://eu.i.posthog.com' });
+    ).toEqual({ key: 'phc_abc', host: 'https://eu.i.posthog.com', env: 'development' });
     expect(resolveTelemetry({ posthogKey: 'phc_abc' })).toEqual({
       key: 'phc_abc',
       host: 'https://us.i.posthog.com',
+      env: 'development',
     });
+  });
+
+  it('env 是建置 profile（報表篩選 production 用）', () => {
+    expect(resolveTelemetry({ posthogKey: 'phc_abc', buildProfile: 'production' })?.env).toBe(
+      'production'
+    );
+    expect(resolveTelemetry({ posthogKey: 'phc_abc', buildProfile: 'preview' })?.env).toBe(
+      'preview'
+    );
   });
 
   it.each([

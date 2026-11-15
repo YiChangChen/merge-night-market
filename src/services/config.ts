@@ -13,14 +13,25 @@ export type Extra = {
   posthogHost?: string;
 };
 
+export type TelemetrySettings = {
+  key: string;
+  host: string;
+  /** 每個事件都附上 env，報表篩選 production（開發與測試的資料也送同一個專案，7.3 AC6 審查決策） */
+  env: BuildProfile;
+};
+
 /**
  * 埋點設定（S7.3）：只接受 Project API Key（phc_ 開頭）。沒有 key 或放錯成其他 key 時回傳 null，埋點停用。
  * app.config.ts 已經擋過一次；這裡再檢查，避免舊的建置或 OTA 帶著錯的 key。
  */
-export function resolveTelemetry(extra: Extra): { key: string; host: string } | null {
+export function resolveTelemetry(extra: Extra): TelemetrySettings | null {
   const key = extra.posthogKey;
   if (typeof key !== 'string' || !key.startsWith('phc_')) return null;
-  return { key, host: extra.posthogHost ?? 'https://us.i.posthog.com' };
+  return {
+    key,
+    host: extra.posthogHost ?? 'https://us.i.posthog.com',
+    env: extra.buildProfile ?? 'development',
+  };
 }
 
 /**

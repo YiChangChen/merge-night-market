@@ -4,7 +4,7 @@ baseline_commit: 4fbd6a0
 
 # Story 7.3: 數據埋點（PostHog）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -25,7 +25,7 @@ so that 封閉測試和上架後，我知道玩家在哪裡卡住、為什麼沒
    用來支援 D1／D7／D30 留存，以及 GDD 指標：「第 1 天第一次升級率」「第 3 天首次發明率」「每位 DAU 每日看廣告數」。
 4. 關閉自動擷取（screen、觸控）；只使用匿名 ID，不收集任何個資。
 5. 離線時由 SDK 暫存，連上網路後批次送出；初始化失敗時靜默降級。
-6. API key 從 `extra.posthogKey` 讀取；development profile 預設不送出，或送到獨立的測試專案。
+6. API key 從 `extra.posthogKey` 讀取；每個事件附上 `env`（建置 profile），報表篩選 production；開發與測試的資料也送進同一個專案（E7 審查決策：目前只能用 Expo Go 測試）。
 7. 在 PostHog 建好留存與漏斗報表，報表連結記錄在 README。
 
 ## Tasks / Subtasks
@@ -52,6 +52,18 @@ so that 封閉測試和上架後，我知道玩家在哪裡卡住、為什麼沒
   - 實機玩一下，到 PostHog 後台的 Activity 看到事件。
   - 在 PostHog 建立留存（D1／D7／D30）與漏斗報表，連結寫進 README（AC7）。
   - 量 iPhone 效能數字（E6 retro A8）。
+
+### Review Findings（E7 程式碼審查，2026-11-15）
+
+- [x] [Review][Decision] AC6：development profile 沒有任何限制，Expo Go 的資料直接進正式專案 730825；但目前只能用 Expo Go 測試（E6 retro D1）— 送出但標記環境、另開測試專案，或開發時預設不送 — 決策：送出但每個事件附 `env`，已改 AC6 與 epics.md
+- [x] [Review][Decision] AC4：`disableGeoip` 只擋地理解析，IP 仍會存在 `$ip`；要在 PostHog 專案設定開「Discard client IP data」（使用者操作）。SDK 自動附的 `$device_name`（Android 可能含使用者取的名字）、`$locale`、`$timezone` 是否接受 — 決策：使用者在 PostHog 開啟丟棄 IP；查 SDK 原始碼確認 `$device_name` 是 expo-device 的 modelName（機型），不含使用者取的名字，不需改程式
+- [x] [Review][Decision] 每個 GameEvent 都送，含高頻的 `item_merged`；免費額度每月 1M 事件 — 全送，或排除 `item_merged` — 決策：排除 `item_merged`（`EXCLUDED_EVENTS`）
+- [x] [Review][Patch] iOS 進背景後，背景寬限期內的 store 更新會在背景送出 app_open，玩家真正回來時反而不送，留存少算；只在前景送 [src/services/telemetry.ts:trackAppOpen]
+- [x] [Review][Patch] 教學一次跳兩步時，中間那一步的 tutorial_step 不送；步驟倒退（除錯面板開新局、匯入）後會重複送；改成逐步補送、只送超過最高紀錄的步驟 [src/services/telemetry.ts:tutorial_step]
+- [x] [Review][Patch] AC3「第 1 天第一次升級率」「第 3 天首次發明率」缺天數依據：每個事件都附 `days_since_first_launch` [src/services/telemetry.ts:capture]
+- [x] [Review][Patch] `posthog-react-native` 版本範圍用 `^`，改成 `~` 與其他套件一致 [package.json:25]
+- [x] [Review][Defer] 接上真的 AdMob 後，Android 全螢幕廣告會讓 AppState 進出背景，多送 app_open、背景音樂停一下 [src/services/telemetry.ts、audio.ts] — deferred，7.4–7.7 接真廣告時處理
+- [x] [Review][Defer] 設定畫面沒有「分析資料」開關 [src/features/settings/settings-screen.tsx] — deferred，上架前隱私權政策與商店隱私標籤一起評估
 
 ## Dev Notes
 
@@ -168,3 +180,4 @@ Claude Opus 5.5（claude-opus-5-5）
 
 - 2026-11-15：S7.3 實作完成（PostHog 埋點、只接受 phc_ key 的防護），狀態改為 review，等使用者設定正確的 key 與實機確認（T8）。
 - 2026-11-15：T8 完成（實機事件進 PostHog、報表連結寫進 README、效能數字記錄）。
+- 2026-11-15：E7 程式碼審查（三層依序）；決策 3 項、修正 4 項、延後 2 項，狀態改為 done。

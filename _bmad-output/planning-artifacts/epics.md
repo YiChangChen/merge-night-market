@@ -870,7 +870,7 @@ So that 每一個動作都有夜市的手感。
 - `stall_reopened`：鐵捲門
 - `stall_upgraded`：招牌通電「嗡」
 - `queue_sold_out`：煙火
-- `dish_invented`：鑼聲
+- `dish_invented`：第一次發明播鑼聲；已發現的配方再做出來時播合成音（E7 審查決策）
 - `invent_rejected`：輕的否定音
 **And** 人龍剩最後 3 人時，計量條的節奏音效加快（補完 Story 2.2）
 **And** 音效載入或播放失敗時只記 `log.warn`，靜默跳過，不影響遊戲
@@ -887,7 +887,7 @@ So that 我在通勤時也能安靜地玩。
 **Given** 已有 Story 7.1 的 AudioService
 **When** 遊戲在前景
 **Then** 背景音樂 `bgm-night-market` 循環播放；App 進入背景時暫停，回到前景時繼續
-**And** 新一波人龍開始、完售時，隨機播放 2–3 句叫賣語音的其中一句（FR44）
+**And** 新一波人龍開始時，從 2 句叫賣中隨機播放一句；完售時在煙火之後播 1 句道謝（共 3 句，FR44；E7 審查決策）
 **And** 在 Story 1.7 的設定畫面加上「音樂」和「音效」兩個開關，設定存在 `merge-night-market/settings`，不寫進遊戲存檔；重新啟動後設定不變
 **And** 所有音訊素材都確認是可商用的授權，授權來源記錄在 `art-source/LICENSES.md`
 
@@ -905,7 +905,7 @@ So that 封閉測試和上架後，我知道玩家在哪裡卡住、為什麼沒
 **And** 另外補送 `app_open`（附上距離首次啟動的天數）、`tutorial_step`、`ad_shown`、`ad_rewarded`，用來支援 D1/D7/D30 留存，以及「第 1 天第一次升級率」「第 3 天首次發明率」「每位 DAU 每日看廣告數」這些 GDD 指標
 **And** 關閉自動擷取（screen、觸控）；只使用匿名 ID，不收集任何個資
 **And** 離線時由 SDK 暫存，連上網路後批次送出；初始化失敗時靜默降級
-**And** API key 從 `extra.posthogKey` 讀取；development profile 預設不送出，或送到獨立的測試專案
+**And** API key 從 `extra.posthogKey` 讀取；每個事件附上 `env`（建置 profile），報表篩選 production；開發與測試的資料也送進同一個專案（E7 審查決策：目前只能用 Expo Go 測試）
 **And** 在 PostHog 建好留存與漏斗報表，報表連結記錄在 README
 
 ### Story 7.4: 崩潰回報（Sentry）

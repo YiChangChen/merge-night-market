@@ -48,8 +48,12 @@ export function startAudioService({
     log.warn('audio', message, { key, error: String(error) });
   };
 
+  // App 在前景（iOS 進背景後的寬限期內計時器仍會跑，背景時不發聲）；stop 之後不再播放
+  let appActive = AppState.currentState !== 'background';
+  let stopped = false;
+
   const play = ({ id, rate, volume }: SoundPlay) => {
-    if (!useSettings.getState().sfx) return;
+    if (stopped || !appActive || !useSettings.getState().sfx) return;
     const pool = players.get(id);
     if (!pool || pool.length === 0) return;
     const index = cursors.get(id) ?? 0;
@@ -61,7 +65,9 @@ export function startAudioService({
       // 輪到的 player 通常已經播完：先回到開頭，完成後再播放（同時呼叫會互相干擾）
       player
         .seekTo(0)
-        .then(() => player.play())
+        .then(() => {
+          if (!stopped) player.play();
+        })
         .catch((error: unknown) => warnOnce(id, '音效播放失敗', error));
     } catch (error) {
       warnOnce(id, '音效播放失敗', error);
@@ -88,16 +94,15 @@ export function startAudioService({
 
   // 背景音樂（S7.2）：設定讀完、音樂開啟、App 在前景、已經載入時才播放
   // （設定還沒讀完就播，上次關掉音樂的玩家會先聽到一下）
+  // 是否在播放看 player 的實際狀態：iOS 來電、Siri 中斷或拔耳機時，系統會直接暫停 player，
+  // 之後任何一次 AppState 或設定變化都會把它播回來
   let bgm: AudioPlayer | null = null;
-  let bgmPlaying = false;
-  let appActive = AppState.currentState !== 'background';
   const updateBgm = () => {
     if (!bgm) return;
     const { loaded, music } = useSettings.getState();
     const shouldPlay = appActive && loaded && music;
-    if (shouldPlay === bgmPlaying) return;
-    bgmPlaying = shouldPlay;
     try {
+      if (shouldPlay === bgm.playing) return;
       if (shouldPlay) bgm.play();
       else bgm.pause();
     } catch (error) {
@@ -140,16 +145,33 @@ export function startAudioService({
   const frame = requestAnimationFrame(load);
 
   // 人龍最後 3 人的節奏音：剩越少越快；冷卻中、不在最後 3 人、App 在背景時停止（補完 S2.2）
-  let tickTimer: ReturnType<typeof setInterval> | undefined;
+  // 換節奏時接著上一聲算（距上一聲已超過新間隔就馬上響），連續快速出餐時才不會一直被重設而不響
+  let tickTimer: ReturnType<typeof setTimeout> | undefined;
   let tickEvery: number | null = null;
+  let lastTickAt: number | null = null;
+  const scheduleTick = (delay: number) => {
+    tickTimer = setTimeout(() => {
+      lastTickAt = Date.now();
+      play({ id: 'sfx-queue-tick' });
+      if (tickEvery !== null) scheduleTick(tickEvery);
+    }, delay);
+  };
   const updateTicker = () => {
     const queue = useGameStore.getState().state?.queue;
     const next =
       appActive && queue && isQueueFinalStretch(queue) ? tickInterval(queue.remaining) : null;
     if (next === tickEvery) return;
+    const wasTicking = tickEvery !== null;
     tickEvery = next;
-    clearInterval(tickTimer);
-    tickTimer = next === null ? undefined : setInterval(() => play({ id: 'sfx-queue-tick' }), next);
+    clearTimeout(tickTimer);
+    tickTimer = undefined;
+    if (next === null) {
+      lastTickAt = null;
+      return;
+    }
+    // 剛進入最後 3 人：從現在起算一個間隔
+    if (!wasTicking || lastTickAt === null) lastTickAt = Date.now();
+    scheduleTick(Math.max(0, next - (Date.now() - lastTickAt)));
   };
   const unsubscribeStore = useGameStore.subscribe((store, previous) => {
     if (store.state?.queue !== previous.state?.queue) updateTicker();
@@ -164,12 +186,13 @@ export function startAudioService({
 
   return () => {
     // 取消預載、取消訂閱、清空 player 之後，就不會再播放任何音效
+    stopped = true;
     cancelAnimationFrame(frame);
     unsubscribe();
     unsubscribeStore();
     unsubscribeSettings();
     appStateSubscription.remove();
-    clearInterval(tickTimer);
+    clearTimeout(tickTimer);
     for (const timer of voiceTimers) clearTimeout(timer);
     voiceTimers.clear();
     for (const player of [...players.values()].flat().concat(bgm ? [bgm] : [])) {

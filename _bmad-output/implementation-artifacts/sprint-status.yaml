@@ -1,5 +1,5 @@
 # generated: 2026-11-09
-# last_updated: 2026-11-11
+# last_updated: 2026-11-15
 # project: merge-night-market
 # project_key: NOKEY
 # tracking_system: file-system
@@ -38,7 +38,7 @@
 # Epic 1 順序依 2026-11-09 Sprint Change Proposal：1.0 可與 1.1～1.5 並行，須在 1.7 前完成。
 
 generated: 2026-11-09
-last_updated: 2026-11-11
+last_updated: 2026-11-15
 project: merge-night-market
 project_key: NOKEY
 tracking_system: file-system
@@ -104,9 +104,9 @@ development_status:
 
   # Epic 7：聲音、數據與上架
   epic-7: in-progress
-  7-1-audio-service-and-event-sfx: review
-  7-2-bgm-voice-and-mute-settings: review
-  7-3-telemetry-posthog: review
+  7-1-audio-service-and-event-sfx: done
+  7-2-bgm-voice-and-mute-settings: done
+  7-3-telemetry-posthog: done
   7-4-crash-reporting-sentry: backlog  # E6 retro D1：需要商店帳號與建置環境，延後
   7-5-closed-beta-and-balance-tuning: backlog  # E6 retro D1：需要商店帳號與建置環境，延後
   7-6-final-performance-acceptance: backlog  # E6 retro D1：需要商店帳號與建置環境，延後

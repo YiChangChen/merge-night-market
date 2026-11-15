@@ -19,6 +19,13 @@ const isProduction = profile === 'production';
  */
 const expoGoDebugTools = !isProduction && process.env.EXPO_GO_DEBUG_TOOLS === '1';
 
+/**
+ * PostHog（S7.3）：只注入 Project API Key（phc_ 開頭，本來就是公開的、只能送事件）。
+ * 放錯成 Secret Key（phs_）或 Personal API Key（phx_）時一律不注入，免得密鑰被打包進 App。
+ */
+const posthogKey = process.env.POSTHOG_KEY?.startsWith('phc_') ? process.env.POSTHOG_KEY : null;
+const posthogHost = process.env.POSTHOG_HOST ?? 'https://us.i.posthog.com';
+
 /** 正式 ad unit ID 只在 production 注入；development / preview 一律用 TestIds（S1.4、S6.2）。 */
 const adUnitIds = isProduction
   ? {
@@ -91,7 +98,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     buildProfile: profile,
     adUnitIds,
-    posthogKey: process.env.POSTHOG_KEY ?? null,
+    posthogKey,
+    posthogHost,
     sentryDsn: process.env.SENTRY_DSN ?? null,
     debugTools: !isProduction,
     expoGoDebugTools,

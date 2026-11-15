@@ -1,5 +1,8 @@
 // S6.2：假的廣告服務（E5 retro D1：還沒有開發版建置環境，先用假的實作把流程做完）。
 import { ads, FAKE_AD_MS, useFakeAds } from '../ads';
+import { trackAdShown } from '../telemetry';
+
+jest.mock('../telemetry', () => ({ trackAdShown: jest.fn() }));
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -35,5 +38,22 @@ describe('假的廣告服務', () => {
     useFakeAds.setState({ enabled: true, mode: 'unavailable' });
     expect(ads.isReady('sellout-double')).toBe(false);
     await expect(ads.show('sellout-double')).resolves.toBe('unavailable');
+  });
+});
+
+describe('埋點（S7.3）', () => {
+  beforeEach(() => {
+    jest.mocked(trackAdShown).mockClear();
+  });
+
+  it('真的開始播放才送 ad_shown；沒有廣告時不送', async () => {
+    useFakeAds.setState({ enabled: true, mode: 'unavailable' });
+    await ads.show('energy');
+    expect(trackAdShown).not.toHaveBeenCalled();
+
+    useFakeAds.setState({ enabled: true, mode: 'dismissed' });
+    void ads.show('sellout-double');
+    expect(trackAdShown).toHaveBeenCalledWith('sellout-double');
+    await jest.advanceTimersByTimeAsync(FAKE_AD_MS);
   });
 });

@@ -39,3 +39,14 @@ jest.mock('expo-audio', () => ({
   }),
   setAudioModeAsync: () => Promise.resolve(),
 }));
+
+// posthog-react-native（S7.3）：測試裡不送任何資料。埋點自己的測試（telemetry-test）會用自己的 mock 檢查內容。
+jest.mock('posthog-react-native', () => ({
+  __esModule: true,
+  default: class {
+    capture() {}
+    flush() {
+      return Promise.resolve();
+    }
+  },
+}));

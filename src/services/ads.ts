@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import type { Placement } from '@/game/daily';
 
 import { config } from './config';
+import { trackAdShown } from './telemetry';
 
 export type AdResult = 'earned' | 'dismissed' | 'unavailable';
 
@@ -49,8 +50,10 @@ export const ads: AdService = {
   isReady() {
     return fakeReady();
   },
-  show() {
+  show(placement) {
     if (!fakeReady()) return Promise.resolve('unavailable');
+    // 真的開始播放才算一次（S7.3 埋點；看完的獎勵另由 ad_rewarded 送出）
+    trackAdShown(placement);
     const { mode } = useFakeAds.getState();
     return new Promise((resolve) => setTimeout(() => resolve(mode), FAKE_AD_MS));
   },

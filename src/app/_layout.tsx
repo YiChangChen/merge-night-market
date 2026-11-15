@@ -10,6 +10,7 @@ import { TutorialGuide } from '@/features/tutorial';
 import { startAudioService } from '@/services/audio';
 import { startGameSession } from '@/services/game-session';
 import { loadSettings } from '@/services/settings';
+import { startTelemetry } from '@/services/telemetry';
 import { markStartup } from '@/services/startup-timing';
 
 // 冷啟動量測（E6 retro A3）：根層模組開始執行的時間
@@ -42,6 +43,8 @@ export default function RootLayout() {
   }, []);
   // 音效：把遊戲事件轉成音效（S7.1、S7.2）；預載排在首幀之後
   useEffect(() => startAudioService(), []);
+  // 數據埋點（S7.3）：沒有 Project API Key 時不做任何事；初始化排在首幀之後
+  useEffect(() => startTelemetry(), []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

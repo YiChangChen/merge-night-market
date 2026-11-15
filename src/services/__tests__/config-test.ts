@@ -1,5 +1,5 @@
 // 除錯工具的開關決定正式版玩家看不看得到除錯入口，所以例外替這個純函式寫測試。
-import { resolveDebugTools } from '../config';
+import { resolveDebugTools, resolveTelemetry } from '../config';
 
 describe('resolveDebugTools', () => {
   it.each([
@@ -48,5 +48,26 @@ describe('resolveDebugTools', () => {
     ])('%s', (_name, extra, isExpoGo, expected) => {
       expect(resolveDebugTools(extra, false, isExpoGo)).toBe(expected);
     });
+  });
+});
+
+describe('resolveTelemetry（S7.3）', () => {
+  it('只接受 Project API Key（phc_）', () => {
+    expect(
+      resolveTelemetry({ posthogKey: 'phc_abc', posthogHost: 'https://eu.i.posthog.com' })
+    ).toEqual({ key: 'phc_abc', host: 'https://eu.i.posthog.com' });
+    expect(resolveTelemetry({ posthogKey: 'phc_abc' })).toEqual({
+      key: 'phc_abc',
+      host: 'https://us.i.posthog.com',
+    });
+  });
+
+  it.each([
+    ['沒有 key', {}],
+    ['null', { posthogKey: null }],
+    ['Secret API Key（phs_）', { posthogKey: 'phs_secret' }],
+    ['Personal API Key（phx_）', { posthogKey: 'phx_personal' }],
+  ])('%s：停用埋點', (_name, extra) => {
+    expect(resolveTelemetry(extra)).toBeNull();
   });
 });

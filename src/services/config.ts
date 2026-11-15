@@ -8,7 +8,20 @@ export type Extra = {
   debugTools?: boolean;
   /** `.env.local` 的 EXPO_GO_DEBUG_TOOLS=1：在 Expo Go 的非開發模式（--no-dev）也開除錯工具 */
   expoGoDebugTools?: boolean;
+  /** PostHog 的 Project API Key（S7.3） */
+  posthogKey?: string | null;
+  posthogHost?: string;
 };
+
+/**
+ * 埋點設定（S7.3）：只接受 Project API Key（phc_ 開頭）。沒有 key 或放錯成其他 key 時回傳 null，埋點停用。
+ * app.config.ts 已經擋過一次；這裡再檢查，避免舊的建置或 OTA 帶著錯的 key。
+ */
+export function resolveTelemetry(extra: Extra): { key: string; host: string } | null {
+  const key = extra.posthogKey;
+  if (typeof key !== 'string' || !key.startsWith('phc_')) return null;
+  return { key, host: extra.posthogHost ?? 'https://us.i.posthog.com' };
+}
 
 /**
  * 除錯工具（除錯面板、spike 畫面）只在開發模式或 preview 建置出現。
@@ -29,6 +42,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as Extra;
 export const config = {
   appVersion: Constants.expoConfig?.version ?? '0.0.0',
   buildProfile: extra.buildProfile ?? 'development',
+  telemetry: resolveTelemetry(extra),
   debugTools: resolveDebugTools(
     extra,
     __DEV__,

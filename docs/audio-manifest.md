@@ -76,5 +76,5 @@
 | 類別 | 數量 | 已交付 |
 |---|---|---|
 | 音效 | 12 | 12（2026-11-15；`art-source/scripts/process-e7-audio.py` 剪輯成 `assets/audio/sfx-*.mp3`，來源見 `art-source/LICENSES.md`） |
-| 背景音樂 | 1（＋選用環境音 1） | 0 |
-| 叫賣語音 | 3 | 0 |
+| 背景音樂 | 1（＋選用環境音 1） | 0（目前用占位音檔：`art-source/scripts/make-placeholder-e7-2.py`，S7.2） |
+| 叫賣語音 | 3 | 0（同上，占位的是音型、不是人聲） |

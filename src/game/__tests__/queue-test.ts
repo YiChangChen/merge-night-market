@@ -152,6 +152,12 @@ describe('syncQueue', () => {
       bonus: 0,
     });
     expect(next.lastSellout).toBeNull();
+    // 新一波人龍的事件（S7.2：叫賣語音、之後的埋點）
+    expect(next.events).toEqual([{ type: 'wave_started', wave: 3, length: 14 }]);
+  });
+
+  it('冷卻中沒有開新一波：不送 wave_started', () => {
+    expect(syncQueue(cooling, NOW + COOLDOWN - 1).events).toEqual([]);
   });
 
   it('離線很久也只開一波', () => {

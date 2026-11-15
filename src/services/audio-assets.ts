@@ -13,6 +13,10 @@ export const SOUND_IDS = [
   'sfx-star',
   'sfx-hint',
   'sfx-reward',
+  // 叫賣語音（S7.2、FR44）
+  'voice-call-1',
+  'voice-call-2',
+  'voice-sold-out',
 ] as const;
 
 export type SoundId = (typeof SOUND_IDS)[number];
@@ -30,4 +34,10 @@ export const SOUND_ASSETS: Record<SoundId, number> = {
   'sfx-star': require('../../assets/audio/sfx-star.mp3'),
   'sfx-hint': require('../../assets/audio/sfx-hint.mp3'),
   'sfx-reward': require('../../assets/audio/sfx-reward.mp3'),
+  'voice-call-1': require('../../assets/audio/voice-call-1.mp3'),
+  'voice-call-2': require('../../assets/audio/voice-call-2.mp3'),
+  'voice-sold-out': require('../../assets/audio/voice-sold-out.mp3'),
 };
+
+/** 背景音樂（S7.2）：循環播放 */
+export const BGM_ASSET: number = require('../../assets/audio/bgm-night-market.mp3');

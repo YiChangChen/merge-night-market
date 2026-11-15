@@ -55,6 +55,24 @@ export function soundForEvent(event: GameEvent): SoundPlay | null {
   }
 }
 
+/** 完售叫賣延後播放，等煙火響過 */
+export const SOLD_OUT_VOICE_DELAY_MS = 700;
+
+/**
+ * 叫賣語音（S7.2、FR44）：新一波人龍隨機一句招呼，完售時道謝。random 是 [0, 1) 的亂數，由服務注入。
+ */
+export function voiceForEvent(
+  event: GameEvent,
+  random: () => number
+): { id: SoundId; delayMs: number } | null {
+  if (event.type === 'wave_started') {
+    return { id: random() < 0.5 ? 'voice-call-1' : 'voice-call-2', delayMs: 0 };
+  }
+  if (event.type === 'queue_sold_out')
+    return { id: 'voice-sold-out', delayMs: SOLD_OUT_VOICE_DELAY_MS };
+  return null;
+}
+
 /** 人龍最後 3 人的節奏音間隔（毫秒）：剩越少越快；其他情況沒有節奏音（補完 S2.2） */
 export function tickInterval(remaining: number): number | null {
   if (remaining === 3) return 900;

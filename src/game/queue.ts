@@ -82,7 +82,13 @@ export function advanceQueue(state: GameState, now: number): GameState {
 function startNextWave(state: GameState): GameState {
   const queue = { ...state.queue, wave: state.queue.wave + 1, cooldownEndsAt: null };
   const length = queueCapacity({ stalls: state.stalls, queue });
-  return { ...state, queue: { ...queue, length, remaining: length }, lastSellout: null };
+  return {
+    ...state,
+    queue: { ...queue, length, remaining: length },
+    lastSellout: null,
+    // 新一波人龍開始（S7.2：叫賣語音；之後的埋點也用）
+    events: [...state.events, { type: 'wave_started', wave: queue.wave, length }],
+  };
 }
 
 /**

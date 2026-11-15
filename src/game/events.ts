@@ -10,6 +10,8 @@ export type GameEvent =
   | { type: 'item_merged'; chain: ChainId; level: number }
   | { type: 'order_completed'; kind: OrderKind; coins: number }
   | { type: 'queue_sold_out'; wave: number; length: number }
+  // 冷卻結束、新一波人龍開始（S7.2）
+  | { type: 'wave_started'; wave: number; length: number }
   // 發明（S3.2）：first 代表第一次做出這道菜；rejected 帶受影響、尚未發現的配方（給阿嬤保底，NP-3）
   | { type: 'dish_invented'; recipe: RecipeId; first: boolean }
   | { type: 'invent_rejected'; recipes: RecipeId[] }

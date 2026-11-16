@@ -23,7 +23,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - expo-router ~58（typedRoutes）、react-native-reanimated 4.7.1 + react-native-worklets 0.13、react-native-gesture-handler ~3.3、expo-image ~58
 - React Compiler 已啟用（`experiments.reactCompiler`）
 - 狀態：zustand 5.1；存檔：@react-native-async-storage/async-storage 2.2
-- 服務：react-native-google-mobile-ads 17.4、expo-tracking-transparency 58、posthog-react-native 4.85、@sentry/react-native 8.34、expo-audio 58
+- 服務：react-native-google-mobile-ads 17.4、expo-tracking-transparency 58、posthog-react-native 4.86、@sentry/react-native 8.34、expo-audio 58
 - 測試：Jest 30 + jest-expo ~58
 - 平台：iOS 16.4+ / Android 8+（minSdk 26），只支援直式。Web 不是目標平台，只當開發預覽用。
 - 版本以 `package.json` 為準。安裝套件一律用 `npx expo install`，不要用 npm/yarn add。
@@ -98,7 +98,7 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - `drop-test.ts` 要窮舉 `resolveDrop` 的 6 種判定與優先序。
 - **只要改到存檔形狀**，同一個 PR 內必須完成三件事：遞增 `version`、新增 `migrations[n]`、新增 `__tests__/fixtures/save-v<n>-*.json`。`migration-test.ts` 要驗證遷移後 `isValidSave` 通過，且金幣、XP、棋盤內容不變。
 - `content-test.ts` 要驗證配方、卡牌、素材檔名（等於 `RecipeId`）一一對應。
-- 服務層不寫單元測試。規則層不 mock 任何東西，因為它本來就是純函式。
+- 規則層不 mock 任何東西，因為它本來就是純函式（服務層見下方「服務層測試」）。
   - 例外：`store.ts` 是規則層與外界的邊界，會自己讀 `Date.now()`，所以 `store-test.ts` 可以用 `jest.spyOn(Date, 'now')` 固定時間。其他規則層函式一律從參數傳入 `now`。
 - 畫面元件測試用 `@testing-library/react-native` 14：
   - `render`、`fireEvent.*` 都是 async，一律要 `await`。
@@ -107,8 +107,14 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - 路由整合測試用 `expo-router/testing-library` 的 `renderRouter`。**測試檔不得放在 `src/app/`**，因為那裡的每個檔案都會被當成路由。
 - **Reanimated 的 Jest 設定**（在 `jest.setup.js`，S1.7）：mock `react-native-worklets`、把 Reanimated 的 `initializers`（含 `.native` 與 `lib/module` 版本）換成空函式，再使用 `react-native-reanimated/mock`。原因是 jest-expo 以 iOS 平台解析，原生初始化會呼叫 JSReanimated 不支援的 `setCSSEventHandler`；原生版 `makeMutable` 搭配 Worklets mock 也沒有 `get`／`set`。動畫在測試裡會直接跳到目標值。
 - `jest.setup.js` 已經 mock 了 AsyncStorage 和 gesture-handler；`@/` 別名由 `package.json` 的 `moduleNameMapper` 解析。
-  - **陷阱**：AsyncStorage 官方 mock 的方法本身就是 `jest.fn`。要模擬失敗時用 `jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(...)`，**不要 `jest.spyOn` + `mockRestore`**，那會清掉 mock 的實作，讓後面的測試讀不到資料。
-- **服務層測試的例外**：存檔的資料安全（先備份再寫入、失敗絕不覆寫）是 NFR5 的核心保證，所以 `src/services/__tests__/save-test.ts` 會用 AsyncStorage mock 驗證。其他服務仍然不寫單元測試。
+  - **陷阱（E5、E7 各踩過）**：本身就是 jest mock 的物件（AsyncStorage 的方法、RN 的 `AppState`），**不要 `jest.spyOn` + `mockRestore`**，那會清掉 mock 的實作，後面的測試會莫名壞掉（讀不到資料、`addEventListener` 回傳 `undefined`）。
+    - 模擬一次失敗：`jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(...)`。
+    - 換掉實作：在 `beforeEach` 用 `jest.mocked(AppState.addEventListener).mockImplementation(...)` 每次重設。
+    - `AppState.currentState` 在 mock 裡不是一般屬性（`jest.replaceProperty` 會失敗）：直接賦值，測試結束前還原。
+- **服務層測試**：服務有自己的邏輯時要測（存檔的資料安全 NFR5、音效、設定、埋點、假廣告），SDK 一律用 `jest.mock` 隔離，只驗證呼叫內容與降級行為。單純轉呼叫 SDK 的薄包裝不用測。
+- **反向驗證**（E6 retro A5）：每個新測試都要逐一把被測的程式改壞，確認測試會失敗，結果寫在 story 的 Debug Log。
+  - 和時間有關的測試，觸發條件要長過被測的時間。
+  - **測不到某段防護時，「測不到」不等於「不需要」**（E7：`stopped` 檢查被刪掉，後來審查發現 `seekTo` 完成後的路徑需要它）。先補一個走到那條路徑的測試；確定路徑真的走不到才刪，並在 Debug Log 寫理由。
 - **完成定義：** `npx expo lint`、`npx tsc --noEmit`、`npx jest` 全部通過。
 
 ### Platform & Build Rules
@@ -145,6 +151,18 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - 換日一律以 **UTC+8** 午夜為準（`dateKeyUTC8`），不使用裝置時區。
 - 存檔讀取或遷移失敗時，**絕不覆寫存檔、絕不開新局**。顯示錯誤畫面，保留原檔與 `save.v1.bak`。
 - 廣告、音效、埋點失敗時一律靜默降級（隱藏按鈕或不播放），不能讓遊戲流程中斷，也不能卡住玩家。
+- **訂閱 `AppState` 的服務要逐項確認**（E7：審查 11 項修正有 4 項出在這裡，jest 模擬不出來）：
+  - iOS 進背景後幾秒內 JS 計時器仍會跑，store 仍可能更新：「在背景時不該做的事」（送 `app_open`、播聲音）要另外檢查前景旗標，不能只靠進背景時做一次清理。
+  - `inactive` 不等於 `background`：來電、Siri、控制中心只會變 `inactive`。
+  - 音訊中斷（來電、拔耳機）由系統直接暫停 player：播放狀態看 player 的實際狀態（`player.playing`），不要自己記旗標。
+  - 冷啟動時 App 可能就在背景：初始值用 `AppState.currentState`。
+  - 接上真的全螢幕廣告後，Android 會讓 AppState 進出背景一次。
+
+### Story Rules
+
+- **寫 story 時（create-story）**：在 Tasks 前加一張「AC → task」對照表，每條 AC 都要對應到至少一個 task 或明確寫「不做，原因」（E7：7.3 AC6 整條漏做）。
+- **設計要偏離 AC 時**，當下就改 AC 的文字並請使用者確認，不要只寫在 Dev Notes（E7：鑼聲、完售語音兩條要等 Acceptance Auditor 才發現）。
+- **實作完成前（dev-story）**：逐條對照那張表確認每條 AC 都做到了，再把狀態改成 review。
 
 ---
 
@@ -164,4 +182,4 @@ _本專案 AI agent 實作時必須遵守的關鍵規則。只收錄容易被忽
 - #4 決策閘門有結論後，要更新 Performance Rules。
 - 已經變得理所當然的規則就刪掉。
 
-Last Updated: 2026-11-08
+Last Updated: 2026-11-16（E7 retro A1–A3：AppState 檢查表、jest mock 陷阱通用化、反向驗證「測不到≠不需要」、Story Rules）

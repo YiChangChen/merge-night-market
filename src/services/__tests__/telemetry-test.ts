@@ -6,6 +6,7 @@ import { gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
 
 import { log } from '../log';
+import { DEFAULT_SETTINGS, setAnalyticsEnabled, useSettings } from '../settings';
 import {
   daysSinceFirstLaunch,
   EXCLUDED_EVENTS,
@@ -17,6 +18,8 @@ import {
 const mockCapture = jest.fn();
 const mockFlush = jest.fn(() => Promise.resolve());
 const mockConstruct = jest.fn();
+const mockOptIn = jest.fn(() => Promise.resolve());
+const mockOptOut = jest.fn(() => Promise.resolve());
 
 jest.mock('posthog-react-native', () => ({
   __esModule: true,
@@ -29,6 +32,12 @@ jest.mock('posthog-react-native', () => ({
     }
     flush() {
       return mockFlush();
+    }
+    optIn() {
+      return mockOptIn();
+    }
+    optOut() {
+      return mockOptOut();
     }
   },
 }));
@@ -61,6 +70,9 @@ beforeEach(() => {
   mockCapture.mockClear();
   mockFlush.mockClear();
   mockConstruct.mockClear();
+  mockOptIn.mockClear();
+  mockOptOut.mockClear();
+  useSettings.setState({ ...DEFAULT_SETTINGS, loaded: true });
   appStateHandler = undefined;
   jest.mocked(AppState.addEventListener).mockImplementation((_type, listener) => {
     appStateHandler = listener as (state: string) => void;
@@ -298,6 +310,52 @@ describe('startTelemetry', () => {
       ['tutorial_step', { step: 4, ...common() }],
     ]);
     stop();
+  });
+
+  it('分析資料關掉：不送任何事件並 optOut；打開後 optIn，接著送 app_open 與之後的事件', async () => {
+    useSettings.setState({ analytics: false });
+    const stop = startTelemetry({ settings: SETTINGS });
+    await jest.advanceTimersByTimeAsync(20);
+    expect(mockOptOut).toHaveBeenCalledTimes(1);
+    gameEvents.emit({ type: 'stall_upgraded', stall: 'tea', level: 2 });
+    trackAdShown('energy');
+    expect(captured()).toEqual([]);
+
+    setAnalyticsEnabled(true);
+    expect(mockOptIn).toHaveBeenCalledTimes(1);
+    gameEvents.emit({ type: 'stall_upgraded', stall: 'tea', level: 2 });
+    expect(captured().map(([name]) => name)).toEqual(['app_open', 'stall_upgraded']);
+
+    // 再關掉：optOut，之後不送
+    setAnalyticsEnabled(false);
+    expect(mockOptOut).toHaveBeenCalledTimes(2);
+    gameEvents.emit({ type: 'stall_upgraded', stall: 'tea', level: 2 });
+    expect(captured()).toHaveLength(2);
+    stop();
+  });
+
+  it('設定還沒讀完：先不送；讀完是開的才送 app_open，讀完是關的就不送', async () => {
+    useSettings.setState({ ...DEFAULT_SETTINGS, loaded: false });
+    const stop = startTelemetry({ settings: SETTINGS });
+    await jest.advanceTimersByTimeAsync(20);
+    gameEvents.emit({ type: 'stall_upgraded', stall: 'tea', level: 2 });
+    expect(captured()).toEqual([]);
+    expect(mockOptIn).not.toHaveBeenCalled();
+    expect(mockOptOut).not.toHaveBeenCalled();
+
+    useSettings.setState({ loaded: true, analytics: false });
+    expect(captured()).toEqual([]);
+    expect(mockOptOut).toHaveBeenCalledTimes(1);
+    stop();
+
+    mockOptOut.mockClear();
+    useSettings.setState({ ...DEFAULT_SETTINGS, loaded: false });
+    const stopAgain = startTelemetry({ settings: SETTINGS });
+    await jest.advanceTimersByTimeAsync(20);
+    useSettings.setState({ loaded: true });
+    expect(captured().map(([name]) => name)).toEqual(['app_open']);
+    expect(mockOptIn).toHaveBeenCalledTimes(1);
+    stopAgain();
   });
 
   it('停止時取消訂閱並把排隊的事件送出', async () => {

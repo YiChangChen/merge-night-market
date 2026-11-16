@@ -15,6 +15,16 @@ export function maxEnergy(state: { meta: { firstLaunchAt: number } }, now: numbe
     : BALANCE.maxEnergy;
 }
 
+/**
+ * 首次啟動時間不能在未來（E7 延後項目）：開局時裝置時間偏快，時鐘調回來後 `now < firstLaunchAt`，
+ * 開幕週會被拉長同樣的時間。結算時壓回現在；沒有超過時回傳同一個參考。
+ * 時鐘倒退時開幕週因此提早結束，符合「時鐘倒退只重設計時起點、不拉長」的原則。
+ */
+export function syncFirstLaunch(state: GameState, now: number): GameState {
+  if (state.meta.firstLaunchAt <= now) return state;
+  return { ...state, meta: { ...state.meta, firstLaunchAt: now } };
+}
+
 /** UTC+8（台北）的日期 'YYYY-MM-DD'；只依時間戳計算，和裝置時區無關，可以直接用字串比大小。 */
 export function dateKeyUTC8(now: number): string {
   const date = new Date(now + UTC8_OFFSET_MS);

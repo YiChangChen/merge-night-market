@@ -12,6 +12,9 @@ import { type SoundPlay, soundForEvent, tickInterval, voiceForEvent } from './au
 import { log } from './log';
 import { useSettings } from './settings';
 
+/** 預載時每一幀建立幾個 player（分批預載，不在同一幀卡住 JS 執行緒） */
+export const LOAD_BATCH = 6;
+
 /** 背景音樂的音量：墊在音效底下 */
 export const BGM_VOLUME = 0.35;
 
@@ -111,27 +114,26 @@ export function startAudioService({
   };
   const unsubscribeSettings = useSettings.subscribe(updateBgm);
 
-  const load = () => {
-    // iOS 靜音開關打開時不發聲，並和其他 App（例如音樂）混音
-    setAudioModeAsync({
-      playsInSilentMode: false,
-      interruptionMode: 'mixWithOthers',
-      shouldPlayInBackground: false,
-    }).catch((error: unknown) => warnOnce('mode', '設定音訊模式失敗', error));
-    for (const id of SOUND_IDS) {
-      const pool: AudioPlayer[] = [];
-      for (let i = 0; i < poolSize(id); i++) {
+  // 分批預載（E7 延後項目）：首幀之後先設定音訊模式，接著每一幀只建立 LOAD_BATCH 個 player，
+  // 不在同一幀同步建立二十幾個原生 player。順序和 SOUND_IDS 一樣，最後是背景音樂；還沒載入的音效直接略過。
+  const loadTasks: (() => void)[] = [];
+  for (const id of SOUND_IDS) {
+    for (let i = 0; i < poolSize(id); i++) {
+      loadTasks.push(() => {
         try {
           const player = createAudioPlayer(SOUND_ASSETS[id]);
           // 油鍋聲的速度跟著階數變快，關掉音高校正，音高才會一起升高
           if (id === 'sfx-merge-fried') player.shouldCorrectPitch = false;
+          const pool = players.get(id) ?? [];
           pool.push(player);
+          players.set(id, pool);
         } catch (error) {
           warnOnce(id, '音效載入失敗', error);
         }
-      }
-      players.set(id, pool);
+      });
     }
+  }
+  loadTasks.push(() => {
     try {
       bgm = createAudioPlayer(BGM_ASSET);
       bgm.loop = true;
@@ -140,9 +142,22 @@ export function startAudioService({
       warnOnce('bgm', '背景音樂載入失敗', error);
     }
     updateBgm();
+  });
+
+  let frame = 0;
+  const loadBatch = () => {
+    for (const task of loadTasks.splice(0, LOAD_BATCH)) task();
+    if (loadTasks.length > 0) frame = requestAnimationFrame(loadBatch);
   };
-  // 分段預載的第一段：等首幀畫完再載入
-  const frame = requestAnimationFrame(load);
+  frame = requestAnimationFrame(() => {
+    // iOS 靜音開關打開時不發聲，並和其他 App（例如音樂）混音
+    setAudioModeAsync({
+      playsInSilentMode: false,
+      interruptionMode: 'mixWithOthers',
+      shouldPlayInBackground: false,
+    }).catch((error: unknown) => warnOnce('mode', '設定音訊模式失敗', error));
+    loadBatch();
+  });
 
   // 人龍最後 3 人的節奏音：剩越少越快；冷卻中、不在最後 3 人、App 在背景時停止（補完 S2.2）
   // 換節奏時接著上一聲算（距上一聲已超過新間隔就馬上響），連續快速出餐時才不會一直被重設而不響

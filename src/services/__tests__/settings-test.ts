@@ -7,6 +7,7 @@ import {
   loadSettings,
   parseSettings,
   SETTINGS_KEY,
+  setAnalyticsEnabled,
   setMusicEnabled,
   setSfxEnabled,
   useSettings,
@@ -29,13 +30,15 @@ beforeEach(async () => {
 
 describe('parseSettings', () => {
   it('沒有設定：兩個都開', () => {
-    expect(parseSettings(null)).toEqual({ music: true, sfx: true });
+    expect(parseSettings(null)).toEqual({ music: true, sfx: true, analytics: true });
   });
 
   it('壞掉的 JSON、缺欄位、型別不對：該欄位用預設值', () => {
     expect(parseSettings('{oops')).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings('null')).toEqual(DEFAULT_SETTINGS);
-    expect(parseSettings('{"music":false}')).toEqual({ music: false, sfx: true });
+    expect(parseSettings('{"music":false}')).toEqual({ music: false, sfx: true, analytics: true });
+    expect(parseSettings('{"analytics":false}')).toMatchObject({ analytics: false });
+    expect(parseSettings('{"analytics":"off"}')).toMatchObject({ analytics: true });
     expect(parseSettings('{"music":"no","sfx":0}')).toEqual(DEFAULT_SETTINGS);
   });
 });
@@ -45,7 +48,7 @@ describe('讀取與儲存', () => {
     await loadSettings();
     setMusicEnabled(false);
     setSfxEnabled(false);
-    expect(await stored()).toEqual({ music: false, sfx: false });
+    expect(await stored()).toEqual({ music: false, sfx: false, analytics: true });
 
     // 模擬重新啟動
     useSettings.setState({ ...DEFAULT_SETTINGS, loaded: false });
@@ -56,7 +59,7 @@ describe('讀取與儲存', () => {
   it('不寫進遊戲存檔的 key', async () => {
     await loadSettings();
     setMusicEnabled(false);
-    expect(await stored()).toEqual({ music: false, sfx: true });
+    expect(await stored()).toEqual({ music: false, sfx: true, analytics: true });
     expect(await AsyncStorage.getItem('merge-night-market/save')).toBeNull();
   });
 
@@ -91,6 +94,15 @@ describe('讀取與儲存', () => {
     );
     await loading;
     expect(useSettings.getState()).toMatchObject({ music: false, sfx: true, loaded: true });
-    expect(await stored()).toEqual({ music: false, sfx: true });
+    expect(await stored()).toEqual({ music: false, sfx: true, analytics: true });
+  });
+
+  it('分析資料開關：寫入儲存，重新讀取後不變', async () => {
+    await loadSettings();
+    setAnalyticsEnabled(false);
+    expect(await stored()).toEqual({ music: true, sfx: true, analytics: false });
+    useSettings.setState({ ...DEFAULT_SETTINGS, loaded: false });
+    await loadSettings();
+    expect(useSettings.getState().analytics).toBe(false);
   });
 });

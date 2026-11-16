@@ -5,7 +5,7 @@ import { createGame } from '@/game/engine';
 import { type GameEvent, gameEvents } from '@/game/events';
 import { useGameStore } from '@/game/store';
 
-import { BGM_VOLUME, poolSize, startAudioService } from '../audio';
+import { BGM_VOLUME, LOAD_BATCH, poolSize, startAudioService } from '../audio';
 import { SOUND_IDS, type SoundId } from '../audio-assets';
 import { SOLD_OUT_VOICE_DELAY_MS, soundForEvent, tickInterval, voiceForEvent } from '../audio-map';
 import { log } from '../log';
@@ -73,6 +73,11 @@ function playerOf(id: SoundId): FakePlayer {
   const player = poolOf(id)[0];
   if (!player) throw new Error(`沒有 ${id} 的 player`);
   return player;
+}
+
+/** 等分批預載全部完成（每一幀 LOAD_BATCH 個；jest 的 requestAnimationFrame 是 setTimeout 0，一幀約 1 ms） */
+async function loaded() {
+  await jest.advanceTimersByTimeAsync(20);
 }
 
 /** 播放是在 seekTo(0) 完成之後才呼叫：先讓 Promise 跑完 */
@@ -160,7 +165,7 @@ describe('startAudioService', () => {
     const stop = startAudioService();
     expect(mockCreate).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     expect(mockMode).toHaveBeenCalledWith({
       playsInSilentMode: false,
       interruptionMode: 'mixWithOthers',
@@ -174,10 +179,24 @@ describe('startAudioService', () => {
     stop();
   });
 
+  it('分批預載：每一幀只建立 LOAD_BATCH 個 player；停止後不再建立', async () => {
+    const stop = startAudioService();
+    // 一次推進一個計時器＝一幀
+    await jest.advanceTimersToNextTimerAsync();
+    expect(mockCreate).toHaveBeenCalledTimes(LOAD_BATCH);
+    await jest.advanceTimersToNextTimerAsync();
+    expect(mockCreate).toHaveBeenCalledTimes(LOAD_BATCH * 2);
+    stop();
+    await loaded();
+    expect(mockCreate).toHaveBeenCalledTimes(LOAD_BATCH * 2);
+    // 已經建立的 player 都有釋放
+    expect(players.every((player) => player.remove.mock.calls.length === 1)).toBe(true);
+  });
+
   it('預載完成前的事件直接略過；之後依事件播放，炸物設定速度與音量', async () => {
     const stop = startAudioService();
     gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     expect(playedIds()).toEqual([]);
 
     gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
@@ -194,7 +213,7 @@ describe('startAudioService', () => {
   it('播放失敗只記一次 log.warn，不丟例外；停止後不再反應並釋放 player', async () => {
     const warn = jest.spyOn(log, 'warn').mockImplementation(() => {});
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     for (const cash of poolOf('sfx-cash')) {
       cash.play.mockImplementation(() => {
         throw new Error('boom');
@@ -226,7 +245,7 @@ describe('startAudioService', () => {
 
   it('音效關閉（S7.2 設定）：不播放；打開後恢復', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     setSfxEnabled(false);
     gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
     await flush();
@@ -245,7 +264,7 @@ describe('startAudioService', () => {
       throw new Error('load');
     });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
 
     expect(warn).toHaveBeenCalledTimes(2);
     // 第一個合成音的 player 建立失敗，其餘 3 個照常
@@ -259,7 +278,7 @@ describe('startAudioService', () => {
 
   it('回到開頭完成之前不播放（同時呼叫 seekTo 與 play 會互相干擾）', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const cash = playerOf('sfx-cash');
     cash.seekTo.mockReturnValue(new Promise(() => {}));
     gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
@@ -271,7 +290,7 @@ describe('startAudioService', () => {
 
   it('連續合成（實機回饋：有時沒聲音）：輪流用不同的 player，每一次都從頭播放', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     for (let i = 0; i < 6; i++) {
       gameEvents.emit({ type: 'item_merged', chain: 'tea', level: 2 });
     }
@@ -306,7 +325,7 @@ describe('人龍最後 3 人的節奏音（補完 S2.2）', () => {
 
   it('剩 3 人開始、剩越少越快；完售冷卻後停止', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     setQueue(5);
     await jest.advanceTimersByTimeAsync(2000);
     expect(ticks()).toBe(0);
@@ -332,7 +351,7 @@ describe('人龍最後 3 人的節奏音（補完 S2.2）', () => {
       return { remove: jest.fn() } as never;
     });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     setQueue(2);
     handler?.('background');
     await jest.advanceTimersByTimeAsync(3000);
@@ -347,7 +366,7 @@ describe('人龍最後 3 人的節奏音（補完 S2.2）', () => {
 
   it('連續快速出餐（每次都比節奏短）：換節奏時接著上一聲算，仍然會響', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     setQueue(3);
     await jest.advanceTimersByTimeAsync(600);
     expect(ticks()).toBe(0);
@@ -372,7 +391,7 @@ describe('App 在背景與停止之後', () => {
       return { remove: jest.fn() } as never;
     });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     gameEvents.emit({ type: 'queue_sold_out', wave: 1, length: 12 });
     await flush();
     expect(playedIds()).toEqual(['sfx-fireworks']);
@@ -392,7 +411,7 @@ describe('App 在背景與停止之後', () => {
 
   it('停止時還在等 seekTo 的音效不播', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     gameEvents.emit({ type: 'order_completed', kind: 'normal', coins: 10 });
     const cash = playerOf('sfx-cash');
     stop();
@@ -417,7 +436,7 @@ describe('叫賣語音（S7.2、FR44）', () => {
 
   it('新一波人龍：播注入的亂數選到的那一句', async () => {
     const stop = startAudioService({ random: () => 0.9 });
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     gameEvents.emit({ type: 'wave_started', wave: 2, length: 12 });
     await flush();
     expect(playedIds()).toEqual(['voice-call-2']);
@@ -426,7 +445,7 @@ describe('叫賣語音（S7.2、FR44）', () => {
 
   it('完售：煙火馬上響，道謝在煙火之後', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     gameEvents.emit({ type: 'queue_sold_out', wave: 1, length: 12 });
     await flush();
     expect(playedIds()).toEqual(['sfx-fireworks']);
@@ -437,7 +456,7 @@ describe('叫賣語音（S7.2、FR44）', () => {
 
   it('音效關閉時不播叫賣；停止後延後的道謝也不播', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     setSfxEnabled(false);
     gameEvents.emit({ type: 'wave_started', wave: 2, length: 12 });
     await flush();
@@ -457,7 +476,7 @@ describe('叫賣語音（S7.2、FR44）', () => {
 describe('背景音樂（S7.2）', () => {
   it('首幀後建立：循環、音量 0.35，音樂開啟且在前景時播放', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const bgm = bgmPlayer();
     expect(bgm.loop).toBe(true);
     expect(bgm.volume).toBe(BGM_VOLUME);
@@ -467,7 +486,7 @@ describe('背景音樂（S7.2）', () => {
 
   it('關閉音樂：暫停；再打開：繼續；音效開關不影響音樂', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const bgm = bgmPlayer();
     setMusicEnabled(false);
     expect(bgm.pause).toHaveBeenCalledTimes(1);
@@ -481,7 +500,7 @@ describe('背景音樂（S7.2）', () => {
   it('啟動時音樂是關的：不播放', async () => {
     useSettings.setState({ music: false });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     expect(bgmPlayer().play).not.toHaveBeenCalled();
     stop();
   });
@@ -489,7 +508,7 @@ describe('背景音樂（S7.2）', () => {
   it('設定還沒讀完時不播（上次關掉音樂的玩家不會先聽到一下）', async () => {
     useSettings.setState({ ...DEFAULT_SETTINGS, loaded: false });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     expect(bgmPlayer().play).not.toHaveBeenCalled();
     // 讀到的設定是音樂關閉
     useSettings.setState({ music: false, loaded: true });
@@ -504,7 +523,7 @@ describe('背景音樂（S7.2）', () => {
       return { remove: jest.fn() } as never;
     });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const bgm = bgmPlayer();
     handler?.('background');
     expect(bgm.pause).toHaveBeenCalledTimes(1);
@@ -521,7 +540,7 @@ describe('背景音樂（S7.2）', () => {
       return { remove: jest.fn() } as never;
     });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const bgm = bgmPlayer();
     expect(bgm.play).toHaveBeenCalledTimes(1);
     // 來電：系統直接暫停 player，AppState 只變 inactive
@@ -537,7 +556,7 @@ describe('背景音樂（S7.2）', () => {
     const warn = jest.spyOn(log, 'warn').mockImplementation(() => {});
     useSettings.setState({ music: false });
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const bgm = bgmPlayer();
     bgm.play.mockImplementationOnce(() => {
       throw new Error('play');
@@ -562,7 +581,7 @@ describe('背景音樂（S7.2）', () => {
 
   it('停止時釋放背景音樂的 player', async () => {
     const stop = startAudioService();
-    await jest.advanceTimersByTimeAsync(20);
+    await loaded();
     const bgm = bgmPlayer();
     stop();
     expect(bgm.remove).toHaveBeenCalledTimes(1);

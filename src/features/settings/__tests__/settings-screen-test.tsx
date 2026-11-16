@@ -1,4 +1,4 @@
-// S7.2：設定畫面的音樂、音效開關。
+// S7.2：設定畫面的音樂、音效開關；E7 retro：分析資料開關。
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -40,5 +40,15 @@ describe('設定畫面（S7.2）', () => {
 
     expect(useSettings.getState()).toMatchObject({ music: false, sfx: false });
     expect(screen.getByTestId('toggle-music').props.value).toBe(false);
+  });
+
+  it('分析資料開關：顯示目前的值，切換會改設定', async () => {
+    useSettings.setState({ analytics: false });
+    await renderSettings();
+    expect(screen.getByTestId('toggle-analytics').props.value).toBe(false);
+
+    await fireEvent(screen.getByTestId('toggle-analytics'), 'valueChange', true);
+    expect(useSettings.getState().analytics).toBe(true);
+    expect(screen.getByTestId('toggle-analytics').props.value).toBe(true);
   });
 });

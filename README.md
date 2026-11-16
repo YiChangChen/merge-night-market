@@ -23,6 +23,7 @@ App 用 PostHog 匿名收集遊戲事件（Story 7.3）。在 `.env.local` 設�
 
 - 每個事件都附 `env`（`development`／`preview`／`production`）和 `days_since_first_launch`。開發與測試的資料也會送進同一個專案，看指標時請在報表加篩選 `env = production`。
 - 高頻的 `item_merged`（合成）不送。
+- 玩家可以在設定關掉「分析資料」，之後不送任何事件。隱私權政策草稿見 [docs/privacy-policy.md](docs/privacy-policy.md)。
 - PostHog 專案設定要開啟「Discard client IP data」，不保留玩家 IP。
 
 報表（需登入 PostHog 專案才能看）：

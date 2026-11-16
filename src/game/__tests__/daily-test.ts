@@ -7,10 +7,11 @@ import {
   grantAdReward,
   maxEnergy,
   syncDaily,
+  syncFirstLaunch,
 } from '../daily';
 import { createGame, type GameState, syncEnergy } from '../engine';
 import { migrateV1ToV2 } from '../save/migrations';
-import { needsTick } from '../time';
+import { needsTick, syncAll } from '../time';
 import type { LastSellout } from '../types';
 import { xpToNextLevel } from '../levels';
 
@@ -152,6 +153,49 @@ describe('dateKeyUTC8 與 syncDaily', () => {
   it('時鐘倒退到前一天：視為還沒換日，不歸零', () => {
     const state = game({ daily: { dateKey: TODAY, adEnergyUsed: 5, adDoubleUsed: 3 } });
     expect(syncDaily(state, NOW - 24 * HOUR)).toBe(state);
+  });
+
+  it('防作弊（E7 延後項目評估，維持現行設計）：把時鐘往前調再調回來，不能反覆歸零', () => {
+    const DAY = 24 * HOUR;
+    const used = { adEnergyUsed: 5, adDoubleUsed: 3 };
+    let state = game({ daily: { dateKey: TODAY, ...used } });
+    // 往前調一天：多一次歸零（沒有伺服器時間就擋不了這一次）
+    state = syncDaily(state, NOW + DAY);
+    expect(state.daily).toEqual({ dateKey: '2026-11-12', adEnergyUsed: 0, adDoubleUsed: 0 });
+    state = { ...state, daily: { ...state.daily, ...used } };
+    // 調回來、再調到同一天：都不再歸零，要往前調更多天才會再歸零，總歸零次數不超過經過的日期數
+    expect(syncDaily(state, NOW)).toBe(state);
+    expect(syncDaily(state, NOW + DAY + HOUR)).toBe(state);
+    // 真的過了一天（到達那個日期）也不歸零：代價是提前用掉的那一天
+    expect(syncDaily(state, NOW + DAY + 2 * HOUR).daily).toMatchObject(used);
+  });
+});
+
+describe('syncFirstLaunch：首次啟動時間不能在未來（E7 延後項目）', () => {
+  it('開局時裝置時間偏快、之後調回來：壓回現在，開幕週不被拉長', () => {
+    const state = game({ meta: { ...game().meta, firstLaunchAt: NOW + WEEK } });
+    // 沒修正前：調回來之後開幕週還有兩週
+    expect(maxEnergy(state, NOW + WEEK)).toBe(200);
+    const synced = syncFirstLaunch(state, NOW);
+    expect(synced.meta.firstLaunchAt).toBe(NOW);
+    expect(maxEnergy(synced, NOW + WEEK)).toBe(100);
+  });
+
+  it('不在未來時回傳同一個參考；syncAll 會套用、needsTick 會觸發', () => {
+    const state = game();
+    expect(syncFirstLaunch(state, NOW)).toBe(state);
+    expect(syncFirstLaunch(state, NOW + HOUR)).toBe(state);
+
+    const future = game({ energy: 0, meta: { ...game().meta, firstLaunchAt: NOW + HOUR } });
+    expect(syncAll(future, NOW).meta.firstLaunchAt).toBe(NOW);
+    const full = syncDaily(
+      game({ energy: 999, meta: { ...game().meta, firstLaunchAt: NOW - 2 * WEEK } }),
+      NOW
+    );
+    expect(needsTick(full, NOW)).toBe(false);
+    expect(needsTick({ ...full, meta: { ...full.meta, firstLaunchAt: NOW + HOUR } }, NOW)).toBe(
+      true
+    );
   });
 
   it('needsTick：換日時為 true，結算後同一天為 false', () => {

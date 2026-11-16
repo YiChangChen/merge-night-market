@@ -1,6 +1,6 @@
-// 時間型機制的總結算。每次 apply 前都會先執行：體力 → 人龍 → 線索單到期（S4.2）→ 換日歸零（S6.1）。
+// 時間型機制的總結算。每次 apply 前都會先執行：首次啟動時間不超過現在 → 體力 → 人龍 → 線索單到期（S4.2）→ 換日歸零（S6.1）。
 import { BALANCE } from './content';
-import { dateKeyUTC8, maxEnergy, syncDaily } from './daily';
+import { dateKeyUTC8, maxEnergy, syncDaily, syncFirstLaunch } from './daily';
 import { syncEnergy } from './engine';
 import { tutorialHint } from './invention';
 import { clueNeedsSync, syncOrders } from './orders';
@@ -11,7 +11,9 @@ export { dateKeyUTC8 };
 
 export function syncAll(state: GameState, now: number): GameState {
   // 教學提示放在最後：舊存檔、匯入、除錯調整等級後的第一次結算就會補上（只一次）
-  return tutorialHint(syncDaily(syncOrders(syncQueue(syncEnergy(state, now), now), now), now));
+  return tutorialHint(
+    syncDaily(syncOrders(syncQueue(syncEnergy(syncFirstLaunch(state, now), now), now), now), now)
+  );
 }
 
 /**
@@ -24,6 +26,8 @@ export function syncAll(state: GameState, now: number): GameState {
  * 會變成每秒產生新 state 並觸發存檔（code review 2026-11-10）。
  */
 export function needsTick(state: GameState, now: number): boolean {
+  // 首次啟動時間在未來（時鐘被調回來）：壓回現在，開幕週不被拉長
+  if (state.meta.firstLaunchAt > now) return true;
   // 體力上限依開幕週而定（S6.1）
   if (state.energy < maxEnergy(state, now)) return true;
   // 換日（S6.1）：每天只成立一次，結算後 dateKey 就更新；時鐘倒退時不成立

@@ -2,6 +2,7 @@
 // 只在 src/app/_layout.tsx 的啟動序列呼叫一次。網頁版見 telemetry.web.ts（no-op）。
 //
 // 隱私：只用 PostHog 的匿名 ID，不建立個人資料、不擷取 geoip、不自動擷取畫面與觸控（AC4）。
+// 玩家可以在設定關掉「分析資料」：之後不再送出任何事件，並呼叫 PostHog 的 optOut（E7 retro）。
 // IP 由 PostHog 專案設定「Discard client IP data」丟棄（7.3 審查決策）；SDK 附的 $device_name 是機型名稱，不是使用者取的名字。
 import PostHog from 'posthog-react-native';
 import { AppState, type AppStateStatus } from 'react-native';
@@ -12,6 +13,7 @@ import { useGameStore } from '@/game/store';
 
 import { config, type TelemetrySettings } from './config';
 import { log } from './log';
+import { useSettings } from './settings';
 
 type Props = Record<string, string | number | boolean>;
 
@@ -63,8 +65,14 @@ function warnOnce(message: string, error: unknown) {
  * - env：建置 profile，報表篩選 production（AC6）
  * - days_since_first_launch：「第 1 天第一次升級率」「第 3 天首次發明率」要用安裝後第幾天分群（AC3）
  */
+/** 設定讀完而且玩家沒有關掉分析資料（設定還沒讀完時先不送，避免關掉的玩家被送出一筆） */
+function allowed(): boolean {
+  const { loaded, analytics } = useSettings.getState();
+  return loaded && analytics;
+}
+
 function capture(event: string, props: Props = {}) {
-  if (!client) return;
+  if (!client || !allowed()) return;
   const state = useGameStore.getState().state;
   try {
     client.capture(event, {
@@ -114,9 +122,26 @@ export function startTelemetry({
       client = null;
       return;
     }
+    applyConsent();
     trackAppOpen();
   };
   const frame = requestAnimationFrame(init);
+
+  // 分析資料開關：同步給 PostHog（optOut 會保存在 SDK 的儲存裡，開回來時要 optIn）
+  let consent: boolean | null = null;
+  const applyConsent = () => {
+    const { loaded, analytics } = useSettings.getState();
+    if (!client || !loaded || consent === analytics) return;
+    consent = analytics;
+    (analytics ? client.optIn() : client.optOut()).catch((error: unknown) =>
+      warnOnce('切換分析資料失敗', error)
+    );
+  };
+  const unsubscribeSettings = useSettings.subscribe(() => {
+    applyConsent();
+    // 設定比存檔晚讀完時，app_open 等到這時候才送
+    trackAppOpen();
+  });
 
   // app_open：讀檔完成時送一次；從背景回到前景再送（留存要靠它）。
   // 只在前景送：iOS 進背景後的寬限期內計時器仍會更新 store，不能在那時候算成一次開啟
@@ -124,7 +149,8 @@ export function startTelemetry({
   let openedThisSession = false;
   const trackAppOpen = () => {
     const { state, status } = useGameStore.getState();
-    if (!client || !appActive || !state || status.kind !== 'ready' || openedThisSession) return;
+    if (!client || !allowed() || !appActive || !state || status.kind !== 'ready') return;
+    if (openedThisSession) return;
     openedThisSession = true;
     capture('app_open');
   };
@@ -166,6 +192,7 @@ export function startTelemetry({
     cancelAnimationFrame(frame);
     unsubscribeEvents();
     unsubscribeStore();
+    unsubscribeSettings();
     appStateSubscription.remove();
     client?.flush().catch((error: unknown) => warnOnce('送出埋點失敗', error));
     client = null;

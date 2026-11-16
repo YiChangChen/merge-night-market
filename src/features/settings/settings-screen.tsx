@@ -4,7 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { median, tabSwitchSamples } from '@/features/tabs';
 import { config } from '@/services/config';
-import { setMusicEnabled, setSfxEnabled, useSettings } from '@/services/settings';
+import {
+  setAnalyticsEnabled,
+  setMusicEnabled,
+  setSfxEnabled,
+  useSettings,
+} from '@/services/settings';
 
 // 長按版本號這麼久才開啟除錯面板（架構〈Debug Tools〉）
 const DEBUG_LONG_PRESS_MS = 2000;
@@ -12,11 +17,13 @@ const DEBUG_LONG_PRESS_MS = 2000;
 /**
  * 設定畫面（modal），入口在夜市街左上角。
  * 音樂與音效開關（S7.2，存在 merge-night-market/settings，不寫進遊戲存檔）。
+ * 分析資料開關（E7 retro）：關掉後不再送出匿名的遊玩數據。
  * 版本號在除錯工具開啟時可以長按 2 秒開啟除錯面板（S1.8）。
  */
 export function SettingsScreen() {
   const music = useSettings((store) => store.music);
   const sfx = useSettings((store) => store.sfx);
+  const analytics = useSettings((store) => store.analytics);
   const samples = tabSwitchSamples();
   const switchMedian = median(samples);
 
@@ -52,6 +59,19 @@ export function SettingsScreen() {
             accessibilityLabel="音效"
             value={sfx}
             onValueChange={setSfxEnabled}
+            trackColor={{ true: '#FFD966', false: '#3A4466' }}
+          />
+        </View>
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.rowLabel}>分析資料</Text>
+            <Text style={styles.rowNote}>傳送匿名的遊玩數據，幫助改進遊戲</Text>
+          </View>
+          <Switch
+            testID="toggle-analytics"
+            accessibilityLabel="分析資料"
+            value={analytics}
+            onValueChange={setAnalyticsEnabled}
             trackColor={{ true: '#FFD966', false: '#3A4466' }}
           />
         </View>
@@ -100,10 +120,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 48,
   },
+  rowText: {
+    flex: 1,
+    gap: 2,
+    paddingRight: 12,
+  },
   rowLabel: {
     color: '#F2F4FA',
     fontSize: 17,
     fontWeight: '700',
+  },
+  rowNote: {
+    color: '#9FB3D1',
+    fontSize: 13,
   },
   title: {
     color: '#FFD966',

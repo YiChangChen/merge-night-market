@@ -3,6 +3,8 @@ import type { Placement } from '@/game/daily';
 
 export function trackAdShown(_placement: Placement): void {}
 
+export function trackEnergyBlocked(): void {}
+
 export function startTelemetry(
   _options: { settings?: { key: string; host: string } | null } = {}
 ): () => void {

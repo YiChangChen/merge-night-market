@@ -33,6 +33,7 @@ import { useGameStore } from '@/game/store';
 import { useTabSwitchTiming } from '@/features/tabs';
 import { retryLoadGame, startOverAfterSaveFailure } from '@/services/game-session';
 import { markStartup } from '@/services/startup-timing';
+import { trackEnergyBlocked } from '@/services/telemetry';
 
 const MAX_BOARD_WIDTH = 480;
 const SCREEN_PADDING = 12;
@@ -239,7 +240,10 @@ export default function GameScreen() {
     setSelection(piece ? { cell, id: piece.id, game: gameId } : null);
     if (piece?.kind !== 'generator') return;
     const blocker = getSpawnBlocker(state);
-    if (blocker === 'no-energy') openEnergyPrompt();
+    if (blocker === 'no-energy') {
+      openEnergyPrompt();
+      trackEnergyBlocked();
+    }
     if (blocker === 'board-full') setToast('棋盤滿了，先合成或賣掉一些');
     apply((current) => tapGenerator(current, cell));
   };

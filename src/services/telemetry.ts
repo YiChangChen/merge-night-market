@@ -93,6 +93,14 @@ export function trackAdShown(placement: Placement): void {
 }
 
 /**
+ * 點產生器時體力不足（棋盤畫面打開體力提示卡時呼叫，S7.5）：封測指標「前 3 天是否卡在體力」用。
+ * 和 ad_shown 分開：沒有廣告、或玩家沒看廣告也要算到
+ */
+export function trackEnergyBlocked(): void {
+  capture('energy_blocked');
+}
+
+/**
  * 啟動埋點，回傳停止函式。沒有 Project API Key（phc_）時什麼都不做。
  * 首幀之後才建立 PostHog（E6 retro A3：不拖慢冷啟動）；之前的事件直接略過。
  */
@@ -147,11 +155,14 @@ export function startTelemetry({
   // 只在前景送：iOS 進背景後的寬限期內計時器仍會更新 store，不能在那時候算成一次開啟
   let appActive = AppState.currentState !== 'background';
   let openedThisSession = false;
+  // 這一次開啟的 app_open 時間；進背景時送 app_background 算單次遊玩時間（S7.5 指標「單次 3–6 分鐘」）
+  let openedAt = 0;
   const trackAppOpen = () => {
     const { state, status } = useGameStore.getState();
     if (!client || !allowed() || !appActive || !state || status.kind !== 'ready') return;
     if (openedThisSession) return;
     openedThisSession = true;
+    openedAt = Date.now();
     capture('app_open');
   };
 
@@ -180,7 +191,12 @@ export function startTelemetry({
   const appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
     appActive = state !== 'background';
     if (!appActive) {
-      // 進背景：先把排隊的事件送出去，下一次回到前景算新的一次開啟
+      // 進背景：送出這一次開啟玩了多久，再把排隊的事件送出去；下一次回到前景算新的一次開啟
+      if (openedThisSession) {
+        capture('app_background', {
+          session_seconds: Math.max(0, Math.round((Date.now() - openedAt) / 1000)),
+        });
+      }
       openedThisSession = false;
       client?.flush().catch((error: unknown) => warnOnce('送出埋點失敗', error));
     } else {

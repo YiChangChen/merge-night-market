@@ -13,6 +13,7 @@ import {
   eventProperties,
   startTelemetry,
   trackAdShown,
+  trackEnergyBlocked,
 } from '../telemetry';
 
 const mockCapture = jest.fn();
@@ -202,6 +203,36 @@ describe('startTelemetry', () => {
     await jest.advanceTimersByTimeAsync(20);
     trackAdShown('sellout-double');
     expect(captured()).toContainEqual(['ad_shown', { placement: 'sellout-double', ...common() }]);
+    stop();
+  });
+
+  it('trackEnergyBlocked：送 energy_blocked（前 3 天是否卡在體力，S7.5）；沒有初始化時不送', async () => {
+    trackEnergyBlocked();
+    expect(mockCapture).not.toHaveBeenCalled();
+
+    const stop = startTelemetry({ settings: SETTINGS });
+    await jest.advanceTimersByTimeAsync(20);
+    trackEnergyBlocked();
+    expect(captured()).toContainEqual(['energy_blocked', common()]);
+    stop();
+  });
+
+  it('app_background：進背景時送這一次開啟玩了幾秒（S7.5）；沒送過 app_open 就不送', async () => {
+    const stop = startTelemetry({ settings: SETTINGS });
+    await jest.advanceTimersByTimeAsync(20);
+    await jest.advanceTimersByTimeAsync(4 * 60 * 1000 + 30_000);
+    appStateHandler?.('background');
+    expect(captured()).toContainEqual(['app_background', { session_seconds: 270, ...common() }]);
+
+    // 已經在背景：再收到一次 background 不重複送
+    appStateHandler?.('background');
+    expect(captured().filter(([name]) => name === 'app_background')).toHaveLength(1);
+
+    // 回到前景重新計時
+    appStateHandler?.('active');
+    await jest.advanceTimersByTimeAsync(60_000);
+    appStateHandler?.('background');
+    expect(captured()).toContainEqual(['app_background', { session_seconds: 60, ...common() }]);
     stop();
   });
 

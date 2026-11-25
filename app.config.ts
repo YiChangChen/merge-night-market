@@ -51,11 +51,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'light',
   runtimeVersion: { policy: 'fingerprint' },
   ios: {
-    icon: './assets/expo.icon',
+    icon: './assets/images/icon.png',
+    // 送出第一個建置後就不能改（S7.7，使用者決定 2026-11-25）
+    bundleIdentifier: 'com.mergenightmarket',
   },
   android: {
+    package: 'com.mergenightmarket',
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      // 夜空深藍，取自圖示背景（S7.7）
+      backgroundColor: '#0D1656',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -71,9 +75,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
+        backgroundColor: '#0D1656',
         image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        imageWidth: 200,
       },
     ],
     [

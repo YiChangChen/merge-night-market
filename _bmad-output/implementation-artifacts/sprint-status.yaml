@@ -110,5 +110,5 @@ development_status:
   7-4-crash-reporting-sentry: backlog  # E6 retro D1：需要商店帳號與建置環境，延後
   7-5-closed-beta-and-balance-tuning: backlog  # E6 retro D1：需要商店帳號與建置環境，延後；2026-11-25 先做完封測前的部分：deadlock-test、進度模擬（docs/balance.md）、energy_blocked／app_background 埋點與指標算法
   7-6-final-performance-acceptance: backlog  # E6 retro D1：需要商店帳號與建置環境，延後
-  7-7-store-assets-and-submission: backlog  # E6 retro D1：需要商店帳號與建置環境，延後
+  7-7-store-assets-and-submission: backlog  # E6 retro D1：需要商店帳號與建置環境，延後；2026-11-25 先做完不需要帳號的部分：docs/store-listing.md（文案、截圖與影片規劃、隱私揭露草稿、送審清單）、npm run release-check
   epic-7-retrospective: done  # 部分回顧（7.1–7.3，2026-11-16）；7.4–7.7 完成後再補
